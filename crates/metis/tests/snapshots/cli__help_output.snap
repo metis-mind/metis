@@ -1,0 +1,15 @@
+---
+source: crates/metis/tests/cli.rs
+expression: stdout
+---
+Self-evolving agent runtime: Rust core (fiber lifecycle, context/events, hot-reloading loader) + Luau plugins
+
+Usage: metis <COMMAND>
+
+Commands:
+  greet  Print a greeting
+  help   Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
