@@ -57,3 +57,24 @@ v1 最小集：全局两层 + session 纯运行时状态（session 服务插件�
 3. revision 引用计数的 Rust 表达（回收时机、与 fiber arena 的关系）
 4. isolate/intercept 是否与 preset 同期引入
 5. "运行中 session 持有旧树"在 actor 模型下的语义（旧 revision 的 fiber 树如何与新声明共存）
+
+## 6. 讨论记录（2026-10-02，D7 确认时派生）
+
+用户提问：插件树全局唯一还是每 session 一棵？用户倾向后者，顾虑多 session 下插件过多/冗余。
+
+讨论方向（非正式决策，正式设计时展开）：
+
+- **二分法不成立**：正解是全局树 + 每会话子树，粒度 = 单个插件挂载的作用域，不是整棵树的归属
+- **冗余顾虑的消解 = 轻/重分离**：重资源（模型 provider、连接池、大缓存）永远全局单例，会话插件经服务调用共享；会话域只放轻状态插件。空闲 actor 成本 ~10–100 KB、零 CPU（估算非实测），50 session × 10 会话插件 ≈ 几十 MB——实例开销不是问题，重资源复制才是，而它靠作用域纪律防止
+- **结构性隔离是每会话实例的核心收益**：会话状态插件若共享实例多路复用，隔离正确性靠插件作者纪律（模型写的插件不可信）；每会话实例 = 独立 `lua_State`，跨会话泄漏结构上不可能，会话结束子树随 fiber 账本回收
+- **不与 D7 冲突**：会话子树挂载 = host 按 preset 声明实例化，不是插件创建插件——仍在声明式/审批世界内；D7 关的是插件代码内 `ctx:spawn` 的门
+
+用户进一步提问（同日）：不同 session 可能有不同配置，如何处理？用户提出自己的分层设想：系统 / project / profile（**≠ Harness 的 profile**）——一份 profile = 一个身份（coder / reviewer / manager），身份自带插件组合与配置。
+
+讨论方向（非正式决策，正式设计时展开）：
+
+- **三层归位到两根轴**：系统、project = 轴 1（来源分层）的层；用户版 profile（身份）≈ Harness 的 **preset**（命名组合，session 创建时实例化），是"选择"不是"叠加"。术语错位注意：Harness 的 "profile" 是它轴 1 的层，用户的 "profile" 是它的 preset
+- **机制区分：叠加 vs 选择**——session 有效配置 = 系统 < project < 所选身份 的 keyed merge（复用 D5 `Value` 数据模型的 merge/diff 基础设施）；身份之间不合并，只被选中
+- **"不同 session 不同配置"的三个来源**：① 创建时选身份/preset revision；② preset revision 演进（future-only，不抢运行中）；③ 会话内动态偏好 = 运行时状态，不进 YAML（判别两问之②）
+- **留给配置格式与 session 模型正式设计的决策点**：project 与身份的优先级冲突规则（倾向：project 在策略类 key 上更硬，身份在边界内个性化）；project 层载体形态；身份是否成为模型可写的最小单元（preset revision 通道——agent 自我进化的正当出口）
+- **与 §3 的关系注意**：§3 定论"v1 只两层、profile 等价物 = `--config` 零新机制"；本节引入 project 层 + 身份 preset 属新机制——v1 范围是否扩大，留给配置格式/session 模型正式设计时一并定
