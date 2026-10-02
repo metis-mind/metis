@@ -68,7 +68,7 @@ loop {
 
 外加半个隐式通道：**声明式组合**（entry 树挂载、preset）——回答"谁存在"，不是"谁调用谁"。
 
-服务调用路径（7 步）：A 调代理 → 打包 `CallService` 发 host → host 查注册表（key→B、B Active、A 的 epoch 指纹有效）→ 转发 B 邮箱 → B pcall 执行 → 结果路由回 A → A 的调用返回（Luau 侧 await 形态归 ABI 设计）。
+服务调用路径（7 步）：A 调代理 → 打包 `CallService` 发 host → host 查注册表（key→B、B Active；epoch 不在调用路径校验，陈旧由重启纪律解决——[ADR-0018](../decisions/0018-service-registry.md) S5）→ 转发 B 邮箱 → B pcall 执行 → 结果路由回 A → A 的调用返回（Luau 侧 await 形态归 ABI 设计）。
 
 ## 2. 派发语义：五种收敛为四种（D3/D4/D8 ✅ = [ADR-0014](../decisions/0014-dispatch-semantics.md)）
 

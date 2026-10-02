@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Freshness: Commands tracks the justfile; NEVER tracks the generated-file list; Skills tracks .agents/skills/. Last reviewed: 2026-09 -->
+<!-- Freshness: Commands tracks the justfile; NEVER tracks the generated-file list; Skills tracks .agents/skills/. Last reviewed: 2026-10 -->
 
 ## Commands (just is the only entry point; never bypass the quality gates)
 
@@ -52,7 +52,7 @@ Done = `just ci` green + self-review of the working diff.
 
 ## Documentation
 
-- `docs/decisions/` — ADRs, one decision per file `NNNN-title.md`; numbers never reused; once accepted the body is frozen — overturning means a new ADR superseding (mark the old one `superseded by ADR-NNNN`, never delete). Reference by number, never restate rationale.
+- `docs/decisions/` — ADRs, one decision per file `NNNN-title.md`; numbers never reused; once accepted the body is frozen — overturning means a new ADR superseding (mark the old one `superseded by ADR-NNNN`, never delete). Partial supersede (one clause/cell, not the whole ADR) follows the same rule: the new ADR names the exact clause it replaces, the old ADR's Status line records the partial supersede, body stays frozen. Reference by number, never restate rationale.
 - `docs/design/` — living design docs with a status header; confirmed decision points get promoted to ADRs.
 - `docs/research/` — point-in-time reports; corrections land as addenda, never rewrite conclusions.
 - `HANDOFF.md` (repo root, gitignored) — the transient session handoff: read it first when it exists; rewrite it when the session's state changes.

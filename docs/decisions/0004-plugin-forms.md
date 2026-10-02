@@ -1,6 +1,6 @@
 # 0004. 插件形态：两形态 + 插件名解析
 
-- Status: accepted
+- Status: accepted（纯代码插件"inject 边加载时运行期发现"一格由 [ADR-0018](0018-service-registry.md) 局部取代）
 - Date: 2026-09-29
 
 ## Context
