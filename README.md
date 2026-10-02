@@ -4,6 +4,10 @@ A self-evolving agent runtime: a long-lived Rust core (fiber lifecycle container
 
 Status: pre-alpha. The architecture is designed in `docs/` ahead of the first line of runtime code.
 
+## Origins
+
+Metis is inspired by [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) and its plugin runtime [Cordis](https://github.com/cordiverse/cordis), together with the paper _A Programming Paradigm for Spatiotemporal Composability_ ([arXiv 2608.25512](https://arxiv.org/abs/2608.25512)). In many ways Metis is a Rust implementation of the Cordis model — fiber lifecycle containers, context scoping, service registry — but it is not a line-by-line port. The Node-specific machinery is dropped, plugins are Luau instead of TypeScript, every plugin gets its own `lua_State`, and several semantics are redesigned around Rust's ownership and actor isolation. The full analysis lives in [`docs/research/cordis-research.md`](docs/research/cordis-research.md).
+
 ## Development
 
     direnv allow   # or: nix develop (entering the shell also arms the git hooks)
