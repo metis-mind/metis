@@ -434,6 +434,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "metis-fiber-core"
+version = "0.0.0"
+
+[[package]]
+name = "metis-loader"
+version = "0.0.0"
+
+[[package]]
+name = "metis-luau"
+version = "0.0.0"
+
+[[package]]
+name = "metis-runtime"
+version = "0.0.0"
+
+[[package]]
+name = "metis-value"
+version = "0.0.0"
+
+[[package]]
 name = "miette"
 version = "7.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

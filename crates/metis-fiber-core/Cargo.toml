@@ -1,0 +1,16 @@
+[package]
+name = "metis-fiber-core"
+description = "Pure fiber lifecycle core: state machine, LIFO disposer ledger, epoch fingerprints (ADR-0010)"
+# Internal crates carry no semver burden. To publish later (when release
+# engineering returns): switch to version.workspace = true and drop
+# publish = false — see CONTRIBUTING.md.
+version = "0.0.0"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

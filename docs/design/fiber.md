@@ -1,7 +1,7 @@
 # Metis — Fiber 设计
 
-> 状态：核心已定（§8 四点 ✅），剩 **fiber-core 纯 crate 切法**（§9）待讨论。
-> 2026-09-29 定稿。机制调研依据：`docs/research/cordis-research.md`；决策登记：[ADR-0010](../decisions/0010-fiber-core.md)。
+> 状态：核心已定（§8 四点 ✅ + §9 ✅ = [ADR-0019](../decisions/0019-crate-layout.md)）。
+> 2026-09-29 定稿；2026-10-02 §9 闭环（[ADR-0019](../decisions/0019-crate-layout.md)）。机制调研依据：`docs/research/cordis-research.md`；决策登记：[ADR-0010](../decisions/0010-fiber-core.md)。
 
 ---
 
@@ -100,6 +100,6 @@ type Disposer = Box<dyn FnOnce() -> BoxFuture<'static, ()> + Send>;
 | 3 | Disposer **统一异步签名**                                                                         | ✅   |
 | 4 | **子 fiber = 父的一笔 effect**（子的卸载函数记进父账）→ LIFO 自动保证父死先死子，无单独树遍历通道 | ✅   |
 
-## 9. 待定（用户要求再讨论）
+## 9. fiber-core 纯 crate 切法（已定 ✅ = [ADR-0019](../decisions/0019-crate-layout.md)）
 
-5. **fiber-core 纯 crate 切法**：把状态转移、LIFO 次序、指纹比较等写成不碰 tokio/mlua 的纯函数核心（面向 Kani/Lean，testing-strategy §2-L4），运行期胶水另置一层。讨论点：纯/不纯边界划在哪、crate 是否物理分离。
+5. 纯核心 = 不碰 tokio/mlua 的纯函数核心（状态机/账本 LIFO/epoch 指纹/失效闭包），返回动作描述由胶水解释执行；crate 物理分离（`metis-fiber-core`），仅允许纯数据依赖（slotmap/indexmap/thiserror 级）、不用 tracing；keyed diff 归独立纯 crate `metis-loader`。边界明细与被淘汰选项见 ADR-0019。

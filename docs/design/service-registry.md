@@ -123,23 +123,34 @@ host 每次调用现查注册表，路由永远指向当前活着的实例；路
 Provider/Consumer 两角已锁（§2/§3：manifest 双声明 + 只认 key + 禁跨插件 require 使"import provider"物理不可能）。**Definition 角**：
 
 1. **原则**：契约（key + 方法集 + 语义）**独立于提供方存在**——这是防"契约漂移 → 插件的插件"的关键。核心服务（`llm`/`tools` 等框架级）契约**必须**有 `lib/` 契约包；插件自定义服务 v1 允许文档约定起步，但 manifest 方法集使存在性永远机器可查
-2. **载体形态登记**：`lib/` 契约包细节与"纯 manifest 契约包"候选的取舍，依赖 `lib/` 引用语法（crate 划分任务）与 manifest 格式——归 crate 划分 + ABI 任务
+2. **载体形态登记**：`lib/` 契约包细节与"纯 manifest 契约包"候选的取舍，依赖 manifest 格式（`lib/` 引用语法已定 = [ADR-0019](../decisions/0019-crate-layout.md)）——归 ABI 任务
 3. **schema 化路径**：方法签名级校验归 ABI 任务的 schema DSL，**与事件 payload schema 共享同一套**；Definition 包届时从"常量+文档"升级为"常量+schema+文档"
 4. **契约演化规则**：加方法 = 兼容（消费者重启但旧代码照常工作）；删方法/改签名 = 破坏（epoch+1 全消费者重启 + 调用期 `Err(MethodMissing)` 当场响亮）。schema 化后安装/审批时静态判定变更级别，审批界面显示"此更新破坏 N 个消费者"
 5. **自省目录**：注册表 + 双声明使服务目录（谁提供什么/方法集/谁依赖谁）纯推导可得；对模型暴露（Harness `cordis_inspect` 两级形态：列表省 token、详查带文档）登记 ABI tooling
 
 **方法发现三层（附议）**：契约文档（Definition）→ manifest 声明（机器可读）→ 运行时自省目录（live catalog，模型可查）——消费者作者无需读提供方源码。
 
-## 7. lib/ 布局与包管理（附议，归 crate 划分任务细化）
+## 7. lib/ 布局、作者语境与包管理（附议；crate 部分已由 [ADR-0019](../decisions/0019-crate-layout.md) 细化，余下归 ABI 任务）
+
+**三个作者语境**（2026-10-02 用户指正：先前讨论隐含"插件作者在部署内开发"的误解——只有平台开发与 agent 创作在部署内，第三方作者在自己仓库）：
+
+| 语境                  | 工作区                            | 与部署的关系                                                                                                                                                                       |
+| --------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 平台开发者            | metis monorepo                    | 核心插件（bundled）+ 契约包 `lib/` 随核心版本演进；dogfood 部署根在仓库内——"开发即生产"**只在此语境成立**                                                                          |
+| 第三方插件作者        | **自有 git 仓库**（一插件一仓库） | 仓库内含自己的 `.luaurc`（开发期产物，alias 指向本机契约包来源）；完成品安装进部署 = 复制进 `plugins/` + 审批事务（`metis install` 工具化归将来）；**插件的 `.luaurc` 不随包分发** |
+| agent（Creator 模式） | 部署内 `plugins/`                 | 唯一直接在部署内创作的作者（[ADR-0008](../decisions/0008-creator-mode-self-modification.md) 审批事务）                                                                             |
+
+**运行期 vs 开发期 `.luaurc`**：host 的 require 包装器只认部署根 alias 配置；插件仓库的 `.luaurc` 仅服务作者本机 LSP，运行期不可见（不在部署内）——防契约欺骗因此是物理事实而非忽略机制。v1 第三方作者的契约包来源 = 本机 metis 检出路径 alias；**v1 插件作者体验是"维护者时代"体验，第三方时代以分发机制为门槛**（[ADR-0004](../decisions/0004-plugin-forms.md) 推迟项）。
 
 ```
-<部署根>/                  ← 开发 = metis 仓库；部署 = 数据目录（v1 开发即生产，无映射层）
+<部署根>/                  ← 平台/部署环境
+├── .luaurc               ← 平台布线：lib → ./lib（部署者可追加；运行期唯一生效的一份）
 ├── plugins/              ← 插件（ADR-0004：foo.luau 或 foo/manifest.yml）
 ├── lib/                  ← 共享纯代码库（契约包、工具库）
 └── config/               ← entry 树 YAML
 ```
 
-- 核心契约包随核心版本演进（v1 monorepo 内 `lib/`；部署形态——内嵌二进制 vs 数据目录——归 crate 划分）
+- 核心契约包随核心版本演进（v1 monorepo 内 `lib/`；**内嵌二进制 + 磁盘数据目录两层**，[ADR-0019](../decisions/0019-crate-layout.md) C3）
 - **lib 模块在每个插件 VM 里是独立副本**（模块缓存随 VM 生灭，[ADR-0005](../decisions/0005-vm-topology.md)）→ lib 必须**纯代码**（函数/常量/schema），顶层囤可变全局状态 = 各插件看到不同世界
 - lib 变更 = 反向传递闭包定位失效插件集 → 重启（[ADR-0003](../decisions/0003-module-require-discipline.md)）→ 管理员级变更走审批；v1 lib 无独立版本号
 - **v1 无包管理**：插件 = 目录，安装 = 放文件 + 配置树登记（走 Creator 审批事务）。LuaRocks（C 模块生态不适配沙箱 Luau）与 Wally/pesde（Roblox 生态）是参考非答案；分发时代按 [ADR-0004](../decisions/0004-plugin-forms.md) 登记长回——包 = manifest + 纯 Luau + 依赖声明（机器可读，依赖解析数据基础白送），安装 = fetch + verify + Creator 事务，主要用户是 agent 自己

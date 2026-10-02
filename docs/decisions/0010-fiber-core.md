@@ -1,6 +1,6 @@
 # 0010. Fiber 核心数据结构
 
-- Status: accepted（4/5；纯 crate 切法见 `../design/fiber.md` §9 待定）
+- Status: accepted（"fiber-core 纯 crate 切法待定"一项由 [ADR-0019](0019-crate-layout.md) 定案）
 - Date: 2026-09-29
 
 ## Context

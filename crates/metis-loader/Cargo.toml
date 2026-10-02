@@ -1,0 +1,16 @@
+[package]
+name = "metis-loader"
+description = "Entry tree, manifests, schema validation, and keyed-diff reconciliation as pure data algorithms (ADR-0004)"
+# Internal crates carry no semver burden. To publish later (when release
+# engineering returns): switch to version.workspace = true and drop
+# publish = false — see CONTRIBUTING.md.
+version = "0.0.0"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

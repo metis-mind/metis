@@ -1,0 +1,16 @@
+[package]
+name = "metis-value"
+description = "Value data model shared by event payloads, service calls, and config (ADR-0015)"
+# Internal crates carry no semver burden. To publish later (when release
+# engineering returns): switch to version.workspace = true and drop
+# publish = false — see CONTRIBUTING.md.
+version = "0.0.0"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
