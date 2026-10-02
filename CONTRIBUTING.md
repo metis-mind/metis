@@ -1,5 +1,12 @@
 # CONTRIBUTING
 
+## Contributing status
+
+Metis is open source, but the core repository is **not accepting code pull requests yet** — the architecture is still landing, and every change must pass an agent-oriented development protocol (see _Agent-assisted development_ below) that external PRs cannot practically satisfy. This policy is temporary and relaxes once the core stabilizes; it is not a one-way door.
+
+- **Issues and Discussions are welcome**: bug reports, design questions, use-case proposals.
+- **Ecosystem contributions** (Luau plugins) will flow through the `metis-mind/marketplace` repository once it opens — plugin submissions are machine-checked by schema CI.
+
 ## Environment setup
 
 ```bash
@@ -25,7 +32,7 @@ Modified Conventional Commits (SSOT: the `check-commit` subcommand of `crates/xt
 - body: any language, no line-width limit; separated from the header by one blank line. No HTML comments, no task lists (`- [ ]`), no bare `---` lines; a prose paragraph runs at most 7 lines — split longer bodies into paragraphs or use lists
 - footer (`TOKEN: value` / `TOKEN #value`): the block is preceded by a blank line. Blessed token: `BREAKING CHANGE:`
 
-There is no PR flow ([ADR-0009](docs/decisions/0009-engineering-baseline.md)): commits land by direct push to `main`, so every message must be landable as-is — it IS the history. Enforcement is local: the commit-msg hook (armed on devShell entry; `just setup` in non-Nix shells). The pre-commit hook additionally runs a secret scan over the staged diff (`xtask pr-guard --staged`); documented example secrets can carry a `pr-guard:allow` marker on their line.
+Maintainer commits land by direct push to `main` with no internal PR flow ([ADR-0020](docs/decisions/0020-open-source-hosting.md)), so every message must be landable as-is — it IS the history. Enforcement is local: the commit-msg hook (armed on devShell entry; `just setup` in non-Nix shells). The pre-commit hook additionally runs a secret scan over the staged diff (`xtask pr-guard --staged`); documented example secrets can carry a `pr-guard:allow` marker on their line.
 
 Semver mapping (consumed when release engineering returns): `fix` → PATCH, `feat` → MINOR, `!` → MAJOR.
 
@@ -51,7 +58,7 @@ This creates an **internal crate** (`version = "0.0.0"`, `publish = false`) with
 
 ## Releasing and remote CI
 
-Deferred. Release engineering (the release-plz / cargo-dist Forgejo spike) and the remote periodic workflows return with the Forgejo migration — see [ADR-0009](docs/decisions/0009-engineering-baseline.md). Until then every gate runs locally through `just`.
+Deferred. Release engineering and the remote periodic workflows return as a follow-up to the GitHub migration — see [ADR-0020](docs/decisions/0020-open-source-hosting.md). Until then every gate runs locally through `just`.
 
 ## Agent-assisted development
 

@@ -29,12 +29,12 @@
 
 ### A. 静态检查（全部可自动修复 → agent 自修复闭环）
 
-| 工具                                  | 抓什么                     | 跑在哪                          |
-| ------------------------------------- | -------------------------- | ------------------------------- |
-| clippy（pedantic + 精选 restriction） | 惯用法错误、可疑逻辑       | pre-commit 快门禁               |
-| rustfmt / dprint                      | 格式漂移                   | pre-commit（`--fix`）           |
-| typos                                 | 拼写错误（代码+文档）      | pre-commit（`--write-changes`） |
-| workflow lint                         | Forgejo workflow YAML 语法 | pre-commit                      |
+| 工具                                  | 抓什么                            | 跑在哪                          |
+| ------------------------------------- | --------------------------------- | ------------------------------- |
+| clippy（pedantic + 精选 restriction） | 惯用法错误、可疑逻辑              | pre-commit 快门禁               |
+| rustfmt / dprint                      | 格式漂移                          | pre-commit（`--fix`）           |
+| typos                                 | 拼写错误（代码+文档）             | pre-commit（`--write-changes`） |
+| workflow lint                         | GitHub Actions workflow YAML 语法 | pre-commit                      |
 
 ### B. 依赖与供应链
 
@@ -89,16 +89,16 @@
 
 ## 5. 推迟登记（含触发条件，防丢）
 
-| 项                     | 何时捡回                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------- |
-| loom / shuttle         | 第一个手写无锁/原子结构出现时                                                         |
-| criterion              | MVP 后出现公认热路径时                                                                |
-| cargo-vet              | 依赖数量或 agent 自选依赖频率失控时                                                   |
-| fuzz（L3）全面铺开     | 配置格式 / Luau ABI 稳定后                                                            |
-| Lean4 试点             | 结构设计收官 + 工程化落地后；先 spike 比较 hax/Aeneas 直译 vs model-first             |
-| 覆盖率地板线           | 测试策略大讨论定夺                                                                    |
-| crates.io 发布（OIDC） | 项目若要开源发布时（[ADR-0009](../decisions/0009-engineering-baseline.md) 留 opt-in） |
-| 轻 PR 评审面           | 用户 review 方案讨论时（[ADR-0009](../decisions/0009-engineering-baseline.md) 遗留①） |
+| 项                 | 何时捡回                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| loom / shuttle     | 第一个手写无锁/原子结构出现时                                                         |
+| criterion          | MVP 后出现公认热路径时                                                                |
+| cargo-vet          | 依赖数量或 agent 自选依赖频率失控时                                                   |
+| fuzz（L3）全面铺开 | 配置格式 / Luau ABI 稳定后                                                            |
+| Lean4 试点         | 结构设计收官 + 工程化落地后；先 spike 比较 hax/Aeneas 直译 vs model-first             |
+| 覆盖率地板线       | 测试策略大讨论定夺                                                                    |
+| workflow lint      | 随 workflows 恢复回归（GitHub 迁移后续，见 §6 第 8 条）                               |
+| 轻 PR 评审面       | 用户 review 方案讨论时（[ADR-0009](../decisions/0009-engineering-baseline.md) 遗留①） |
 
 ## 6. 大讨论待决清单
 
@@ -109,3 +109,5 @@
 5. Lean 试点内核确认（建议 fiber 状态机）+ 路线选择 spike
 6. F 类恢复测试的具体场景清单（随安装事务设计展开）
 7. 与用户 review 方案的联动（agent 产出的人类评审面如何与机器门禁互补）
+8. 远程 CI 重议：开源后 GitHub public repo CI 免费，"本地门禁是唯一测试门禁"的前提（自托管算力成本）已消失——远程跑测试从浪费变为外部 PR 的免费门禁（[ADR-0020](../decisions/0020-open-source-hosting.md)）；与 workflows 恢复同议题
+9. release 流水线与 crates.io 发布形态：crates.io opt-in 已随 [ADR-0020](../decisions/0020-open-source-hosting.md) 激活；`metis` crate 名被占（图分区库），二进制 crate 改名 / cargo-dist 分发的取舍；与第 8 条同批

@@ -4,14 +4,14 @@
 
 ## Commands (just is the only entry point; never bypass the quality gates)
 
-- Full quality gate: `just ci` (run before every commit; remote CI returns with the Forgejo migration)
+- Full quality gate: `just ci` (run before every commit; remote CI returns with the GitHub migration)
 - Format / static checks: `just fmt` / `just lint` (rustfmt + dprint for markdown)
 - All tests: `just test`; single test: `cargo nextest run -p metis <name>`
 - Iterate with the narrowest loop first (`cargo check -p <crate>`, scoped nextest); finish with `just ci`
 - Snapshot updates: `just snapshot-review` (approve each diff by hand; never bulk-accept)
 - New crate: `just new-crate <name>`
 - Dependency policy: `just deny`; docs build: `just doc`; agent-doc smoke check: `just agent-check`
-- Toolchain bump: `just toolchain-bump` (the wrapping weekly workflow returns with the Forgejo migration)
+- Toolchain bump: `just toolchain-bump` (the wrapping weekly workflow returns with the GitHub migration)
 
 ## Environment
 
@@ -35,7 +35,7 @@ Done = `just ci` green + self-review of the working diff.
 - NEVER hand-edit generated files: `Cargo.lock` (the generated-files list grows back when release engineering returns).
 - NEVER hand-write version numbers: the single storage point is `[workspace.package] version` in the root `Cargo.toml`.
 - NEVER commit code that hasn't passed `just ci`; NEVER assemble ad-hoc check pipelines that bypass just.
-- NEVER push tags or cut releases — release engineering is deferred (ADR-0009); version intent lives in commit messages only.
+- NEVER push tags or cut releases — release engineering is deferred (ADR-0020); version intent lives in commit messages only.
 - NEVER add agent-attribution footers (`Co-Authored-By`, "Generated with …") to commits.
 - NEVER force-push or rewrite shared history unless the human explicitly asks.
 - NEVER commit `HANDOFF.md` — transient session-handoff artifact (gitignored).

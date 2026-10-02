@@ -15,7 +15,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT OR Apache-2.0"
-# repository/homepage intentionally unset until the Forgejo remote exists (ADR-0009)
+repository = "https://github.com/metis-mind/metis"
 
 [workspace.dependencies]
 # ---- runtime dependencies ----
@@ -44,7 +44,7 @@ missing_panics_doc = "allow"
 module_name_repetitions = "allow"
 
 # give release binaries a solid optimization level (cross-platform
-# distribution returns with release engineering — ADR-0009)
+# distribution returns with release engineering — ADR-0020)
 [profile.release]
 lto = "thin"
 codegen-units = 1

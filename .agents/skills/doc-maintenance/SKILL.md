@@ -42,7 +42,7 @@ translation drift is a bug — flag or fix it when noticed.
 ## Co-evolution
 
 Behavior, commands, flags, or config changed → the affected docs change in the
-**same change** (no PR flow — ADR-0009). A doc-only change is for rot fixes.
+**same change** (no internal PR flow — ADR-0020). A doc-only change is for rot fixes.
 Never promise documentation "in a follow-up".
 
 ## Drift hunting (run when asked to "check the docs")

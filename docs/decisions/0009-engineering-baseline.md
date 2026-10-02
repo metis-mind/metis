@@ -1,6 +1,6 @@
 # 0009. 工程化基线：模板继承 + Forgejo + 1+N
 
-- Status: accepted
+- Status: accepted（托管 / 发布 / PR 三条款自 2026-10-02 起由 [ADR-0020](0020-open-source-hosting.md) 局部 supersede，其余条款不变）
 - Date: 2026-09-29
 
 ## Context

@@ -1,7 +1,7 @@
 # The task layer: the single implementation site for every repeatable piece of
 # automation in this repository. Local development and git hooks
 # (.pre-commit-config.yaml) are just callers; CI joins when workflows return
-# (Forgejo migration, ADR-0009). Rules: no version numbers here (reference the
+# (GitHub migration, ADR-0020). Rules: no version numbers here (reference the
 # SSOT of the layer below); no bashisms or duplicated arguments in recipes —
 # each tool's parameters live in that tool's own config file.
 
@@ -58,13 +58,13 @@ agent-check:
     cargo run -q -p xtask -- agent-check
 
 # Bump rust-toolchain.toml's channel to the latest stable release; requires
-# curl. The wrapping weekly workflow returns with the Forgejo migration.
+# curl. The wrapping weekly workflow returns with the GitHub migration.
 toolchain-bump:
     cargo run -q -p xtask -- bump-toolchain
 
 # Secret scan of a diff (added lines): token / private-key / .env shapes, hard
 # fail. `pr-guard --staged` is the local pre-commit half; a CI caller returns
-# with the Forgejo migration.
+# with the GitHub migration.
 pr-guard pr="":
     cargo run -q -p xtask -- pr-guard {{pr}}
 
