@@ -1,6 +1,6 @@
 # 0015. payload 与配置值的数据模型：自定义最小 Value
 
-- Status: accepted
+- Status: accepted（"扩展版"淘汰格的 `Int(i64)` 半、Decision 第一条整格、Decision"时间戳纪律"格的 rationale、Consequences 末条整格由 [ADR-0022](0022-value-int64.md) 局部取代——时间戳纪律本身不变）
 - Date: 2026-10-02
 
 ## Context

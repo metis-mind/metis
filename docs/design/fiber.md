@@ -1,7 +1,7 @@
 # Metis — Fiber 设计
 
-> 状态：核心已定（§8 四点 ✅ + §9 ✅ = [ADR-0019](../decisions/0019-crate-layout.md)）。
-> 2026-09-29 定稿；2026-10-02 §9 闭环（[ADR-0019](../decisions/0019-crate-layout.md)）。机制调研依据：`docs/research/cordis-research.md`；决策登记：[ADR-0010](../decisions/0010-fiber-core.md)。
+> 状态：核心已定（§8 四点 ✅ + §9 ✅ = [ADR-0019](../decisions/0019-crate-layout.md) + §10 ✅ = [ADR-0023](../decisions/0023-core-restart-semantics.md)）。
+> 2026-09-29 定稿；2026-10-02 §9 闭环（ADR-0019）；2026-10-03 §10 核心重启语义（ADR-0023）。机制调研依据：`docs/research/cordis-research.md`；决策登记：[ADR-0010](../decisions/0010-fiber-core.md)。
 
 ---
 
@@ -103,3 +103,16 @@ type Disposer = Box<dyn FnOnce() -> BoxFuture<'static, ()> + Send>;
 ## 9. fiber-core 纯 crate 切法（已定 ✅ = [ADR-0019](../decisions/0019-crate-layout.md)）
 
 5. 纯核心 = 不碰 tokio/mlua 的纯函数核心（状态机/账本 LIFO/epoch 指纹/失效闭包），返回动作描述由胶水解释执行；crate 物理分离（`metis-fiber-core`），仅允许纯数据依赖（slotmap/indexmap/thiserror 级）、不用 tracing；keyed diff 归独立纯 crate `metis-loader`。边界明细与被淘汰选项见 ADR-0019。
+
+## 10. 核心重启与插件语义（已定 ✅ = [ADR-0023](../decisions/0023-core-restart-semantics.md)）
+
+核心自身更新 = 进程级干净重启。插件侧**不引入重启专有钩子**，全程复用现有生命周期：
+
+- **关闭 = 全量 unload**：复用 drain 路径——LIFO 结账、优雅执行（disposer 可 await 在途持久化）、超时强制、依赖者先卸（与单次卸载同一契约，见 §2/§3 与 [ADR-0018](../decisions/0018-service-registry.md) S4）
+- **启动 = 全量 load**：复用启动路径——loader 挂载 entry + 激活门 + Pending 解析（与 [ADR-0018](../decisions/0018-service-registry.md) "恢复路径 = 启动路径复用"同一条筋）
+- 插件不区分"为核心重启卸载"与"为热更新卸载"——同一清理契约
+
+派生待办（登记不决）：
+
+- **跨重启状态政策**：进程死则 VM 全灭——什么状态落盘活下来（落盘 seam 原子写）、agent 自身连续性（进行中的对话、待审批）如何恢复，与 journal/replay 设计强耦合
+- **优雅关闭细则**：SIGTERM 处理、drain 总预算、in-flight 服务调用与邮箱残留处置——实现期议题

@@ -1,7 +1,7 @@
 # Metis — Context 面与事件系统设计
 
 > 状态：议题 0（执行模型）✅ = [ADR-0011](../decisions/0011-actor-execution-model.md)；协作通道框架 ✅ 讨论定论；
-> D2 ✅ = [ADR-0013](../decisions/0013-context-scope.md)；D3–D8 ✅ 全部确认（2026-10-02），固化为 [ADR-0014](../decisions/0014-dispatch-semantics.md)~[0017](../decisions/0017-programmatic-spawn-deferred.md)。
+> D2 ✅ = [ADR-0013](../decisions/0013-context-scope.md)；D3–D8 ✅ 全部确认（2026-10-02），固化为 [ADR-0014](../decisions/0014-dispatch-semantics.md)~[0017](../decisions/0017-programmatic-spawn-deferred.md)；D5 由 [ADR-0022](../decisions/0022-value-int64.md) 修订（2026-10-03）。
 > 2026-09-30 讨论。调研依据：`../research/cordis-research.md`；相关 ADR：[0001](../decisions/0001-inject-runtime-checks.md) / [0003](../decisions/0003-module-require-discipline.md) / [0005](../decisions/0005-vm-topology.md) / [0010](../decisions/0010-fiber-core.md)。
 
 ---
@@ -97,17 +97,19 @@ serial 的"注册顺序 + 首认领"只是 host 内置的默认路由策略；**
 - 边界：选择器不能改 host 派发语义，力量来自"站在入口"而非"修改路由器"；独占入口靠组合部署（preset/entry 树）保证
 - 含义：**派发策略本身成为可替换的用户空间组件**（everything-is-a-plugin 的又一兑现）；host 永远只提供四种硬编码默认策略
 
-## 3. payload 值类型（D5 ✅ = [ADR-0015](../decisions/0015-payload-value-model.md)，闭环 payload 类型遗留问题）
+## 3. payload 值类型（D5 ✅ = [ADR-0015](../decisions/0015-payload-value-model.md)，闭环 payload 类型遗留问题；`Int(i64)` 提正 = [ADR-0022](../decisions/0022-value-int64.md)）
 
 进程内派发**不需要字节编解码**：payload 以 Rust 值在 host 与各 VM 间传递，只在 VM 边界做 `Lua table ↔ Value` 转换。定的是数据模型，不是线路格式。
 
-| 方案                                              | 评                                                                                                                                                                            |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A. 自定义最小 `Value`（JSON 数据模型）** ✅采纳 | `Null/Bool/Float(f64)/String/Array/Map`；与 Luau 类型一一对应（数只有 f64、字符串 UTF-8），与 YAML 1.2 core schema（[ADR-0007](../decisions/0007-yaml-config-subset.md)）对齐 |
-| B. `serde_json::Value`                            | 零维护，但 number 语义绕（i64/u64/f64 三分对 Luau 无意义），config 侧还得再定一个类型                                                                                         |
-| C. 扩展版（+`Int(i64)`/`Bytes`）                  | 真实需求但 v1 无用户；登记为兼容扩展位，见首个用户再加                                                                                                                        |
+| 方案                                              | 评                                                                                                                                                                                                                                                         |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. 自定义最小 `Value`（JSON 数据模型）** ✅采纳 | `Null/Bool/Float(f64)/String/Array/Map`；与 Luau 类型一一对应（数只有 f64、字符串 UTF-8），与 YAML 1.2 core schema（[ADR-0007](../decisions/0007-yaml-config-subset.md)）对齐；**2026-10-03：+`Int(i64)`**（[ADR-0022](../decisions/0022-value-int64.md)） |
+| B. `serde_json::Value`                            | 零维护，但 number 语义绕（i64/u64/f64 三分对 Luau 无意义），config 侧还得再定一个类型                                                                                                                                                                      |
+| C. 扩展版（+`Int(i64)`/`Bytes`）                  | 真实需求但 v1 无用户，登记扩展位；**2026-10-03：`Int(i64)` 由 [ADR-0022](../decisions/0022-value-int64.md) 提正**（Luau 上游采纳 64 位整数 RFC），`Bytes` 仍留扩展位                                                                                       |
 
 采纳 A，且 **config 值与事件 payload 共用同一 `Value`**——schema 校验、审批 diff、volatile 快路径、事件日志全套基础设施只吃一种数据模型（"数据大一统"）。
+
+> 2026-10-03 更新：`Value` 增加 `Int(i64)`（[ADR-0022](../decisions/0022-value-int64.md)）——Luau 上游已采纳 64 位整数 RFC（luau-lang/rfcs#153），边界原生映射；2⁵³ 精度天花板论述由原生整数承接。
 
 ## 4. `internal/*` 钩子处置（D6 ✅ = [ADR-0016](../decisions/0016-internal-hooks.md)）
 
@@ -144,13 +146,13 @@ v1 只走声明式 entry 树，`ctx:spawn` 推迟。理由：警惕第二条生�
 
 ## 8. 决策点状态
 
-| #  | 决策点                                                                        | 状态                                                                                 |
-| -- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| D1 | 执行模型 actor 语义 + tokio                                                   | ✅ [ADR-0011](../decisions/0011-actor-execution-model.md)                            |
-| D2 | Context 形态 = fiber 句柄；作用域特性 v1 全裁，isolate/intercept 推迟到任务 5 | ✅ [ADR-0013](../decisions/0013-context-scope.md)                                    |
-| D3 | 五种收敛为四语义（bail 并入 serial）                                          | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                               |
-| D4 | waterfall = 变换链+否决，非真洋葱                                             | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                               |
-| D5 | payload = 自定义 JSON 数据模型 `Value`，config 共用                           | ✅ [ADR-0015](../decisions/0015-payload-value-model.md)（闭环 payload 类型遗留问题） |
-| D6 | internal 钩子 v1 开 plugin/status，机制保留                                   | ✅ [ADR-0016](../decisions/0016-internal-hooks.md)                                   |
-| D7 | 编程式 spawn v1 推迟                                                          | ✅ [ADR-0017](../decisions/0017-programmatic-spawn-deferred.md)                      |
-| D8 | serial 遇错不短路，值短路唯一                                                 | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                               |
+| #  | 决策点                                                                        | 状态                                                                                                                                                  |
+| -- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1 | 执行模型 actor 语义 + tokio                                                   | ✅ [ADR-0011](../decisions/0011-actor-execution-model.md)                                                                                             |
+| D2 | Context 形态 = fiber 句柄；作用域特性 v1 全裁，isolate/intercept 推迟到任务 5 | ✅ [ADR-0013](../decisions/0013-context-scope.md)                                                                                                     |
+| D3 | 五种收敛为四语义（bail 并入 serial）                                          | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                                                                                                |
+| D4 | waterfall = 变换链+否决，非真洋葱                                             | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                                                                                                |
+| D5 | payload = 自定义 JSON 数据模型 `Value`，config 共用                           | ✅ [ADR-0015](../decisions/0015-payload-value-model.md)（闭环 payload 类型遗留问题）+ [ADR-0022](../decisions/0022-value-int64.md)（`Int(i64)` 提正） |
+| D6 | internal 钩子 v1 开 plugin/status，机制保留                                   | ✅ [ADR-0016](../decisions/0016-internal-hooks.md)                                                                                                    |
+| D7 | 编程式 spawn v1 推迟                                                          | ✅ [ADR-0017](../decisions/0017-programmatic-spawn-deferred.md)                                                                                       |
+| D8 | serial 遇错不短路，值短路唯一                                                 | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                                                                                                |
