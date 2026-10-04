@@ -317,3 +317,13 @@ wasm 盒的一切 IO 走 host imports → **天然全量可拦截、可进 journ
 | **coroutine 跨 host 挂起恢复** | **PASS——ADR-0021 R1（最大技术风险）解除**：Lua 侧直线同步写法成立（嵌套/跨 pcall/复杂 table/同实例并发挂起逆序兑现全过）；约束 = 必须 `eval_async`/`into_async` 驱动 |
 | stdlib 裁剪 | PASS：无 io/package，os 天生仅 4 函数；per-instance 摘除替换成功；**默认 stdlib 表可写，硬化须 `Lua::sandbox(true)`，宿主注入先于冻结** |
 | integer（RFC #153） | PARTIAL→已补：字面量/buffer API 默认关（4 个进程级 fflag、早于任何 VM 创建可全开）；`integer` 库默认在；**mlua 写路径走 f64 失精度、读路径全精度**——精确注入用公开 ffi（`lua_pushinteger64`+`exec_raw`）~15 行收口于 metis-luau 转换层（97–120 ns/op），上游适配后删辅助；VM 运算符对 integer 报错为上游设计（算术走 `integer.*` 库） |
+
+---
+
+## 补遗 2（2026-10-05）：补录 mlua spike 的宿主函数调用成本
+
+> 性质：addendum——补录补遗 1 漏记的一行实测（同一 mlua spike、同一 probe7，scratch 一次性工程不入库），供 `../design/seam-capabilities.md` §2.6 成本锚点引用。
+
+| 项 | 实测 |
+| --- | --- |
+| Luau→host 函数调用 | **24.7 ns/op**（Lua 调用 raw `create_c_function`，×1M 均值）——sync 直挂闭包的调用成本锚点；与 wasm 侧 "`get_export` 未缓存 26 ns" 同类教训：**句柄缓存是两侧共同的纪律** |
