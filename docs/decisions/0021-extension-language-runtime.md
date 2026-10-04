@@ -1,6 +1,6 @@
 # 0021. 扩展语言运行时选型：Luau + mlua
 
-- Status: accepted
+- Status: accepted（淘汰表 wasm 行适用范围由 [ADR-0024](0024-carrier-layering.md) 局部取代；整插件进程（T2）例外通道地位由同 ADR 订立）
 - Date: 2026-10-03
 
 ## Context

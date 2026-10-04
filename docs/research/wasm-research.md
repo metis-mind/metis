@@ -277,3 +277,43 @@ wasm 盒的一切 IO 走 host imports → **天然全量可拦截、可进 journ
 - 性能基准：Jangda 等 USENIX ATC 2019（usenix.org）；bytecodealliance.org/articles/wasmtime-10-performance（2022-09-06）；bytecodealliance.org/articles/making-javascript-run-fast-on-webassembly（Lin Clark）
 - 生产案例：github.com/proxy-wasm/spec；envoyproxy.io wasm filter 文档；shopify.dev/docs/apps/build/functions（+ programming-languages/webassembly-for-functions）；github.com/Shopify/shopify-function-wasm-api；fastly.com/products/edge-compute；docs.fastly.com；github.com/spinframework/spin；www.fermyon.com（301→akamai.com 记录）；github.com/wasmCloud/wasmCloud；wasmcloud.com/blog/wasmcloud-v2-is-here/ + RSS + cosign 签名博文（2025-09-02）；zellij.dev/documentation/plugins；github.com/zellij-org/zellij；github.com/lapce/lapce（+ lapce-proxy/Cargo.toml）；docs.lapce.dev；github.com/extism/extism；extism.org；github.com/CosmWasm/cosmwasm；github.com/near/near-sdk-js；github.com/paritytech/polkavm
 - 核查失败记录：fastly.com 博客（拒绝）、fermyon.com（WAF 403）、shopify.engineering 旧文（404）、Roblox NCG 博客（404）、bytecodealliance.org/articles/winch（404）、golang 组件模型 issue（未取到）——相关条目均已降级标注
+
+---
+
+## 补遗 1（2026-10-05）：双 spike 实测标定与两个修正
+
+> 性质：addendum——对正文 💭 推断与官方口径的实测复核，不改写正文结论。**spike 执行于 2026-10-04**（本补遗落笔于 2026-10-05）。执行方式：两个独立技术探针（scratch 一次性工程，不入库），环境 R7 5800X / 16GiB / NixOS，全部 release 构建。决策消化见 [ADR-0024](../decisions/0024-carrier-layering.md)。
+
+### wasmtime spike（wasmtime 49.0.2）——官方口径全部兑现或偏保守
+
+| 项 | 实测值 | 对照正文 |
+| --- | --- | --- |
+| 实例化 | 冷启 11.6 µs / InstancePre 7.4 µs / **pooling 1.7 µs**；4.16 MiB 模块几乎同速（CoW 初始化抹平） | §0"µs 级"✓ |
+| fuel vs epoch | 平坦算术循环 fuel **1.022×**、epoch **1.000×**；病态形态（每迭代一次调用）两者均 1.78×（每检查点 ≈1 ns） | §0 口径（epoch ~10%、fuel ≈ epoch 的 2×）= 保守上限 |
+| 限额×性能 | limiter 超限拦截全生效（grow 返 -1 / trap / 实例化期拒载），稳态**零开销**（0.999×）；pooling 账：100 槽×64 MiB = +6.48 GiB VA 零 RSS，实触 100 MiB → +100.6 MiB RSS，drop 即 madvise 归还 | §2 容量规划账式实测吻合 |
+| host 跨界 | 空操作调用 **4.3 ns**；`get_export` 每次 26 ns（**句柄必须缓存**）；拷入随尺寸 ~15.6 GiB/s 封顶 | §3.4"数十 ns"✓ |
+| `.cwasm` | 加载 **158–480 µs** vs 源码编译 29–96 ms（**183–199×**，deserialize_file mmap 更快）；体积反小于 wasm（0.72–0.84×） | §3.1 编译移出关键路径 ✓ |
+
+### 修正一：§3.5 的"wasm ≈ Luau 5–20×"推断被推翻
+
+同算法三形态对比（数值核 bit32 / 逐字节文本 / 地道 Luau 写法）：
+
+- **标量逻辑 wasm 领先 36–125×**（bit32 数值核 62.5×、逐字节文本 40×）——远超推断区间；
+- **C 算子密集代码仅 6.8×**（地道 Luau 写法 `string.split` 等 C 算子）——推断只对该形态成立；
+- **Luau NCG 对内建函数密集代码零加速**（bit32/string.byte/buffer 均不吃 NCG；仅纯 FP 核 1.9×）——§3.5 折让 (b)"NCG 追回 2–3×"对内建密集形态不适用，ADR-0021"性能上限 → NCG"一条的期望随之打折。
+
+工程含义：粒度规则不变且收益更大；"重活不在 Luau 里逐字节/逐元素循环"写进 SDK 文档。
+
+### 修正二：§1.3/§5.10 WASI 0.3 —— host 已备、guest 工具链未跟上
+
+**guest 构建 BLOCKED：Rust 无 `wasm32-wasip3` target**（rustup 仅 wasip1/wasip1-threads/wasip2）；wasmtime 侧 p3 模块标 experimental。wasip2 组件 async 形态跑通（编译 13 ms、实例化 113 µs、运行 196 µs）。落地路径：guest WASI 进口走 wasip2 组件、wasmtime 按 world 分流，wasip3 target 落地后迁移（ADR-0024 第 3 节）。另：Nix 管理工具链不能 `rustup target add`，guest 构建需 rustup 自管工具链。
+
+### mlua spike（mlua 0.12.2 vendored Luau 0.740）——ADR-0021 R1 风险解除
+
+| 项 | 结果 |
+| --- | --- |
+| 独立 lua_State + require | PASS：实例间全局彻底隔离；`Lua::create_require_function` + `Require` trait = 现成 per-plugin 模块缝（内存虚拟模块树实证） |
+| table↔Value | PASS：`Value::Table` 为注册表引用（~11 ns 往返零拷贝），深拷贝 ~300 ns/entry（2 万 entry 表 ~6.1 ms） |
+| **coroutine 跨 host 挂起恢复** | **PASS——ADR-0021 R1（最大技术风险）解除**：Lua 侧直线同步写法成立（嵌套/跨 pcall/复杂 table/同实例并发挂起逆序兑现全过）；约束 = 必须 `eval_async`/`into_async` 驱动 |
+| stdlib 裁剪 | PASS：无 io/package，os 天生仅 4 函数；per-instance 摘除替换成功；**默认 stdlib 表可写，硬化须 `Lua::sandbox(true)`，宿主注入先于冻结** |
+| integer（RFC #153） | PARTIAL→已补：字面量/buffer API 默认关（4 个进程级 fflag、早于任何 VM 创建可全开）；`integer` 库默认在；**mlua 写路径走 f64 失精度、读路径全精度**——精确注入用公开 ffi（`lua_pushinteger64`+`exec_raw`）~15 行收口于 metis-luau 转换层（97–120 ns/op），上游适配后删辅助；VM 运算符对 integer 报错为上游设计（算术走 `integer.*` 库） |
