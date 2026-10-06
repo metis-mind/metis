@@ -208,7 +208,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 
 - **fs**（`ctx.fs.*`）：v1 = 每插件私有数据目录（preopen 哲学，路径天然隔绝）；读/写分档声明；写 = 临时文件 + rename **原子写**（[ADR-0023](../decisions/0023-core-restart-semantics.md) 落盘要求的落点）；共享 workspace 登记 session 议题
 - **http**（`ctx.http.request`）：透明 gzip（§4.2 判出的主场景在此吸收）；**强制超时**（不允许无 deadline 请求）；响应默认进内存带预算，大 body/SSE 走流式（§3.2 约束①）；**域名白名单细化归 A2**（prompt 注入 → 数据外泄是 agent 头号攻击面，声明粒度是安全权重最高的一格）
-  - 配套政策登记（随白名单一并归 A2/实现期）：跨域重定向须重新对账白名单（open-redirect 旁路）；DNS 解析层拒绝内网/链路本地段（SSRF——localhost、RFC1918、`169.254.0.0/16`）
+  - 配套政策（**白名单政策 SSOT = [luau-abi](luau-abi.md) §A2.5**，2026-10-06 落位）：跨域重定向须重新对账（open-redirect 旁路）；SSRF = 解析结果非全局单播即拒（含 v6）+ 白名单显式授予内网 + 最终解析结果判定钉住；明文 http 须 `http://` 显式标记——细则以该节为准
 - **timer**（`ctx.timer.after/every`）：replay 按史注入不按墙钟；注册为 fiber 的一笔 effect、卸载随 LIFO drain 自动取消（无孤儿）；**无能力门，但 `every` 设最小间隔政策**（机制在此，数值实现期配置；DSH 先例 5 分钟硬下限锚的是**持久调度**梯度，见 §5.5）；cron 形态登记
 - **spawn**：v1 不给（编程式 spawn 已推迟 = [ADR-0017](../decisions/0017-programmatic-spawn-deferred.md)；外部服务 = 部署组成，[ADR-0024](../decisions/0024-carrier-layering.md) §1；MCP stdio 监管机器 host 自持，非 syscall）
 
@@ -234,7 +234,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 | ----------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | 易失定时（秒–分钟，热更/卸载即消）  | `ctx.timer.after/every`                              | 核心原语（§5.2）                                                                                                                            |
 | 持久调度（跨热更/重启的提醒）       | 插件层 schedule 服务 = sqlite + timer 原语 + journal | 插件层议题登记（DSH `dsh-schedule` 已验证此路线：日志持真相、定时器为易失投影、every ≥5min、错过间隔不补发、墙钟回拨不早发/前跳算 overdue） |
-| 声明式周期任务（cron 式，更可审批） | manifest/config 声明                                 | A2/配置议题登记                                                                                                                             |
+| 声明式周期任务（cron 式，更可审批） | v1 = config 键约定（[luau-abi](luau-abi.md) §A2.7）  | 一等声明式调度复审归任务 4                                                                                                                  |
 | replay 中的时间                     | 按史注入                                             | 已定（§5.3）                                                                                                                                |
 
 主被动模型注：timer 不破"插件被动调用"模型——tick 是邮箱消息的一种（[ADR-0011](../decisions/0011-actor-execution-model.md)），`every` = 订阅宿主时钟这个事件源；主被动分界 = **谁拥有循环**，线程式 `while+sleep` 已结构性封死（§2.8 多线程条）。
