@@ -1,6 +1,6 @@
 # 0011. 执行模型：actor 语义 + tokio
 
-- Status: accepted
+- Status: accepted（「同一时刻一个插件最多一个回调在执行……串行性绝对」的 run-to-completion 解读 = 局部 supersede 意向已登记于 [luau-abi](../design/luau-abi.md) §A4.1，2026-10-08 定案插件内自由交错；正式 supersede 随 Luau ABI 冻结 ADR 一并立）
 - Date: 2026-09-30
 
 ## Context

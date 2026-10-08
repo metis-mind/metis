@@ -1,7 +1,7 @@
 # Metis — Context 面与事件系统设计
 
 > 状态：议题 0（执行模型）✅ = [ADR-0011](../decisions/0011-actor-execution-model.md)；协作通道框架 ✅ 讨论定论；
-> D2 ✅ = [ADR-0013](../decisions/0013-context-scope.md)；D3–D8 ✅ 全部确认（2026-10-02），固化为 [ADR-0014](../decisions/0014-dispatch-semantics.md)~[0017](../decisions/0017-programmatic-spawn-deferred.md)；D5 由 [ADR-0022](../decisions/0022-value-int64.md) 修订（2026-10-03）。
+> D2 ✅ = [ADR-0013](../decisions/0013-context-scope.md)；D3–D8 ✅ 全部确认（2026-10-02），固化为 [ADR-0014](../decisions/0014-dispatch-semantics.md)~[0017](../decisions/0017-programmatic-spawn-deferred.md)；D5 由 [ADR-0022](../decisions/0022-value-int64.md) 修订（2026-10-03）。执行模型的串行解读由 [luau-abi](luau-abi.md) §A4.1 收窄（2026-10-08，见 §0.3 末修订注）。
 > 2026-09-30 讨论。调研依据：`../research/cordis-research.md`；相关 ADR：[0001](../decisions/0001-inject-runtime-checks.md) / [0003](../decisions/0003-module-require-discipline.md) / [0005](../decisions/0005-vm-topology.md) / [0010](../decisions/0010-fiber-core.md)。
 
 ---
@@ -39,6 +39,8 @@ loop {
 ```
 
 串行铁律：同一时刻一个插件最多一个回调在执行；插件作者写无锁顺序代码。插件世界里一切都经邮箱到达（事件/服务调用/dispose/定时器），串行性绝对，无后门。
+
+> 2026-10-08 修订注：本节「串行处理循环」「串行性绝对」与 worker 伪码的 run-to-completion 解读已被 [luau-abi](luau-abi.md) §A4.1 收窄——插件内执行模型 = 协作式自由交错（同一瞬间至多一条协程在 CPU 上仍成立；handler 挂起即让路，多条回调可在飞交错，互斥 = 显式 `ctx.exclusive`）。跨插件层（星型拓扑、邮箱路由）与时间盒/超时两保险不受影响；bounded 邮箱保险的背压面变化（积压面移至在飞协程数）= §A4.1 D1.4 写实 + 联动登记实现期预算。worker 伪码的语义更新归实现期。
 
 ### 0.4 爆炸半径三层保险
 
