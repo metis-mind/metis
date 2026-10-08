@@ -8,18 +8,25 @@
 
 ## 0. 术语锚点（本文档新增；共享术语见 [seam-capabilities](seam-capabilities.md) §0）
 
-| 术语          | 含义                                                                                                                                      |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 入口契约      | loader 加载插件入口模块后"第一眼"看到的形状：返回值形状、setup 签名、清理习语——插件作者每天要写的第一行代码                               |
-| 两形态        | 纯代码插件 `plugins/foo.luau`（无 manifest）/ 包插件 `plugins/foo/`（manifest + `entry:` 缺省 `main.luau`），ADR-0004 冻结                |
-| `plugin()` 糖 | 宿主注入的全局函数：`plugin(fn)` ≡ `{ setup = fn }`——写码层便利，不是第二种契约形态                                                       |
-| manifest      | 包插件的自述文件 `manifest.yml`（§A2）：我是谁/怎么加载我/我需要什么/我提供什么/我带了什么                                                |
-| 配置树        | 部署者的装配单（`metis.yml` 等价物）：装哪些插件、每个实例给什么 config 值、挂在哪——归任务 4，≠ manifest                                  |
-| 契约包        | `lib/` 里的契约库：服务契约（方法集 + schema + 文档）独立于提供方存在（Seam 三角，ADR-0018 S6）                                           |
-| `deps`        | setup 第三参数：宿主按 manifest inject 装配的依赖句柄表（冻结）。二分：ctx = 宿主契约面（人人相同）/ deps = manifest 派生面（各插件不同） |
-| 烘焙          | 句柄生成方式：宿主按声明（注册表方法集 / 盒导出清单）逐方法生成 Rust 闭包装成冻结表；方法集快照随激活定格，epoch 重启刷新                 |
-| scope         | fs 能力的范围标识三键：private（私域免绑定）/ workspace（部署绑定根）/ global（用户世界 − 两条豁免）                                      |
-| 豁免          | carve-out：对一切 fs scope（含 global）读写同禁的两处——secrets store 与 journal                                                           |
+| 术语          | 含义                                                                                                                                                                    |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 入口契约      | loader 加载插件入口模块后"第一眼"看到的形状：返回值形状、setup 签名、清理习语——插件作者每天要写的第一行代码                                                             |
+| 两形态        | 纯代码插件 `plugins/foo.luau`（无 manifest）/ 包插件 `plugins/foo/`（manifest + `entry:` 缺省 `main.luau`），ADR-0004 冻结                                              |
+| `plugin()` 糖 | 宿主注入的全局函数：`plugin(fn)` ≡ `{ setup = fn }`——写码层便利，不是第二种契约形态                                                                                     |
+| manifest      | 包插件的自述文件 `manifest.yml`（§A2）：我是谁/怎么加载我/我需要什么/我提供什么/我带了什么                                                                              |
+| 配置树        | 部署者的装配单（`metis.yml` 等价物）：装哪些插件、每个实例给什么 config 值、挂在哪——归任务 4，≠ manifest                                                                |
+| 契约包        | `lib/` 里的契约库：服务契约（方法集 + schema + 文档）独立于提供方存在（Seam 三角，ADR-0018 S6）                                                                         |
+| `deps`        | setup 第三参数：宿主按 manifest inject 装配的依赖句柄表（冻结）。二分：ctx = 宿主契约面（人人相同）/ deps = manifest 派生面（各插件不同）                               |
+| 烘焙          | 句柄生成方式：宿主按声明（注册表方法集 / 盒导出清单）逐方法生成 Rust 闭包装成冻结表；方法集快照随激活定格，epoch 重启刷新                                               |
+| scope         | fs 能力的范围标识三键：private（私域免绑定）/ workspace（部署绑定根）/ global（用户世界 − 两条豁免）                                                                    |
+| 豁免          | carve-out：对一切 fs scope（含 global）读写同禁的两处——secrets store 与 journal                                                                                         |
+| tagged union  | 类型标签 + 载荷的联合体 = VM 值的内存形态；Luau↔Rust 边界 = 查标签取载荷（无序列化），对照 wasm 盒边界的字节流拷入拷出（§A6.0）                                         |
+| 元表          | metatable：Luau table 可挂的隐形同伴表（`setmetatable`），定义 `__index` 缺省读取 / `__newindex` 写拦截 / 运算符重载等行为；深快照只读原始内容，元表行为不跨界（§A6.2） |
+| WIT           | WebAssembly Interface Types：wasm 组件的接口描述语言（.wit 文件声明组件导入/导出函数的名字与类型）；类型经 canonical ABI 铺成线性内存字节（§A6.6）                      |
+| canonical ABI | WIT 类型 ↔ wasm 线性内存字节布局的标准映射规则（lift/lower）；WIT 签名取琐碎形态后，它只负责搬 `list<u8>` 字节（§A6.6）                                                 |
+| NaN-boxing    | 借 f64 的冗余 NaN 模式（2⁵² 个）当标签空间的 64bit 值编码：非 NaN 模式 = f64 原样内联；NaN 模式 = 52 尾数位装 tag+载荷（§A6.6）                                         |
+| out-of-line   | 值不内联在 cell 里，cell 装 32bit 缓冲内偏移指向真实数据（i64/string/容器；对照 float 内联）；偏移永不解引用为宿主指针（§A6.6）                                         |
+| 盒流式        | 核心↔盒边界的大数据增量传输（对照 §A6.5 Luau 侧流式句柄族）；v1 不立，预定形态 = host imports 回调流（§A6.6）                                                           |
 
 ## A1 插件包形态与入口契约（2026-10-06 收官）
 
@@ -207,7 +214,7 @@ ctx = 插件代码手里唯一的宿主句柄；Rust 侧形态 = `Context { fibe
 ### A3.1 容器形态：frozen table
 
 - **决策**：ctx 及一切宿主装配句柄（deps 句柄、盒句柄、process 句柄）= **宿主构建的 table，递归只读化**（`set_readonly`，与 stdlib 硬化同款机制，seam §1.4）；无元表、无 `__index` 魔法；方法 = 宿主逐个安装的 Rust 闭包（身份闭包捕获）。写即响亮报错。
-- **淘汰 userdata**：① 方法集按 Rust 类型静态注册——deps/盒句柄的方法集是运行期按注册表/导出清单生成的，userdata 只能退回 `__index` 动态分发，反而引入隐式行为（ADR-0013 杀 Proxy 魔法的同向选择）；② `pairs`/`print` 不可内省，Creator 场景 agent 失去运行时自探索面；③ Luau 类型系统对 userdata 形状的表达弱于 table type（A10 类型定义成本）。userdata 留给真正有不透明原生状态的东西——流式句柄族（A6 再审）。
+- **淘汰 userdata**：① 方法集按 Rust 类型静态注册——deps/盒句柄的方法集是运行期按注册表/导出清单生成的，userdata 只能退回 `__index` 动态分发，反而引入隐式行为（ADR-0013 杀 Proxy 魔法的同向选择）；② `pairs`/`print` 不可内省，Creator 场景 agent 失去运行时自探索面；③ Luau 类型系统对 userdata 形状的表达弱于 table type（A10 类型定义成本）。userdata 留给真正有不透明原生状态的东西——流式句柄族（A6 再审）。（2026-10-08 修订注：再审已结案 = **淘汰**，全族 frozen table 烘焙，§A6.5 D5.2。）
 - **防篡改等效**：递归只读 + 无元表 ⇒ 与 userdata 同档（rawset 响亮报错；debug 库已裁，seam §1.3）；残留“遮蔽”（插件自造表指过来）只影响自己。**安全强制点与容器无关**：能力门 / journal / 归属全在 Rust 宿主侧。
 
 ### A3.2 顶层组织
@@ -217,8 +224,8 @@ ctx
  ├─ on / emit / serial / parallel / waterfall   -- 事件编排（A3.4，扁平）
  ├─ provide                                      -- 服务暴露（A3.5）
  ├─ box(name)                                    -- 盒句柄获取（A3.12）
- ├─ fs / workspace / global                      -- 文件三 scope（A3.7）
- ├─ http.request                                 -- A3.8
+ ├─ fs / workspace / global                      -- 文件三 scope（A3.7；2026-10-08 §A6.4/§A6.5 增补：readbytes / writebytes / openread / openwrite）
+ ├─ http.request / http.stream                   -- A3.8（http.stream = 2026-10-08 §A6.5）
  ├─ timer.after / every / sleep                  -- A3.6
  ├─ sql.exec / query                             -- A3.9
  └─ process.exec / spawn                         -- A3.10
@@ -300,7 +307,7 @@ ctx.timer.sleep(2_000)   -- 挂起当前协程 2 秒，期间邮箱其他消息�
   1. **词法归一**（纯字符串，不碰盘）：解掉 `.`/`..`/重复分隔符 → 标准形；confined scope 判结果是否仍在根内，逃逸即拒——杀 `./x/../../../etc` 类词法逃逸。
   2. **物理 canonicalize**（解 symlink 后再验）：confined scope 验“仍在 canonical 根内”；global 验“未命中豁免清单”——**豁免必须验在 canonical 之后**，否则放个指向 secrets store 的软链即绕过。
      TOCTOU 硬化（检查与 open 之间的路径偷换：`openat2(RESOLVE_BENEATH)` / open 后 fstat 复核）归实现期清单；ABI 只冻结两段式语义。
-- **五方法**（三 scope 同方法集）：`read(path) -> string` / `write(path, content)`（原子写 tmp+rename，seam §5.2；**自动建父目录**——私域/绑定根内无共享语义，省一个 mkdir）/ `list(dir?) -> array` / `delete(path)` / `exists(path) -> bool`。append = read+write 组合（actor 串行无并发写者）；glob/mkdir 等一律不立。大文件/二进制 = A6 的 Bytes/buffer 扩展位；read 带大小预算（实现期配置）。
+- **五方法**（三 scope 同方法集）：`read(path) -> string` / `write(path, content)`（原子写 tmp+rename，seam §5.2；**自动建父目录**——私域/绑定根内无共享语义，省一个 mkdir）/ `list(dir?) -> array` / `delete(path)` / `exists(path) -> bool`。append = read+write 组合（actor 串行无并发写者）；glob/mkdir 等一律不立。大文件/二进制 = A6 的 Bytes/buffer 扩展位（2026-10-07 §A6.4 兑现：静态二进制读写 = `readbytes -> buffer` / `writebytes` 分立方法；`read` 保 UTF-8 契约、非 UTF-8 响亮失败指路 `readbytes`；大文件归 §A6.5 流式句柄）；read 带大小预算（实现期配置）。
 
 ### A3.8 http 单方法
 
@@ -317,7 +324,7 @@ local resp = ctx.http.request({
 
 - 单方法 + opts table：HTTP 的语义复杂度天然是命名参数；get/post 糖归 SDK 插件层，核心保持一格。
 - 安全政策 **SSOT = §A2.5**（域名白名单/https 缺省/SSRF 最终解析判定/跨域重定向重对账/响应预算），不在此重复；透明 gzip 宿主吸收（seam §5.2）。
-- SSE/大 body 流式 = 扩展位（seam §3.2 约束①；wasm 侧答案 = WASI 0.3 async，ADR-0024 §3）；v1 响应进内存带预算。
+- SSE/大 body 流式 = 扩展位（seam §3.2 约束①；wasm 侧答案 = WASI 0.3 async，ADR-0024 §3）；v1 响应进内存带预算。（2026-10-08 修订注：下载流式已兑现 = `ctx.http.stream` 分立方法，§A6.5 D5.4；剩余扩展位 = 流式上传。）
 
 ### A3.9 sql 两方法与私有 db
 
@@ -328,7 +335,7 @@ local rows = ctx.sql.query("SELECT * FROM intents WHERE due < ?", { now })
 -- rows = { { id = "...", payload = "..." }, ... }
 ```
 
-- 两方法按有无结果集分：`exec`（DDL/DML → 受影响行数）/ `query`（→ 行数组，列名→值）。**只许参数化占位 `?`**：注入防护 + 类型转换单挂点；分页参数 = 实现期配置（seam §6.3）。
+- 两方法按有无结果集分：`exec`（DDL/DML → 受影响行数）/ `query`（→ 行数组，列名→值）。**只许参数化占位 `?`**：注入防护 + 类型转换单挂点；分页参数 = 实现期配置（seam §6.3）。（2026-10-08 修订注：v1 不立 BLOB 列，遇 BLOB 响亮失败指路“存 TEXT 或走 fs”；列映射 = NULL→Null / INTEGER→`Int(i64)` / REAL→Float / TEXT→String，§A6.4 D4.3。）
 - **每插件一个私有 db**（`sqlite: true` 无参数，§A2.5）：物理位置 core 管理、**不在本插件 fs 私域子树内**（自己的 `ctx.fs` 够不到 = 手滑写花结构性不存在）；global scope 可达（维护/调试正道，§A3.7）。生命周期随插件私有数据政策（卸载保留与否归任务 4）。
 - **价值定位**：fs+JSON 管整张读写小状态；ctx.sql 管多记录条件查询（索引/WHERE/排序/分页——编排层手写 = 在最慢的一层重新发明 sqlite）；共享归服务层（物理共享 db = schema 归属/迁移/锁三烂摊子 + 提供方可替换性死亡；“共享关系存储”收敛后的正当形态 = 平台契约 + 参考实现插件，§A2.4 三层已留位）。核心提供而非盒自包的理由：journal 粒度（`sql_call`/`sql_result` vs 盒内经 fs 的 `fs_write` 字节流，审计与 replay 同降档）+ WAL/崩溃一致性白拿。近消费者：memory、schedule（seam §5.5 梯度二）、session/历史。
 - **事务 = 扩展位**：候选 = 原子 batch（一组语句一次调用、不可挂起，无脚枪）/ tx 回调；带真实用例再审。
@@ -353,7 +360,7 @@ local exit = p.wait()             -- 挂起等退出 → { code = 0 }
 p.kill()                          -- 杀进程组
 ```
 
-- **结构纪律**：句柄/在途 exec = 账本条目，卸载 drain 杀**进程组**（无孤儿，与 timer 同铁律）；未读输出 = 宿主管道缓冲自然背压 + 预算上限；更富的流式形态（行/事件）归 SDK 组合。
+- **结构纪律**：句柄/在途 exec = 账本条目，卸载 drain 杀**进程组**（无孤儿，与 timer 同铁律）；未读输出 = 宿主管道缓冲自然背压 + 预算上限；更富的流式形态（行/事件）归 SDK 组合；chunk = buffer（2026-10-07 §A6.5 族规范统一定，文本消费 = 插件层 buffer→string/行切分组合）。
 - **journal**：`process_spawn`/`process_exit` 元数据 + exec 输出（带预算）；spawn 流式内容默认不进（写入量账 seam §6.2，粒度政策任务 6）。**行为透明是核心对不可预测命令能给的真正护栏：藏不住。** replay = record/inject 到头，副作用出视野不可回滚（任务 6 登记）。
 - 与 MCP 的关系：ADR-0024 的 MCP stdio 监管机器 = host 自持物，与插件侧 process 能力井水不犯河水。
 - **实现节奏**：ABI 形状本节冻结，落地随默认插件集（shell tool = 参考实现近需求）——“ABI 先行、实现后随”，与 workspace 绑定同模式。
@@ -372,24 +379,186 @@ local ast = parser.parse(source)   -- 挂起式调用：盒内 ms 级计算不�
 - **访问器 `ctx.box(name)`**：盒不是服务依赖（不卡激活门），是按需获取的能力句柄——与能力门同走 ctx 挂载位（seam §2.3）；analyze 对账 `box()` 调用（§A2.5/A10）形状衔接。
 - 句柄 = 冻结表烘焙方法集（按盒导出清单生成——§A3.1 统一模型第三次兑现）；实例池/句柄缓存 = 宿主内部事（ADR-0024 §8：句柄必须缓存，否则 +26ns/次）。
 - **调用挂起**：盒内 ms 级 CPU 密集 → 卸载 blocking 池 + 两跳 resume（与效应调用同形态，作者直线写法不变）。
-- 归 A6：参数/返回线编码（NaN-boxed 参照）、大 Value 零拷贝/Arc、流式；归 A7：WIT 形式化。
+- 归 A6：参数/返回线编码（NaN-boxed 参照）、大 Value 零拷贝/Arc、流式；归 A7：WIT 形式化。（2026-10-08 修订注：§A6.6 已收官——线编码定案 TLV 家族非 NaN-boxed，盒流式 v1 不立。）
 
 ### A3.13 联动登记汇总
 
-| 去向                | 内容                                                                                                                                                         |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A4（await/交错）    | 挂起点 = ctx 方法调用处（seam §6.1 已登记）；handler 等待期间邮箱让路语义；事件回调与协程恢复的交错细则                                                      |
-| A5（错误/Result）   | 一切效应/服务/盒/process 调用的失败封套形状（本节示例失败面一律从简）                                                                                        |
-| A6（边界转换）      | 流式句柄族形态统一再审（http SSE/大 body、fs 大文件、process 流式；userdata 届时再审）；盒线编码/零拷贝/Bytes                                                |
-| A7（schema DSL）    | deps 烘焙方法集的 schema 来源（contract 对账）；盒 WIT                                                                                                       |
-| A8（事件静态声明）  | manifest `events` 字段（on/emit 面的静态化）                                                                                                                 |
-| A9（能力门槛）      | 安装面对账：capabilities 政策声明 = syscall 与盒能力笼同一对账机制（seam §6.1 已登记）                                                                       |
-| A10（工具/ABI rev） | ctx/deps/`plugin()` 糖类型定义；analyze 对账（scope 键↔命名空间、`box()`、能力漂移）；词汇扩展通道（fs 命名根、process 参数化、sql 命名 db/事务、http 流式） |
-| ADR-0018 S5         | 失败表 #2 落点细化（常驻缺席 = nil 字段；`Err(Unavailable)` 归运行期窗口）——任务 3 冻结 ADR 时吸收                                                           |
-| seam §5.1/5.2/5.3   | 子进程门开门 + kind 表补 `process_spawn`/`process_exit`（本 change 已同步）                                                                                  |
-| §A2.5               | capabilities 词汇修订：fs → scope map 三键 + 简形；+`process`（本 change 已同步）                                                                            |
-| 任务 4（配置格式）  | workspace/命名根绑定机制；db 卸载保留政策；env 收紧政策；cwd 政策                                                                                            |
-| 任务 6（journal）   | kind 表补 process 两条；spawn 流式内容粒度政策；process replay 族；sleep 复用 timer kind；journal 查询接口（豁免的正当访问面）                               |
-| 默认插件集立项      | shell tool = process 能力参考实现（近需求）                                                                                                                  |
-| 扩展位              | `ctx.once`；fs 命名根；process 流式富形态；sql 事务（batch/tx）与命名 db；http 流式；userdata 流式句柄（A6）                                                 |
-| 实现期配置          | http 超时/预算；fs read 预算；timer `every` 最小间隔；process 输出预算；TOCTOU 硬化手段；加载总预算（A1 已登记）                                             |
+| 去向                | 内容                                                                                                                                                                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A4（await/交错）    | 挂起点 = ctx 方法调用处（seam §6.1 已登记）；handler 等待期间邮箱让路语义；事件回调与协程恢复的交错细则                                                                                                                   |
+| A5（错误/Result）   | 一切效应/服务/盒/process 调用的失败封套形状（本节示例失败面一律从简）                                                                                                                                                     |
+| A6（边界转换）      | 流式句柄族形态统一再审（http SSE/大 body、fs 大文件、process 流式；userdata 届时再审）；盒线编码/零拷贝/Bytes（**2026-10-08 已收官**：§A6.5 流式族 + userdata 淘汰、§A6.6 盒线编码 TLV、§A6.4 Bytes 维持扩展位）          |
+| A7（schema DSL）    | deps 烘焙方法集的 schema 来源（contract 对账）；盒 WIT                                                                                                                                                                    |
+| A8（事件静态声明）  | manifest `events` 字段（on/emit 面的静态化）                                                                                                                                                                              |
+| A9（能力门槛）      | 安装面对账：capabilities 政策声明 = syscall 与盒能力笼同一对账机制（seam §6.1 已登记）                                                                                                                                    |
+| A10（工具/ABI rev） | ctx/deps/`plugin()` 糖类型定义；analyze 对账（scope 键↔命名空间、`box()`、能力漂移）；词汇扩展通道（fs 命名根、process 参数化、sql 命名 db/事务、http 流式）                                                              |
+| ADR-0018 S5         | 失败表 #2 落点细化（常驻缺席 = nil 字段；`Err(Unavailable)` 归运行期窗口）——任务 3 冻结 ADR 时吸收                                                                                                                        |
+| seam §5.1/5.2/5.3   | 子进程门开门 + kind 表补 `process_spawn`/`process_exit`（本 change 已同步）                                                                                                                                               |
+| §A2.5               | capabilities 词汇修订：fs → scope map 三键 + 简形；+`process`（本 change 已同步）                                                                                                                                         |
+| 任务 4（配置格式）  | workspace/命名根绑定机制；db 卸载保留政策；env 收紧政策；cwd 政策                                                                                                                                                         |
+| 任务 6（journal）   | kind 表补 process 两条；spawn 流式内容粒度政策；process replay 族；sleep 复用 timer kind；journal 查询接口（豁免的正当访问面）                                                                                            |
+| 默认插件集立项      | shell tool = process 能力参考实现（近需求）                                                                                                                                                                               |
+| 扩展位              | `ctx.once`；fs 命名根；process 流式富形态；sql 事务（batch/tx）与命名 db；http 流式上传（2026-10-08 §A6.5：下载流式 = `ctx.http.stream` 已兑现）；userdata 流式句柄 = **结案淘汰**（2026-10-08 §A6.5 D5.2，不再是扩展位） |
+| 实现期配置          | http 超时/预算；fs read 预算；timer `every` 最小间隔；process 输出预算；TOCTOU 硬化手段；加载总预算（A1 已登记）                                                                                                          |
+
+## A6 边界转换细则（2026-10-08 收官）
+
+### A6.0 边界机制与前提
+
+- **Luau ↔ Rust 边界无序列化**：VM 活在宿主进程内，值 = tagged union 躺 Lua 栈槽位；跨界 = 查标签取载荷，ns 级。mlua `Value` 枚举 = 这套标签的镜像。对照 wasm 盒边界（§A6.6）：各自独立线性内存，必须字节流拷入拷出——两种边界本质不同，政策分开定。
+- 推论：`123`（tag=number）与 `123i`（tag=integer）是**不同标签的值**，非同一数的两种写法——边界纪律（§A6.1 严格匹配）建立在标签之上。
+- **三层 "Value" 辨析**（名词易混，一次锚定）：
+  1. **Luau VM 值** = tagged union 本体，躺 VM 堆/栈；标量槽位直接装数据，string/table/function 等是 GC 对象（槽位装指针）。
+  2. **mlua `Value`**（Rust 枚举）= VM 值的镜像：标量变体（Nil/Bool/Integer/Number）直接带数据；`String`/`Table`/`Function`/`UserData` 变体装的是**注册表句柄**（遥控器：凭它可回头访问 VM 里那个活对象，本身不含内容）。字符串句柄因 Luau 字符串不可变而无害（读出即拷贝字节）；**table 可变 + 句柄 = 隐患所在**（拿到句柄后插件仍可改表）。
+  3. **metis `Value`**（metis-value crate，ADR-0015 + ADR-0022）= 系统业务数据货币：`Null/Bool/Float(f64)/Int(i64)/String/Array/Map` 纯数据树，Rust 拥有、不依附任何 VM——事件 payload / 配置值 / journal 记录 / 服务调用参数的法定形态。
+- **转换纪律的存在理由**：插件各自独立 lua_State（实例隔离，spike 补遗 1），A 的 VM 句柄对 B 的 VM 无意义；事件/服务调用跨插件路由、journal 落盘、async 挂起期间数据存活——都要求宿主手里是**自己拥有的数据**（metis `Value`），而非某个 VM 的句柄。跨界两方向都有转换：进 = VM 表递归读成 metis `Value`（§A6.2 快照纪律）；出 = 按 metis `Value` 在目标 VM 新建表并冻结（§A3.1 容器形态）。
+
+### A6.1 integer 边界映射（2026-10-07 定案）
+
+前提：`Value` 数双轨 = `Float(f64)` + `Int(i64)`（ADR-0022）；Luau 原生整数已开（RFC #153；4 个 FFlag 进程级全局、须早于任何 VM 创建，核心启动期一次性设置；vendored Luau 升级时复查）。实测 SSOT = [wasm-research](../research/wasm-research.md) 补遗 1 integer 条 + 补遗 3（兜底 124ns / buffer 149ns+55ns / 方向标定 / probe7 代码）。
+
+- **写路径（Rust → Luau）= raw push 收口**：mlua 的 `Value::Integer` 入栈走 `lua_pushinteger`（= pushnumber shim），超 2⁵³ 静默丢精度；覆盖缝（`IntoLua::push_into_stack` 依赖未公开导出的 `RawLua`）够不着，无法写"更好的 IntoLua"。定案：`metis-luau` 转换层内部 `push_int64_exact`（`ffi::lua_pushinteger64` + `Lua::exec_raw`，~15 行 unsafe 收口一处），一次机制覆盖三种注入形态 = Rust 精确 `Value` / Lua 全局注入 / 宿主函数精确返回（`create_c_function`——消息 ID/时间戳类 API 的直接答案）。实测 97–120ns/op，调用面无感。**移除触发器 = mlua 上游修写路径**；兜底预案 = 字符串 + `integer.fromstring`（纯 safe，124ns/op；坑 = 超界静默钳制）；buffer 不当标量方案（每次读取 55ns 税 + `readinteger` 泄漏到使用点），归 §A6.4 二进制载荷。
+- **读路径（Luau → Rust）零处理**：tag=integer → `Value::Int(i64)` 全精度直达（2⁶³−1 实测精确往返）。
+- **严格边界纪律（D3 定案，2026-10-07 用户拍板：先严格，不做模糊处理）**：契约槽位声明类型 ↔ VM 标签**精确匹配，零隐式 coercion**——
+  - int64 槽位：只收 tag=integer；tag=number（含整值）= 响亮失败，报错指路写法（`expected integer for 'offset', got number — 写 1024i 或用 integer.* 的产物`）。
+  - float 槽位对称严格：只收 tag=number；tag=integer = 响亮失败（i64→f64 超 2⁵³ 静默丢精度，此方向同样不容）。
+  - **契约写作连带指南**：手写字面量高频的计数/时长类槽位（ms、重试次数、预算）声明 `Float`，宿主侧另做整值/范围校验（校验 ≠ coercion，违例仍响亮失败）；宿主注入往返值（消息 ID/时间戳/游标）声明 `Int`——生来 integer 标签，插件只传不写，严格制零摩擦。
+  - 无契约覆盖处（自由态事件 payload）不检查，`Value` 原样透传。
+  - 演进通道：真实摩擦出现经 A10 ABI rev 再议。
+- **算术面口径（上游设计吃进，Creator 文档必教）**：VM 运算符对 integer **报错**（算术走 `integer.*` 库：`integer.add(id, 1i)`）；实务口径 = ID/时间戳类大整数"只传不比算"；大整数字面量写 `123i`（不带 `i` 的是 number，2⁵³ 以上丢精度）。
+
+### A6.2 table 转换纪律：调用点深快照（2026-10-07 定案）
+
+前提：`Value::Table` 是注册表句柄不是拷贝（§A6.0 三层辨析）；可变 + 句柄 = 唯一隐患（字符串句柄因不可变无害，标量枚举自带数据）。ADR-0015 Consequences 委托项（Array/Map 判定、非字符串 key 处置）= D2.3 闭环。
+
+- **D2.1：插件 → 宿主的 table 一律调用点深快照**（递归读成 metis `Value` 树，此后原表改动与本次调用无关；**适用面 = 数据载荷跨界**——注册面例外：provide 方法表 / on / timer 回调按引用捕获函数（§A3.4–A3.6），函数本非数据，D2.2 失败面只咬“作为数据嵌进表”的函数）。三条独立理由各自成立：
+  1. **跨 VM 隔离**：emit/deps 的参数终点是另一个插件的独立 lua_State，句柄跨不过去，宿主手里必须是自己拥有的数据；
+  2. **挂起窗口可变风险**：async 两跳挂起期间插件邮箱可让其他 handler 先跑（让路语义归 A4），惰性读取会读到脏值——快照必须先于挂起；
+  3. **journal 落盘**：syscall 边界拦截录的必须是宿主拥有的数据。
+     反向（宿主 → 插件）无此问题：容器 = frozen table 无元表（§A3.1），注入即冻结 = 天然快照。waterfall 每跳变换返回值同样跨界、同纪律。
+- **1 + N 成本结构与 Arc 共享**：emit/parallel/waterfall 投递成本 = 1 次源 VM 深读 + N 次目标 VM 建表；中间 metis `Value` 不可变 → **一份实例 N 处引用（`Arc`），Rust 侧零额外克隆**（事件路径 = §A6.3 Arc 表示的头号用户）。N 次建表 = 不可约物理成本（独立堆/GC，共享对象即击穿隔离地基）；惰性代理表（元表拦截按需读）已被 §A3.1 无元表封死。N 份建表彼此独立、源不可变（Send + Sync），可 executor 并行。实测锚：深**往返** ~300ns/entry、单向约半（方向性推断）（[wasm-research](../research/wasm-research.md) 补遗 1 + 补遗 3 方向标定）——业务粒度事件（百 entry × 小 N）≈ 数十 µs；瓶颈防线 = 粒度纪律（大载荷走 §A6.4/§A6.5，不搭事件的车，seam §3.2 约束 3），不做投机优化（seam §3.3）。
+- **D2.2：不可转换值一律响亮失败**（2026-10-07 用户拍板）——
+  - 嵌套 `function`/`userdata`/`thread`：`Value` 无对应变体 → 报错；
+  - 循环引用表：`Value` 是纯树 → 报 cycle；
+  - **带元表的表**：元表对迭代不可见，`__index` 默认字段快照抓不到——静默丢语义不可接受。报错指路："参数表带元表，元表不跨界——请显式铺平成纯数据表"。检测 = 一次 `getmetatable`；纯数据字面量表无元表是常态；
+  - VM 既有行为照单收：NaN 做键 VM 即拒；整值浮点键归一化为整数键（随后按整数键规则走）。
+- **D2.3：统一表 → Array/Map 严格二分 + 契约优先**（2026-10-07 用户拍板）——
+  - 键恰为 1..n 连续整数 → `Array`；全字符串键 → `Map`；混合表/稀疏"数组"/布尔键/非整浮点键/table 键 = **响亮失败**，报错指路拆表写法。淘汰 JSON 惯例（整数键静默转字符串，违 §A6.1 严格制）；
+  - **契约优先**：有契约覆盖的槽位（ctx 参数、deps 方法、A8 事件声明）按契约声明的形状判定，键不符 = 响亮失败；自由态 payload 按严格二分；
+  - 空表 `{}` 判 `Array`（惯例）：重建回 Luau 都是同一空表，唯一可观察差异 = journal 序列化形态（`[]` vs `{}`），无实际分歧；
+  - 反向无歧义：`Array` → 连续整数键表；`Map` → 字符串键表。
+- **边界限制 ≠ 收窄语言**（原则声明）：插件内部元表/混合表/class/OOP 完全自由——纪律只咬合在跨界瞬间（同构：`JSON.stringify` 不要求 JS 内部放弃原型链）。作者可自写 flatten 类帮手在边界前铺平。
+- **预算形状**：单参数 entry 数 / 嵌套深度 / 总字节超限 = 响亮失败；数值归实现期配置（seam 惯例：预算数值不进 ABI，形状进）。
+- **登记（去向 A10 + Creator）**：边界转换违规的写码期/生成期对应检查进四层防线（seam §1.5 同构）——SDK 类型定义带参数形状、analyze 数据流追踪（`setmetatable` 产物/混合表/非字符串键/缺 `i` 后缀流入边界调用）、Creator 上下文携带边界规则清单；运行期响亮失败 = 兜底兼教学层，全部四层由同一契约 SSOT 驱动（分歧无法静默）。**A10 验证项**：Luau 类型检查器是否区分 `integer`/`number`（RFC #153 类型器集成度未验证；若不分，int64 严格检查靠 analyze 数据流 + 运行期兜底）。
+
+### A6.3 Rust 侧表示：朴素树 + 接缝 Arc（2026-10-07 定案）
+
+- **主取舍（用户拍板 = A）**：`Value` 类型本体保持朴素 owned tree，共享发生在接缝处 `Arc<Value>`——事件总线一份实例 N 处引用（§A6.2 已记账），journal 序列化 / replay 重建 / 配置注入 / VM 建表全部 `&Value` 借用完成，v1 无 clone 消费者。淘汰：内部节点 Arc 化（类型复杂度永固化进公共 API，v1 无场景）、仅叶子 Arc 化（`Arc<Value>` 整体共享已覆盖；改公共类型 = breaking，真需求走 ADR 演进）。
+- **约束**：`Value` 保持 `Send + Sync`（executor 并行建表/投递的前提；朴素 tree 天然满足，写为显式约束防未来变体夹带非 Send/Sync 件）。
+- **Map 容器 = `BTreeMap`**（ADR-0015 `Map<String, _>` 的容器补白）：迭代序 = 键排序、天然确定——journal 规范序列化与 replay 比对白送；淘汰 `IndexMap`（插入序需重水合保序 + 新依赖）、`HashMap`（迭代序非确定，序列化前还得排序，seam §1.6 同顾虑）。
+
+### A6.4 Bytes 与 buffer（2026-10-07 定案）
+
+前提：Luau string = 字节串（不校验 UTF-8）；metis `Value::String` = UTF-8 强校验；`buffer` = Luau 原生可写字节数组（`buffer.*` 库），VM-local（跨 VM 无意义，天然纪律）。spike 成本账：buffer 建 149ns + 每次读取 55ns 税 → 不当标量（§A6.1），批量二进制正是本行。
+
+- **D4.1：`Bytes` 变体维持扩展位不立**（ADR-0015"见首个真实用户"纪律不破）。消费面拆分：ctx 面二进制（fs/http/sql/process）= `buffer` 直通、不经 `Value`；**唯一需要 `Value::Bytes` 的 = 跨插件二进制**（deps 参数、事件 payload，典型 = 多模态事件链），v1 无确认消费者。**提正触发器与预定形态写实**：首个跨插件二进制消费者出现 → 走 ADR 演进；预定形态 = `Bytes(Arc<[u8]>)`（大二进制从第一天 Arc-backed，§A6.3 精神），Luau 侧映射 = buffer（契约语言统一，物理形态原生件）。
+- **D4.2：buffer = Luau 侧二进制法定形态**：ctx 方法二进制参数/返回用它（宿主经 mlua Buffer API 直读内存，一次甚至零次拷贝）；永不跨插件。登记去向 A7：schema 词汇表预留 `buffer` 类型词，**限定 ctx 面可用、deps/provide 签名禁用**（analyze 可静态强制）。
+- **D4.3：方法面二进制切割**——
+  - **fs**：+`readbytes(path) -> buffer` / `writebytes(path, buffer)` 分立方法（§A3.7 扩展位兑现，本节已同步修订注）。淘汰 opts 多态（返回类型由运行时值决定 = 动态形态，违 §A6.1/D2.3 严格精神）；大文件归 §A6.5 流式。
+  - **`fs.read` 加 UTF-8 校验**（收隐藏裂缝）：文本方法保 UTF-8 契约——`read` 返回值要进 journal 而 `Value::String` 强校验，不拦则调用"成功"、journal 录制时炸在离现场很远的地方；失败 = 响亮失败指路 `readbytes`。O(n) scan 相对 I/O 可忽略。
+  - **http**：二进制 body 整体归 §A6.5 流式（大载荷主流）。
+  - **sql**：v1 不立 BLOB 列；查询遇 BLOB = 响亮失败指路"存 TEXT（base64/hex）或走 fs"。列映射 = NULL→Null / INTEGER→`Int(i64)`（整数链路已通，精确）/ REAL→Float / TEXT→String。
+  - **process**：输出文本向；大二进制输出归 §A6.5 流式或写文件绕行。
+
+### A6.5 流式句柄族（2026-10-07 定案）
+
+模板 = §A3.10 spawn 句柄（拉式 read、挂起、EOF=nil、冻结表烘焙、管道缓冲自然背压）；本节 = 推广为族规范 + 三家源就位。
+
+- **D5.1 族语义 = 拉式 `read()`**（挂起 = async 两跳，直线写法不变；EOF = nil）。背压天然：宿主缓冲预算顶满 → 生产者自然停（TCP 窗口 / pipe 阻塞）；fs 无背压概念（pull 即读）。淘汰推式回调：慢消费 = 丢数据或无限缓冲，timer 的合并丢弃政策对数据流是损坏非降级。
+- **D5.2 userdata 正式结案 = 淘汰**（§A3.1 留题）：全族句柄 = frozen table 烘焙方法集（统一模型第四次兑现）；状态全在 Rust 闭包，table 只是门面；userdata 必挂元表破容器纪律、与 deps/盒/process 句柄形态分裂。迭代习语 = while 循环（无 `__iter` 可用）：
+
+```luau
+while true do
+    local chunk = stream.read()        -- 挂起直到有数据或 EOF
+    if chunk == nil then break end     -- EOF = nil（§A3.10 既定）
+    -- ...
+end
+```
+
+- **D5.3 chunk 全族唯一形态 = buffer**：无校验、无 UTF-8 裂缝、无 per-源政策分叉（§A6.4 D4.2 法定形态正对）。文本便利层（buffer→string、行切分、SSE 组装）= SDK/插件层组合（§A3.10 既定纪律推广；内建件 sse 解析登记扩展位）。一次性文本方法（`exec`/`fs.read`）保 UTF-8 校验不变（§A6.4），二进制需求指路流式句柄。§A3.10 `read_stdout`/`read_stderr` 的 chunk 形态本节定为 buffer（已同步修订注）。
+- **D5.4 句柄族面**：
+  - **fs**：`ctx.fs.openread(path) -> { read, close }` / `ctx.fs.openwrite(path) -> { write(buffer), close }`——close = tmp+rename 原子提交（§A3.7 write 原子性一致；未 close 弃 tmp）；三 scope 同方法集、能力门不变。
+  - **http**：`ctx.http.stream(...) -> { read, status, headers, close }`（§A3.8 扩展位兑现；参数形状同 request）。**分立方法**非 opts 多态（返回类型由运行时值决定 = 动态形态，违 §A6.1/D2.3 严格精神）。流式上传 v1 不立（中等块 buffer 一次性给），登记扩展位。
+  - **process**：§A3.10 已就位（read_stdout/read_stderr/write/signal/wait/kill），chunk 按 D5.3 定 buffer。
+- **D5.5 生命周期与背压**：`close()` 幂等；句柄 = 账本条目、插件卸载强 close（drain 铁律同 timer/process：http = drop 连接、fs = 关 fd、openwrite 未 close = 弃 tmp）；宿主缓冲预算数值归实现期配置。
+- **登记**：journal 流式政策 = 开流/关流元数据条目 + chunk 内容默认不进（§A3.10 spawn 政策推广为族政策），blob 引用粒度归 §A6.7/任务 6；流式中途错误封套归 A5；扩展位 = http 流式上传、SSE/行迭代内建件。
+- **形态速查**（string/buffer/UTF-8 一图流）：**string = "我保证是文本"**（边界 UTF-8 校验背书，违例在调用点炸）；**buffer = "一堆字节"**（无承诺无校验，自己负责解读）。作者只需答一个问题：这数据是文本吗？
+
+| 交付形态   | 文本 → string                                         | 字节 → buffer                 |
+| ---------- | ----------------------------------------------------- | ----------------------------- |
+| 一次性方法 | `fs.read`（UTF-8 校验）/ `exec` 输出 / http 文本 body | `fs.readbytes` / `writebytes` |
+| 流式句柄   | ——（无：文本流也给 buffer，文本处理归插件层组合）     | 全族 `read() -> buffer`       |
+
+### A6.6 盒线编码（2026-10-08 定案）
+
+边界性质（§A6.0 对照的盒侧展开）：盒有独立线性内存，一切值必须编码成字节、memcpy 拷入、对端解码——序列化不可免，**线上编码格式 = 核心↔盒的 ABI 面**（选定即冻结，演进走 A10 ABI rev 纪律）。
+
+- **D6.1 接口分层 = 琐碎 WIT 签名**（2026-10-08 用户拍板）：`list<u8>` 进、`result<list<u8>, list<u8>>` 出 + 自描述值格式；Value 演进只动 codec crate，WIT 永停琐碎形态；错误出参 = err 分支同样一坨字节，封套格式归 A5；**导出形态 = 每方法一个琐碎签名导出**（WIT export 名 = 方法名——§A3.12 按盒导出清单烘焙方法集的接线不变；淘汰单 `call` + TLV 内分发：方法面退化为运行时数据，analyze/能力对账失静态抓手）。
+- **D6.2 值格式 = TLV 家族**（2026-10-08 用户拍板）：tag 字节 + 内联载荷（MessagePack 精神）；i64 内联无间接（高频 scalar 友好，对照分析见下）；单 codec crate 双 target；位分配表归 codec 实现期定稿，**首盒发布前冻结**，之后走 A10 ABI rev；**字节流带格式版本字段**（演进钩子 = ABI 级决定，具体位置归位分配表；版本不识 = 解码前响亮失败，不等解码炸——ADR-0024 C3 的 WIT 指纹对账在琐碎签名下退化为常量，格式版本字段替补为演进载体）；NaN-word 留作参照系（惰性/随机访问需求若随盒流式触发器出现，经 ABI rev 再议）。
+- **D6.3 盒流式 v1 不立**（2026-10-08 用户拍板）：批式调用覆盖 v1 全部确认场景；扩展位 + 触发器 = 首个流式盒消费者，预定形态 = host imports 回调流（详见下；可跑在 WASI 0.3 async host import 之上，ADR-0024 §3 同缝）；大 Value 政策 = 一次 memcpy 物理地板，“零拷贝” = 无中间缓冲、host 侧从 `Arc<Value>` 借用编码。
+- **登记**：WIT 递归 variant 支持度 = 验证项（归 A10 工具链议题）；盒 trap/业务错误封套归 A5（§A3.13 已登记）；盒 WIT 签名归 A7（§A3.13 已登记）；codec 复用候选 = **撤回**（§A6.7 D7.3 定案 JSONL，对账 ADR-0007 + 调研规避项）；实现期 = codec 位分配表定稿 + 纯 Rust round-trip 测试基线。
+
+背景与概念地基（2026-10-08 用户问答沉淀）：
+
+- **WIT 签名两形态**（D6.1 背景）：
+  - 富形态：WIT variant 描述整棵 `Value` 树（递归类型——**WIT 递归 variant 支持度 = 验证项**），canonical ABI 全权负责编解码；省自研 codec，但格式演进权交上游，递归表达力是硬伤。
+  - 琐碎形态：`parse: func(input: list<u8>) -> result<list<u8>, list<u8>>`——WIT 只搬字节，值格式**自描述**（cell 自带 tag，解码无需外部 schema）；格式演进自控，只动 codec crate。
+- **bytes-in → bytes-out 流程**（琐碎形态的一次盒调用）：宿主 `Arc<Value>` → codec 编码成 `Vec<u8>`（一次编码 pass）→ 经 canonical ABI 的 `list<u8>` 通道 memcpy 进 guest 线性内存 → guest 用**同一 codec crate**（wasm32 target 编译）解码干活 → 结果编码 → memcpy 拷回 → 宿主解码。成本模型 = 编码 pass + memcpy 各一次（入出对称）。**单 codec crate 双 target 编译 = 零漂移**——guest 也是 Rust 的独有红利；codec 正确性可在纯 Rust 宿主侧做 round-trip 测试，无需 wasm 在环。
+- **转换代码归属**（2026-10-08 用户问答沉淀）：一次写就，三层——`metis-value`（Value 类型两边共用）/ `metis-codec`（encode/decode，双 target）/ 盒 SDK（wasm32：入口宏 + host import 包装）。盒作者写 `fn parse(Value) -> Result<Value, _>`，宏展开成收 `&[u8]` 的导出函数，不碰字节；Luau 插件作者走 §A6.2/A3.1 frozen table 面，bytes 边界对其不可见。
+- **NaN-boxed 值格式澄清**（D6.2 背景，2026-10-08 用户问答沉淀）：
+  - 名字由来：f64 指数位全 1 + 尾数非零 = NaN，2⁵² 个冗余模式被借来当 tag 空间。**float 是唯一一等公民**——非 NaN 模式即 f64 本体，完整 64bit 内联零成本（此方案因 JS 引擎"一切数字皆 f64"而生）；代价 = NaN 规范化（一切 NaN 折成一个模式）。
+  - **i64 塞不进 32bit 数据位 → 走 out-of-line**（cell 装偏移，指向缓冲内 8 字节真身）——与 string/容器同列（长度不定本就必须外联）。定制点即此：Shopify 面向 JSON 无 i64（参照骨架 = 4bit tag + 14bit 长度 + 32bit 数据/偏移，wasm-research §4.2 ②）；**我们照抄的是"tag + 内联/外联"骨架，不是具体 bit 布局**，位分配表归实现期定稿（选定即冻结 ABI 面）。
+  - **"32bit 指针" ≠ 宿主机指针**：= 字节缓冲内偏移（FlatBuffers/Cap'n Proto 同招）；且边界另一侧是 wasm32——guest 线性内存地址空间天生 32bit（≤ 4 GiB），单次盒调用载荷（KB–MB 级）离上限数量级之遥。
+  - "逐出 parser"红利（Shopify = 把 JSON parser 逐出插件二进制）对我们的兑现 = guest 二进制小 → 并发槽单价低（seam §3.1）。
+  - **候选骨架对照**（2026-10-08 用户问答沉淀）：NaN-word 为"float 主导 + 值躺寄存器"的内存场景优化，搬到线上映射弱——float 内联零成本（我们 float 不主导，nice 不决定性）、统一 cell 的惰性/随机访问（v1 批式用不上）、i64 外联（我们 i64 = 高频 scalar，消息 ID/时间戳/游标，§A6.1 宿主往返值全声明 Int，最高频类型每次一跳间接）。对照候选 = **TLV 流**（MessagePack 家族：tag 字节 + 内联载荷；string/容器 = tag+长度+字节序；i64 内联无间接、小值紧凑、编解码单次顺序 pass 最简；缺点 = 无随机访问、惰性需额外索引）。两候选均满足需求清单（自描述/单 codec 双 target/一遍编码+memcpy/codec 体积小）——D6.2 据此定案 TLV。
+- **盒流式**（D6.3 背景）：盒处理的数据远超内存预算时，批式 bytes-in→bytes-out 不成立（入参即灾难）。预定形态 = **host imports 回调流**：guest 反复调 host import `read_chunk() -> buffer` / `write_chunk(buffer)` 增量收发——IO 全走 host imports 本是 ADR-0024 冻结结构（journal 同缝），流式 = 把该通道用于 chunk 传输。**v1 不立**：批式覆盖全部确认场景，无确认消费者不立（同 §A6.4 Bytes、§A6.5 流式上传纪律）；触发器 = 首个流式盒消费者。
+
+### A6.7 journal 记录格式草案（2026-10-08 定稿；正式设计归任务 6）
+
+输出定位：不是 journal 完整设计（单双流/fork 物理组织/发散比对强度/fsync 策略 = 调研开放问题 1/3/4/5，归任务 6），是交汇点纪律下的**记录格式草案**——一条 journal 条目长什么样、大 payload 怎么放、秘密怎么不落明文。
+
+- **D7.1 录制粒度 = ★ 族全录 + audit 族 v1 默认降档**（2026-10-08 用户拍板）：
+  - **replay 必需族（★）全录**：边界输入族（external_input / message_enqueued / http_request+response / timer_scheduled+fired / nondeterminism_read）+ 生命周期族 + code_ref 三件套（M4）——核心崩溃恢复与确定性重放的全部事实源；
+  - **audit 族 v1 默认降档**：fs_read/fs_write、sql_call/sql_result 等 per-call 条目默认不录全量——可配开（调试窗口期）或聚合摘要（“本消息处理窗口 fs_read ×12”）；服务对象 = 部署者审计（三层之③），开关面 = 配置键（归任务 4 词汇）。**不降档写死**：`process_spawn`/`process_exit` 元数据族全录（“藏不住”护栏依赖之，§A3.10）；**张力注记**：降档收窄了 ADR-0024 §6 防线 2 的默认审计面（fs/sql 面默认失明、可配开兜底）——音量与信任模型的对换，任务 6 与私有状态族政策一并复审；
+  - **★ 族内大 body = 阈值上 blob 引用**：超阈值 payload 落 blob 存储，条目记 hash + 引用；阈值数值归实现期配置，blob 生命周期/GC 归任务 6；
+  - **chunk 序列不立**（同 §A6.5 族政策：开流/关流元数据条目 + chunk 内容默认不进）；流式响应整段 buffered 录制（调研开放问题 2 的 v1 倾向）；
+  - 联动：私有状态族（fs/sql）replay 政策 = 任务 6 头号问题——若定 record/注入，audit 族音量随政策回归，故降档 = v1 默认档非永久结构，任务 6 复审；`nondeterminism_read` 高频面（循环读时钟 = 每调用一条）的频率整形（合并/节流）归任务 6。
+- **D7.2 生成型秘密 = kind 感知加密，按 source 子类分流**（2026-10-08 用户拍板）：`nondeterminism_read` 条目的 payload 带 `source` 子类字段——**`crypto.random` 系加密落盘**（append 侧加密、replay 注入侧解密；审计可见“此条目已加密”不见值），**时钟读取明文**（无密可泄，省 crypto 税与审计失明）；擦除重生成不可行（replay 注入需原值，重生成破坏确定性）。分工：M6 脱敏管线（模式匹配）管 secrets store 登记的秘密，本决管运行期生成型秘密——互补两条。journal 密钥形态/生成登记路径（与 §A2.5 手写层纪律的衔接）+ 加密算法归任务 6。
+- **D7.3 payload 落盘 = JSONL + 格式版本字段 + Int 字符串惯例**（2026-10-08 用户拍板；**修正出示原推荐「复用盒 codec」**——对账 ADR-0007“日志/数据流用 JSONL”+ 调研 M1 + 规避项“二进制编码是负优化”，codec 复用候选撤回）：条目 = 一行一 JSON 对象；文件头/条目带格式版本字段（历史条目长期可读，版本纪律独立于 A10 ABI rev）；**Int 落盘 = 十进制字符串**（主流 JSON parser 默认把数读成 f64——按最坏假设立惯例，超 2⁵³ 静默丢精度，消息 ID/雪花 ID 正中；seq/wall_ms 在安全域内保 number）；**读侧 = kind/schema 感知还原**（kind 表 = payload schema SSOT，replay 注入侧按 kind 声明还原 Int/String；自由态 payload 的区分标记形态归任务 6——候选 = 包裹对象）；审计侧注意：jq 对字符串数字按词典序比较（数值比较先 `tonumber`）；人读视图（markdown 导出）= M10 派生物不进正本。
+- **登记**：audit 降档开关面 = 配置键归任务 4；blob 存储与 GC、加密算法/密钥形态、单双流实测（开放问题 1，新论据 = 保留期分叉）、写入量实测、私有状态族 replay 政策联动复审——均归任务 6；`session` 字段随任务 5 复审；agent 层 transcript/fork/replay = 插件层议题。
+
+概念地基（2026-10-08 用户问答沉淀）：
+
+- **replay 定义**（调研 §1.2，Temporal 语义）：重跑插件代码，边界输入不真做——录制的响应注入（LLM 不重调、timer 不真等、随机/时间取录制值），插件向 host 发出的调用序列与录制逐一比对；一致 = 推进，不一致 = 发散响亮失败（`replay_diverged` 条目 + Failed 态）。确定性 = 行为性判定（“相同输入 → 相同调用序列”，内部推导任意）。
+- **replay 四场景**（调研需求 a–d 原始陈述；**2026-10-08 二层修正：按层重分配见下——d fork 退出核心需求集**）：b 崩溃恢复（插件状态 = `(config, 输入序列)` 纯函数，重启 = 重放；快照只做 host 侧性能件，M8）；c 确定性重放/调试（LLM 不可重调：贵 + 每次结果不同）；d 从历史点 fork（引用前缀 + 新 session 续写，Claude Code `--fork-session`/Temporal reset 先例）；a 审计回看 = 读 journal 不是 replay，但是第一消费者。另：fiber §10 干净重启后的 agent 连续性（进行中的对话、待审批）恢复与 journal 强耦合。
+- **journal 定位（2026-10-08 二层修正，用户拍板框架）**：核心 journal = **核心自己的飞行记录仪**（append-only；两个工程化消费者 = replay 引擎 + audit 查询，不是调试输出）。“一切调用必经核心”（组合的物理接缝，seam §0）使核心天然处于什么都能记的位置，**记多少 = 服务对象决定**。服务对象三层：① **核心自己**——崩溃恢复（b）+ fiber §10 干净重启连续性 = 立身之本；② **插件/agent 层的平台能力**——journal 查询接口（A3 已登记），agent 层的 transcript/session fork/eval replay 以它为结构源之一 + 自己经 seam（fs/sql）持久化的领域记录；③ **部署者/人**——能力使用审计（哪个插件何时用了什么能力）与调试。
+- **四需求按层重分配**（2026-10-08 用户指出：调研需求陈述带 agent 眼镜——§7.3 候选 kind 的 `llm_*`/`session_*` 即证据；核心 agent-agnostic，LLM 调用在核心视野里只是 plugin 发出的一次 http）：a 审计 = 核心层记能力使用（部署者面）/ 对话轨迹审计归插件层；b 崩溃恢复 = 核心层立身之本；c 确定性重放 = 核心层 = 系统/插件调试（记录效应结果供注入）/ 对话重放与 eval = 插件层功能；**d fork 退出核心需求集**——session fork = agent 层功能；核心侧对应物 = “新代码重跑旧史”的 replay 调试运行，产出 = 发散报告/新 replay 制品，不是活分支。
+- **对 kind 表的影响**：调研 §7.3 候选 kind 去 agent 化——`llm_request`/`llm_response`/`session_started`/`session_ended` 退出核心 kind 表（seam §5.3 的 generic kind 表 = 正确形状）；`session` 字段随任务 5 复审（若 session 非核心一等概念，条目只靠 fiber/plugin 标识 + 因果链，session 聚合归查询侧/插件层）；agent 层 transcript/fork/replay 登记为插件层议题（同 Cadmus 结论纪律：产品面机器不进核心设计链）。
+- **session 归属与物理组织**（2026-10-08 用户问答沉淀）：核心是否有 session 概念 = 任务 5 待决 #1；种子稿 v1 最小集的现行倾向 = **session = 插件层实体**（session 服务插件持有会话状态，核心只见 fiber 子树 + preset 实例化，session-model §5/§6）。“找出某会话的日志” = **按 fiber 子树聚合**（会话 ≈ 一棵子树），聚合归查询侧/插件层，条目本体不押注 session 字段。**物理组织**：逻辑上必须单流——全局 `seq`/因果链的前提是 host 单点定序单写者，因果链跨插件是常态，拆流 = 全序红利尽失；物理形态 = 按 seq 分段/轮转的一组段文件（保留/归档的实现细节，归任务 6）。单流 vs 双流（replay/audit 分文件）= 调研开放问题 1 留任务 6，新框架下双流多一条论据（保留期分叉：replay 流长留、audit 流快轮转）。journal 属主 = host 进程（每个 host 实例一本）；**journal ≠ 运行日志**（tracing/debug 输出 = 给人的诊断面，另一回事）。
+- **容量账拆解与裁剪方向**：seam §6.2 的 0.2–0.5 GB/天/插件最坏账，大头 = **audit 族 per-call 条目**（fs_read/sql_call 每调用一条），非 replay 必需。各家对账（2026-10-08 用户要求）：**cordis/DSH 无 journal 概念**，最近似物 = DSH session 日志（纪律 = “Model-visible ⟺ logged”，cordis-research §5，只录对话面）；**Claude Code** transcript = 对话面（消息 + tool call/result + system prompt 版本 pinning），不录 syscall 级；**OTel GenAI** 内容默认不录、三档（不录/录属性/外部存储+引用）；**Aider** 启示 = 审计与重放可用不同载体；Temporal 三家 = 记边界、重算内部。裁剪方向：**replay 必需族（★）全录；audit 族 v1 默认降档**（可配开/聚合摘要；M7 内核哑捕获、采样/保留/导出 = 上层可替换组件）；大 body blob 引用；保留归档 = 上层策略（不删改正文，走“快照+前段归档且不可重放”显式降级）。**联动**：私有状态族（fs/sql）replay 政策 = 任务 6 头号问题（seam §5.4）——若彼处定 record/注入，audit 族音量随政策回归，故降档 = v1 默认档非永久结构，任务 6 复审。实际写入量以任务 6 实测为准（调研开放问题 1 同此纪律）。
+
+### A6.8 联动登记汇总（章末）
+
+| 去向                   | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A4（await/交错）       | 挂起窗口可变风险 = §A6.2 D2.1 理由 2 已用（快照必须先于挂起）；handler 等待邮箱让路语义（A3 登记原条）                                                                                                                                                                                                                                                                                                                                                |
+| A5（错误/Result）      | 流式中途错误封套（§A6.5 登记）；盒 trap/业务错误封套——err 通道 = `result<list<u8>, list<u8>>` 第二坨字节（§A6.6 D6.1）                                                                                                                                                                                                                                                                                                                                |
+| A7（schema DSL）       | int64 标注必须可表达（§A6.1 严格制配套）；`buffer` 类型词预留、限 ctx 面（§A6.4 D4.2）；盒 WIT 琐碎签名形态已定（§A6.6 D6.1，WIT 形式化归 A7）                                                                                                                                                                                                                                                                                                        |
+| A10（工具/ABI rev）    | 边界转换违规写码期/生成期检查进四层防线（§A6.2 登记）；验证项 = Luau 类型检查器区分 integer/number 否（§A6.2）、WIT 递归 variant 支持度（§A6.6）；ABI rev 演进通道兑现例 = §A6.1 严格制摩擦、§A6.4 Bytes 提正、§A6.6 TLV 位布局冻结后再演进                                                                                                                                                                                                           |
+| 任务 4（配置格式）     | audit 族降档开关面 = 配置键（§A6.7 D7.1）                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 任务 5（session 模型） | journal `session` 字段复审——现行倾向 session = 插件层实体，条目不押 session 字段（§A6.7）                                                                                                                                                                                                                                                                                                                                                             |
+| 任务 6（journal）      | **§A6.7 草案全文 = 头号输入**（服务对象三层、D7.1–D7.3、物理组织逻辑单流）；私有状态族 replay 政策联动（降档 = v1 默认档，彼处复审）；blob 存储/GC、加密算法与密钥形态、`nondeterminism_read` 高频面频率整形、自由态 payload Int 标记形态、单双流实测（开放问题 1 + 保留期分叉新论据）、写入量实测、journal 查询接口（A3 登记原条）；流式族政策（开流/关流元数据 + chunk 默认不进，§A6.5 登记原条）                                                   |
+| 扩展位                 | `Value::Bytes` 提正（触发器 = 首个跨插件二进制消费者，§A6.4 D4.1）；http 流式上传 + SSE/行迭代内建件（§A6.5）；盒流式（触发器 = 首个流式盒消费者，形态 = host imports 回调流，§A6.6 D6.3）                                                                                                                                                                                                                                                            |
+| 结案                   | userdata 流式句柄 = 淘汰（§A6.5 D5.2，§A3.1 留题闭环）                                                                                                                                                                                                                                                                                                                                                                                                |
+| 实现期清单             | metis-luau = `push_int64_exact` raw push 收口（§A6.1；代码原型 = wasm-research 补遗 3，可直抄）；metis-value = `Int(i64)` + `BTreeMap` + Send+Sync（§A6.3）；metis-codec = TLV 位分配表定稿 + 纯 Rust round-trip 测试基线（§A6.6 D6.2）；`fs.read` UTF-8 校验（§A6.4 D4.3）；流式句柄族三源（§A6.5 D5.4）；journal = JSONL + Int 字符串惯例（§A6.7 D7.3）；预算数值类（快照 entry 数/嵌套/总字节、流式缓冲、blob 阈值、audit 开关默认值）= 实现期配置 |
+| Creator 文档           | 算术面口径（VM 运算符对 integer 报错、`integer.*` 库、只传不比算、大整数字面量 `123i`，§A6.1）；边界规则清单进 Creator 上下文（§A6.2 四层防线登记）                                                                                                                                                                                                                                                                                                   |

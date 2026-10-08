@@ -223,7 +223,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 | process       | `ctx.process.*`            | `process`（无参数）                                         | `process_spawn` / `process_exit`（元数据族；流式内容政策归任务 6） | record/注入到头（副作用出视野不可回滚，任务 6 登记） |
 | 时间/随机读取 | 原位替换 / `crypto.random` | 无门                                                        | `nondeterminism_read` ★                                            | record/注入（PRNG 部分 recompute）                   |
 
-（kind 表全文 = `../research/journal-replay-research.md` §7.3；本表 = syscall 部分回填。）
+（kind 表全文 = `../research/journal-replay-research.md` §7.3；本表 = syscall 部分回填。2026-10-08 修订注：kind 表去 agent 化 + 录制分族政策（★ 全录 / audit 降档）已定案 = [luau-abi](luau-abi.md) §A6.7——调研 §7.3 的 `llm_*`/`session_*` 不属核心 kind。）
 
 ### 5.4 replay 分族原则
 
@@ -257,8 +257,8 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 ### 6.2 journal 正式设计（任务 6）输入
 
 - kind 表 syscall 部分 = §5.3；私有状态族 replay 政策 = 头号输入；`nondeterminism_read` 已覆盖时间/CSPRNG 读取
-- **写入量账**：§5.3 的 per-call 条目在忙插件下达日百万级（~0.2–0.5 GB/天/插件），单条大 body 可达 10⁷–10⁸B——需录制粒度政策（全量内联 vs blob 引用 vs chunk；http 大 body/SSE 与 LLM 流式同族，参 `../research/journal-replay-research.md` 开放问题 2）
-- **生成型秘密的落盘政策**：`crypto.random`（record）生成的密钥/token/nonce 会明文进 `nondeterminism_read`——M6 脱敏管线的模式匹配抓不到生成型秘密，需 kind 感知政策（append 加密/擦除 + replay 注入侧解密）
+- **写入量账**：§5.3 的 per-call 条目在忙插件下达日百万级（~0.2–0.5 GB/天/插件），单条大 body 可达 10⁷–10⁸B——需录制粒度政策（全量内联 vs blob 引用 vs chunk；http 大 body/SSE 与 LLM 流式同族，参 `../research/journal-replay-research.md` 开放问题 2）——**2026-10-08 已定案**：[luau-abi](luau-abi.md) §A6.7 D7.1（★ 全录 + audit 默认降档 + 阈值 blob 引用）
+- **生成型秘密的落盘政策**：`crypto.random`（record）生成的密钥/token/nonce 会明文进 `nondeterminism_read`——M6 脱敏管线的模式匹配抓不到生成型秘密，需 kind 感知政策（append 加密/擦除 + replay 注入侧解密）——**2026-10-08 已定案**：[luau-abi](luau-abi.md) §A6.7 D7.2（kind 感知加密，按 source 子类分流）
 
 ### 6.3 实现期登记
 
