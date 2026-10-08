@@ -49,20 +49,21 @@ replay 纪律前提：版本 pinning（replay 默认用录制期代码）已排�
 
 ### 1.3 裁剪面定案
 
-| 项                                                                                                             | 处置                                          | 理由（一句）                                                                                                       |
-| -------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `loadstring`                                                                                                   | tombstone（红线）                             | 动态 eval 绕过审批链与 plugin_revision 钉版；合法需求 = 随包 .luau 文件                                            |
-| `require`                                                                                                      | 保留 + 宿主包装                               | 模块缝（[ADR-0003](../decisions/0003-module-require-discipline.md)），per-plugin 解析，细节归 A1/A3                |
-| `print`                                                                                                        | 原位替换：输出改道宿主日志，自动带 fiber 身份 | 长驻 server 的 print 须可归因                                                                                      |
-| `collectgarbage` / `gcinfo`                                                                                    | tombstone                                     | GC 是宿主职责                                                                                                      |
-| `newproxy` / `getfenv` / `setfenv`                                                                             | tombstone                                     | legacy 环境操弄，与 sandbox 模型冲突                                                                               |
-| `debug.info`                                                                                                   | tombstone                                     | 内省邀脆弱元编程；`debug.traceback` 保留（错误诊断质量）。（`debug` 实测仅剩此两件；上游若加件由 §1.4 白名单兜住） |
-| 其余全部（`coroutine/string/table/buffer/bit32/utf8/vector/integer`/`math` 余部/语言核心函数/`_G`/`_VERSION`） | 保留                                          | 纯算件：无效应、无非确定性、VM 内自含                                                                              |
+| 项                                                                                                   | 处置                                          | 理由（一句）                                                                                                                                |
+| ---------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `loadstring`                                                                                         | tombstone（红线）                             | 动态 eval 绕过审批链与 plugin_revision 钉版；合法需求 = 随包 .luau 文件                                                                     |
+| `require`                                                                                            | 保留 + 宿主包装                               | 模块缝（[ADR-0003](../decisions/0003-module-require-discipline.md)），per-plugin 解析，细节归 A1/A3                                         |
+| `print`                                                                                              | 原位替换：输出改道宿主日志，自动带 fiber 身份 | 长驻 server 的 print 须可归因                                                                                                               |
+| `collectgarbage` / `gcinfo`                                                                          | tombstone                                     | GC 是宿主职责                                                                                                                               |
+| `newproxy` / `getfenv` / `setfenv`                                                                   | tombstone                                     | legacy 环境操弄，与 sandbox 模型冲突                                                                                                        |
+| `debug.info`                                                                                         | tombstone                                     | 内省邀脆弱元编程；`debug.traceback` 保留（错误诊断质量）。（`debug` 实测仅剩此两件；上游若加件由 §1.4 白名单兜住）                          |
+| `coroutine`                                                                                          | 保留 + shim 包装                              | 库本身纯算；经 shim 可透明调 ctx（挂起冒泡到恢复者线程）——迭代器/生成器是流式消费主流形态（[luau-abi](luau-abi.md) §A4.3 D9.2，2026-10-09） |
+| 其余全部（`string/table/buffer/bit32/utf8/vector/integer`/`math` 余部/语言核心函数/`_G`/`_VERSION`） | 保留                                          | 纯算件：无效应、无非确定性、VM 内自含                                                                                                       |
 
 ### 1.4 建 VM 姿势与硬化顺序
 
 - **白名单建 VM**：`Lua::new_with(StdLib 白名单)`——fail-closed 对 vendored Luau 升级（上游新增全局件默认不存在）。注意 mlua 无条件安装 `require/collectgarbage/loadstring/_VERSION`——前三件仍须手工处置（包装/tombstone），`_VERSION` 保留。
-- **硬化顺序铁律**：白名单建实例 → 宿主裁剪 + 注入（os/math/print/ctx/require 包装）→ `sandbox(true)` 冻结 → 才跑插件代码。
+- **硬化顺序铁律**：白名单建实例 → 宿主裁剪 + 注入（os/math/print/ctx/require 包装 + coroutine shim）→ `sandbox(true)` 冻结 → 才跑插件代码。
 - sandbox 语义：stdlib 表与 `_G` 只读；插件在自己环境按名遮蔽只写进影子表（自欺不欺人，无害）。
 
 ### 1.5 四层防线（横切 ABI/SDK 纪律）
@@ -244,15 +245,15 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 
 ### 6.1 ABI 议题回填
 
-| 议题         | 回填                                                                                                                                                                              |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A2 manifest  | `capabilities` 字段面 = { fs（三 scope × 读/写，A3 修订）、http（可域名细化）、sqlite、process（A3 开门） }；纯算内建件无需声明                                                   |
-| A3 ctx       | ctx 效应方法面 = fs（三 scope）/ http / timer / sql / **process**（2026-10-07 开门）——已全落 [luau-abi](luau-abi.md) §A3；编排面（事件/服务调用）同 §A3                           |
-| A4 await     | **A4.1 已收官**（2026-10-08 [luau-abi](luau-abi.md) §A4.1）：挂起点 = ctx 方法调用处；插件内自由交错 + `ctx.exclusive` / fan-out / 调度规则冻结进 ABI；恢复调度细则等归 A4 后续节 |
-| A5 错误      | sync 件 = 同步错误返回；async 件 = Result 习语主战场                                                                                                                              |
-| A6 边界转换  | 大 Value 零拷贝/Arc 表示；Bytes 扩展位与 buffer 的关系                                                                                                                            |
-| A9 能力门槛  | syscall 政策声明对账 = 安装面（与盒能力笼同一对账机制）                                                                                                                           |
-| A10 工具形态 | `metis sdk` analyze 管线 = 四层防线写码期/安装期（§1.5）                                                                                                                          |
+| 议题         | 回填                                                                                                                                                                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A2 manifest  | `capabilities` 字段面 = { fs（三 scope × 读/写，A3 修订）、http（可域名细化）、sqlite、process（A3 开门） }；纯算内建件无需声明                                                                                                          |
+| A3 ctx       | ctx 效应方法面 = fs（三 scope）/ http / timer / sql / **process**（2026-10-07 开门）——已全落 [luau-abi](luau-abi.md) §A3；编排面（事件/服务调用）同 §A3                                                                                  |
+| A4 await     | **A4 全章已收官**（2026-10-08 §A4.1 + 2026-10-09 §A4.2–§A4.6，[luau-abi](luau-abi.md)）：挂起点 = ctx 方法调用处；插件内自由交错 + `ctx.exclusive` / fan-out / 调度规则冻结进 ABI（单队列 FIFO）；coroutine shim / 保险丝总表 / 卸载细则 |
+| A5 错误      | sync 件 = 同步错误返回；async 件 = Result 习语主战场                                                                                                                                                                                     |
+| A6 边界转换  | 大 Value 零拷贝/Arc 表示；Bytes 扩展位与 buffer 的关系                                                                                                                                                                                   |
+| A9 能力门槛  | syscall 政策声明对账 = 安装面（与盒能力笼同一对账机制）                                                                                                                                                                                  |
+| A10 工具形态 | `metis sdk` analyze 管线 = 四层防线写码期/安装期（§1.5）                                                                                                                                                                                 |
 
 ### 6.2 journal 正式设计（任务 6）输入
 

@@ -115,4 +115,4 @@ type Disposer = Box<dyn FnOnce() -> BoxFuture<'static, ()> + Send>;
 派生待办（登记不决）：
 
 - **跨重启状态政策**：进程死则 VM 全灭——什么状态落盘活下来（落盘 seam 原子写）、agent 自身连续性（进行中的对话、待审批）如何恢复，与 journal/replay 设计强耦合
-- **优雅关闭细则**：SIGTERM 处理、drain 总预算、in-flight 服务调用与邮箱残留处置——实现期议题
+- **优雅关闭细则**：in-flight 服务调用与邮箱残留处置已定（2026-10-09 [luau-abi](luau-abi.md) §A4.5：四段时序关闸→优雅窗口→强杀→drain；对手方即 `Err(Unavailable)`、残留丢弃）；SIGTERM 处理、drain 总预算数值 = 实现期议题
