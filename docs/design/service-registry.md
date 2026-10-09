@@ -47,10 +47,10 @@ HashMap<ServiceKey, ServiceEntry { provider: FiberId, epoch: u64, methods: Vec<M
 ```yaml
 # 插件 manifest（示意形态，格式细节归 ABI/配置任务）
 name: memory-viewer
-provides: []            # 我暴露什么服务
+provides: [] # 我暴露什么服务
 inject:
-  required: [memory]    # 没有它我无法工作
-  optional: [metrics]   # 有它更好
+    required: [memory] # 没有它我无法工作
+    optional: [metrics] # 有它更好
 ```
 
 - **inject：代码零声明**。setup 时 host 按声明装配依赖句柄注入（`deps.memory:call(...)` 形态归 ABI）——未声明的服务**结构性拿不到**，不是报错纪律，是无从表达
@@ -126,8 +126,8 @@ Provider/Consumer 两角已锁（§2/§3：manifest 双声明 + 只认 key + 禁
 
 > 产品模型注（2026-10-03 用户确认，纠正此前隐含前提）：core = 插件管理与组合机器 + syscall 层 VM 基底（为满足核心层任务的原语可提供），**不提供任何 agent 领域服务**；llm/tools 等框架级能力的实现是插件（发行可捆绑参考实现，可替换），契约仍必须 `lib/` 契约包。详见 [ADR-0021](../decisions/0021-extension-language-runtime.md)。
 
-2. **载体形态登记**：`lib/` 契约包细节与"纯 manifest 契约包"候选的取舍，依赖 manifest 格式（`lib/` 引用语法已定 = [ADR-0019](../decisions/0019-crate-layout.md)）——归 ABI 任务
-3. **schema 化路径**：方法签名级校验归 ABI 任务的 schema DSL，**与事件 payload schema 共享同一套**；Definition 包届时从"常量+文档"升级为"常量+schema+文档"
+2. **载体形态登记**：`lib/` 契约包细节与"纯 manifest 契约包"候选的取舍，依赖 manifest 格式（`lib/` 引用语法已定 = [ADR-0019](../decisions/0019-crate-layout.md)）——归 ABI 任务——**2026-10-09 已收官** = [luau-abi](luau-abi.md) §A7.3 D18.1（契约包 = contract.yml + README.md + 可选 init.luau）
+3. **schema 化路径**：方法签名级校验归 ABI 任务的 schema DSL，**与事件 payload schema 共享同一套**；Definition 包届时从"常量+文档"升级为"常量+schema+文档"——**2026-10-09 已收官** = [luau-abi](luau-abi.md) §A7（YAML 骨架 + 表达式串记法；包形态 = contract.yml + README.md + 可选 init.luau）
 4. **契约演化规则**：加方法 = 兼容（消费者重启但旧代码照常工作）；删方法/改签名 = 破坏（epoch+1 全消费者重启 + 调用期 `Err(MethodMissing)` 当场响亮）。schema 化后安装/审批时静态判定变更级别，审批界面显示"此更新破坏 N 个消费者"
 5. **自省目录**：注册表 + 双声明使服务目录（谁提供什么/方法集/谁依赖谁）纯推导可得；对模型暴露（Harness `cordis_inspect` 两级形态：列表省 token、详查带文档）登记 ABI tooling
 
@@ -155,7 +155,7 @@ Provider/Consumer 两角已锁（§2/§3：manifest 双声明 + 只认 key + 禁
 
 - 框架级契约包随核心版本演进（v1 monorepo 内 `lib/`；**内嵌二进制 + 磁盘数据目录两层**，[ADR-0019](../decisions/0019-crate-layout.md) C3）
 - **lib 模块在每个插件 VM 里是独立副本**（模块缓存随 VM 生灭，[ADR-0005](../decisions/0005-vm-topology.md)）→ lib 必须**纯代码**（函数/常量/schema），顶层囤可变全局状态 = 各插件看到不同世界
-- lib 变更 = 反向传递闭包定位失效插件集 → 重启（[ADR-0003](../decisions/0003-module-require-discipline.md)）→ 管理员级变更走审批；v1 lib 无独立版本号
+- lib 变更 = 反向传递闭包定位失效插件集 → 重启（[ADR-0003](../decisions/0003-module-require-discipline.md)）→ 管理员级变更走审批；v1 lib 无独立版本号（2026-10-09 修订注：内嵌层维持原位——契约版本 ≡ 核心版本；契约包 `version:` 字段 = 生态契约专属，[luau-abi](luau-abi.md) §A7.3 D18.1/D18.2）
 - **v1 无包管理**：插件 = 目录，安装 = 放文件 + 配置树登记（走 Creator 审批事务）。LuaRocks（C 模块生态不适配沙箱 Luau）与 Wally/pesde（Roblox 生态）是参考非答案；分发时代按 [ADR-0004](../decisions/0004-plugin-forms.md) 登记长回——包 = manifest + 纯 Luau + 依赖声明（机器可读，依赖解析数据基础白送），安装 = fetch + verify + Creator 事务，主要用户是 agent 自己
 
 ## 8. 决策点状态

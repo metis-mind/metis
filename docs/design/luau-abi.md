@@ -8,34 +8,35 @@
 
 ## 0. 术语锚点（本文档新增；共享术语见 [seam-capabilities](seam-capabilities.md) §0）
 
-| 术语           | 含义                                                                                                                                                                    |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 入口契约       | loader 加载插件入口模块后"第一眼"看到的形状：返回值形状、setup 签名、清理习语——插件作者每天要写的第一行代码                                                             |
-| 两形态         | 纯代码插件 `plugins/foo.luau`（无 manifest）/ 包插件 `plugins/foo/`（manifest + `entry:` 缺省 `main.luau`），ADR-0004 冻结                                              |
-| `plugin()` 糖  | 宿主注入的全局函数：`plugin(fn)` ≡ `{ setup = fn }`——写码层便利，不是第二种契约形态                                                                                     |
-| manifest       | 包插件的自述文件 `manifest.yml`（§A2）：我是谁/怎么加载我/我需要什么/我提供什么/我带了什么                                                                              |
-| 配置树         | 部署者的装配单（`metis.yml` 等价物）：装哪些插件、每个实例给什么 config 值、挂在哪——归任务 4，≠ manifest                                                                |
-| 契约包         | `lib/` 里的契约库：服务契约（方法集 + schema + 文档）独立于提供方存在（Seam 三角，ADR-0018 S6）                                                                         |
-| `deps`         | setup 第三参数：宿主按 manifest inject 装配的依赖句柄表（冻结）。二分：ctx = 宿主契约面（人人相同）/ deps = manifest 派生面（各插件不同）                               |
-| 烘焙           | 句柄生成方式：宿主按声明（注册表方法集 / 盒导出清单）逐方法生成 Rust 闭包装成冻结表；方法集快照随激活定格，epoch 重启刷新                                               |
-| scope          | fs 能力的范围标识三键：private（私域免绑定）/ workspace（部署绑定根）/ global（用户世界 − 两条豁免）                                                                    |
-| 豁免           | carve-out：对一切 fs scope（含 global）读写同禁的两处——secrets store 与 journal                                                                                         |
-| tagged union   | 类型标签 + 载荷的联合体 = VM 值的内存形态；Luau↔Rust 边界 = 查标签取载荷（无序列化），对照 wasm 盒边界的字节流拷入拷出（§A6.0）                                         |
-| 元表           | metatable：Luau table 可挂的隐形同伴表（`setmetatable`），定义 `__index` 缺省读取 / `__newindex` 写拦截 / 运算符重载等行为；深快照只读原始内容，元表行为不跨界（§A6.2） |
-| WIT            | WebAssembly Interface Types：wasm 组件的接口描述语言（.wit 文件声明组件导入/导出函数的名字与类型）；类型经 canonical ABI 铺成线性内存字节（§A6.6）                      |
-| canonical ABI  | WIT 类型 ↔ wasm 线性内存字节布局的标准映射规则（lift/lower）；WIT 签名取琐碎形态后，它只负责搬 `list<u8>` 字节（§A6.6）                                                 |
-| NaN-boxing     | 借 f64 的冗余 NaN 模式（2⁵² 个）当标签空间的 64bit 值编码：非 NaN 模式 = f64 原样内联；NaN 模式 = 52 尾数位装 tag+载荷（§A6.6）                                         |
-| out-of-line    | 值不内联在 cell 里，cell 装 32bit 缓冲内偏移指向真实数据（i64/string/容器；对照 float 内联）；偏移永不解引用为宿主指针（§A6.6）                                         |
-| 盒流式         | 核心↔盒边界的大数据增量传输（对照 §A6.5 Luau 侧流式句柄族）；v1 不立，预定形态 = host imports 回调流（§A6.6）                                                           |
-| 挂起点         | 协程可能让出执行权的点 = ctx 方法调用处（async 两跳件）；两挂起点之间的代码区间天然原子（§A4.1）                                                                        |
-| 自由交错       | §A4.1 定案的插件内执行模型：handler 挂起即让路、邮箱下一条先跑；协作式 = 同一瞬间至多一条协程在跑，切换仅在挂起点                                                       |
-| exclusive      | `ctx.exclusive(name, fn)`：插件内部作用域的具名互斥——同名函数体同一时刻至多一条协程在内（含挂起期间），闭包圈定自动释放（§A4.1 D1.2）                                   |
-| 线程（协作式） | 作者视角的执行流：核心登记并调度（handler 本体 / `fanout` 子），ctx 调用 = 可挂起陷入；实现对象 = Luau coroutine，OS 映射 = 内核调度线程（§A4.3）                       |
-| 协程（裸协程） | 插件自建 Luau coroutine：控制流件（生成器等），切换不进核心；经 shim 可透明调 ctx——挂起冒泡到恢复者线程（§A4.3）；OS 映射 = 用户态协程                                  |
-| 可调度队列     | 每 fiber 单只 FIFO 队列：新消息（经在飞预算闸门接纳）/ 完成恢复 / `fanout` 子创建共用入队；worker 取队首跑到挂起或结束（§A4.2）                                         |
-| 错误封套       | `err` 数据表 `{ kind, message, data? }`：kind 定控制流 / message 人读 / data 按族查表；普通数据表非 frozen（§A5.2 D13.1）                                               |
-| kind           | 错误种类标识：封闭枚举；能力族 = 两级串 `"族.具体"`（`fs.not_found`），服务四态/business = 单级通用词；全集冻结进 ABI，演进走 A10 ABI rev（§A5.2 D13.2）                |
-| 兜底格         | 底层错误空间开放的族必设的诚实格（`fs.io`/`http.error`/`sql.error`），message 留原文；禁 message 匹配做控制流，子类提格走 ABI rev（§A5.3 D14.7）                        |
+| 术语           | 含义                                                                                                                                                                                          |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 入口契约       | loader 加载插件入口模块后"第一眼"看到的形状：返回值形状、setup 签名、清理习语——插件作者每天要写的第一行代码                                                                                   |
+| 两形态         | 纯代码插件 `plugins/foo.luau`（无 manifest）/ 包插件 `plugins/foo/`（manifest + `entry:` 缺省 `main.luau`），ADR-0004 冻结                                                                    |
+| `plugin()` 糖  | 宿主注入的全局函数：`plugin(fn)` ≡ `{ setup = fn }`——写码层便利，不是第二种契约形态                                                                                                           |
+| manifest       | 包插件的自述文件 `manifest.yml`（§A2）：我是谁/怎么加载我/我需要什么/我提供什么/我带了什么                                                                                                    |
+| 配置树         | 部署者的装配单（`metis.yml` 等价物）：装哪些插件、每个实例给什么 config 值、挂在哪——归任务 4，≠ manifest                                                                                      |
+| 契约包         | `lib/` 里的契约库：服务契约（方法集 + schema + 文档）独立于提供方存在（Seam 三角，ADR-0018 S6）                                                                                               |
+| `deps`         | setup 第三参数：宿主按 manifest inject 装配的依赖句柄表（冻结）。二分：ctx = 宿主契约面（人人相同）/ deps = manifest 派生面（各插件不同）                                                     |
+| 烘焙           | 句柄生成方式：宿主按声明（注册表方法集 / 盒导出清单）逐方法生成 Rust 闭包装成冻结表；方法集快照随激活定格，epoch 重启刷新                                                                     |
+| scope          | fs 能力的范围标识三键：private（私域免绑定）/ workspace（部署绑定根）/ global（用户世界 − 两条豁免）                                                                                          |
+| 豁免           | carve-out：对一切 fs scope（含 global）读写同禁的两处——secrets store 与 journal                                                                                                               |
+| tagged union   | 类型标签 + 载荷的联合体 = VM 值的内存形态；Luau↔Rust 边界 = 查标签取载荷（无序列化），对照 wasm 盒边界的字节流拷入拷出（§A6.0）                                                               |
+| 元表           | metatable：Luau table 可挂的隐形同伴表（`setmetatable`），定义 `__index` 缺省读取 / `__newindex` 写拦截 / 运算符重载等行为；深快照只读原始内容，元表行为不跨界（§A6.2）                       |
+| WIT            | WebAssembly Interface Types：wasm 组件的接口描述语言（.wit 文件声明组件导入/导出函数的名字与类型）；类型经 canonical ABI 铺成线性内存字节（§A6.6）                                            |
+| canonical ABI  | WIT 类型 ↔ wasm 线性内存字节布局的标准映射规则（lift/lower）；WIT 签名取琐碎形态后，它只负责搬 `list<u8>` 字节（§A6.6）                                                                       |
+| NaN-boxing     | 借 f64 的冗余 NaN 模式（2⁵² 个）当标签空间的 64bit 值编码：非 NaN 模式 = f64 原样内联；NaN 模式 = 52 尾数位装 tag+载荷（§A6.6）                                                               |
+| out-of-line    | 值不内联在 cell 里，cell 装 32bit 缓冲内偏移指向真实数据（i64/string/容器；对照 float 内联）；偏移永不解引用为宿主指针（§A6.6）                                                               |
+| 盒流式         | 核心↔盒边界的大数据增量传输（对照 §A6.5 Luau 侧流式句柄族）；v1 不立，预定形态 = host imports 回调流（§A6.6）                                                                                 |
+| 挂起点         | 协程可能让出执行权的点 = ctx 方法调用处（async 两跳件）；两挂起点之间的代码区间天然原子（§A4.1）                                                                                              |
+| 自由交错       | §A4.1 定案的插件内执行模型：handler 挂起即让路、邮箱下一条先跑；协作式 = 同一瞬间至多一条协程在跑，切换仅在挂起点                                                                             |
+| exclusive      | `ctx.exclusive(name, fn)`：插件内部作用域的具名互斥——同名函数体同一时刻至多一条协程在内（含挂起期间），闭包圈定自动释放（§A4.1 D1.2）                                                         |
+| 线程（协作式） | 作者视角的执行流：核心登记并调度（handler 本体 / `fanout` 子），ctx 调用 = 可挂起陷入；实现对象 = Luau coroutine，OS 映射 = 内核调度线程（§A4.3）                                             |
+| 协程（裸协程） | 插件自建 Luau coroutine：控制流件（生成器等），切换不进核心；经 shim 可透明调 ctx——挂起冒泡到恢复者线程（§A4.3）；OS 映射 = 用户态协程                                                        |
+| 可调度队列     | 每 fiber 单只 FIFO 队列：新消息（经在飞预算闸门接纳）/ 完成恢复 / `fanout` 子创建共用入队；worker 取队首跑到挂起或结束（§A4.2）                                                               |
+| 错误封套       | `err` 数据表 `{ kind, message, data? }`：kind 定控制流 / message 人读 / data 按族查表；普通数据表非 frozen（§A5.2 D13.1）                                                                     |
+| kind           | 错误种类标识：封闭枚举；能力族 = 两级串 `"族.具体"`（`fs.not_found`），服务四态/business = 单级通用词；全集冻结进 ABI，演进走 A10 ABI rev（§A5.2 D13.2）                                      |
+| 兜底格         | 底层错误空间开放的族必设的诚实格（`fs.io`/`http.error`/`sql.error`），message 留原文；禁 message 匹配做控制流，子类提格走 ABI rev（§A5.3 D14.7）                                              |
+| 表达式串       | §A7 记法：schema 里类型形状的行内写法——基元词/`array<T>`/`map<T>`/record `{...}`/union `A \| B`/`T?` + 签名 `(参数) -> 返回`；住 YAML 字符串内（须加引号），parser ~百行零依赖（§A7.1 D16.2） |
 
 ## A1 插件包形态与入口契约（2026-10-06 收官）
 
@@ -203,16 +204,16 @@ v1 顶层字段（封闭集）：
 
 ### A2.8 联动登记汇总
 
-| 去向                  | 内容                                                                                                                                  |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| A3（ctx 形态）        | inject 句柄装配形态（provides/inject 声明面的消费侧）；capabilities 的运行时强制点——**已落 §A3.3 / §A3.2**                            |
-| A7（schema DSL）      | provides 的 `contract:` 引用位形状与版本戳；config schema 词汇表（secret 已立）                                                       |
-| A10（工具形态）       | `sdk new` 模板（provides 前缀约定）/ `sdk check` 校验器三面暴露 / `sdk analyze` 对账（能力/盒/硬编码间隔）；boxes map 形演进；ABI rev |
-| 任务 4（配置格式）    | secrets store 细节；isolate/重命名；一等 cron 复审                                                                                    |
-| 任务 6（journal）     | 秘密值身份注册脱敏                                                                                                                    |
-| 任务 9（marketplace） | 契约目录发现性；version semver 约束；市场元数据字段；包身份/改名复审                                                                  |
-| schedule 插件立项     | 持久调度原则四件套（A2.7）                                                                                                            |
-| 扩展位                | boxes per-box 收窄；`runtime` 字段（随 ADR-0024 §2）                                                                                  |
+| 去向                  | 内容                                                                                                                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A3（ctx 形态）        | inject 句柄装配形态（provides/inject 声明面的消费侧）；capabilities 的运行时强制点——**已落 §A3.3 / §A3.2**                                                                    |
+| A7（schema DSL）      | provides 的 `contract:` 引用位形状与版本戳；config schema 词汇表（secret 已立）——**已收官 = §A7（2026-10-09）**（引用位/版本 = D18.2；config `type:` 接入表达式语法 = D16.2） |
+| A10（工具形态）       | `sdk new` 模板（provides 前缀约定）/ `sdk check` 校验器三面暴露 / `sdk analyze` 对账（能力/盒/硬编码间隔）；boxes map 形演进；ABI rev                                         |
+| 任务 4（配置格式）    | secrets store 细节；isolate/重命名；一等 cron 复审                                                                                                                            |
+| 任务 6（journal）     | 秘密值身份注册脱敏                                                                                                                                                            |
+| 任务 9（marketplace） | 契约目录发现性；version semver 约束；市场元数据字段；包身份/改名复审                                                                                                          |
+| schedule 插件立项     | 持久调度原则四件套（A2.7）                                                                                                                                                    |
+| 扩展位                | boxes per-box 收窄；`runtime` 字段（随 ADR-0024 §2）                                                                                                                          |
 
 ## A3 ctx 形态与方法集（2026-10-07 收官）
 
@@ -389,7 +390,7 @@ local ast, err = parser.parse(source)  -- 挂起式调用：盒内 ms 级计算�
 - **访问器 `ctx.box(name)`**：盒不是服务依赖（不卡激活门），是按需获取的能力句柄——与能力门同走 ctx 挂载位（seam §2.3）；analyze 对账 `box()` 调用（§A2.5/A10）形状衔接。
 - 句柄 = 冻结表烘焙方法集（按盒导出清单生成——§A3.1 统一模型第三次兑现）；实例池/句柄缓存 = 宿主内部事（ADR-0024 §8：句柄必须缓存，否则 +26ns/次）。
 - **调用挂起**：盒内 ms 级 CPU 密集 → 卸载 blocking 池 + 两跳 resume（与效应调用同形态，作者直线写法不变）。
-- 归 A6：参数/返回线编码（NaN-boxed 参照）、大 Value 零拷贝/Arc、流式；归 A7：WIT 形式化。（2026-10-08 修订注：§A6.6 已收官——线编码定案 TLV 家族非 NaN-boxed，盒流式 v1 不立。）
+- 归 A6：参数/返回线编码（NaN-boxed 参照）、大 Value 零拷贝/Arc、流式；归 A7：WIT 形式化。（2026-10-08 修订注：§A6.6 已收官——线编码定案 TLV 家族非 NaN-boxed，盒流式 v1 不立。）（2026-10-09 修订注：§A7 已收官——WIT 琐碎签名由 schema 机械生成 = §A7.4 D19.2。）
 
 ### A3.13 联动登记汇总
 
@@ -398,7 +399,7 @@ local ast, err = parser.parse(source)  -- 挂起式调用：盒内 ms 级计算�
 | A4（await/交错）    | 挂起点 = ctx 方法调用处（seam §6.1 已登记）；插件内自由交错 + `ctx.exclusive`（§A4.1）——**A4 全章已收官**（2026-10-08 §A4.1 + 2026-10-09 §A4.2–§A4.6：单队列 FIFO / coroutine shim / 保险丝总表 / 卸载细则）              |
 | A5（错误/Result）   | **已收官**（2026-10-09 §A5.0–§A5.5：多返回值 `res, err` / err 封套 / 族清单 / 处置习语）——本章示例失败面仍从简，err 槽省略处见 §A5.1                                                                                      |
 | A6（边界转换）      | 流式句柄族形态统一再审（http SSE/大 body、fs 大文件、process 流式；userdata 届时再审）；盒线编码/零拷贝/Bytes（**2026-10-08 已收官**：§A6.5 流式族 + userdata 淘汰、§A6.6 盒线编码 TLV、§A6.4 Bytes 维持扩展位）          |
-| A7（schema DSL）    | deps 烘焙方法集的 schema 来源（contract 对账）；盒 WIT                                                                                                                                                                    |
+| A7（schema DSL）    | deps 烘焙方法集的 schema 来源（contract 对账）；盒 WIT——**已收官 = §A7（2026-10-09）**（对账 = D18.3、运行期校验 = D19.1；WIT 生成 = D19.2）                                                                              |
 | A8（事件静态声明）  | manifest `events` 字段（on/emit 面的静态化）                                                                                                                                                                              |
 | A9（能力门槛）      | 安装面对账：capabilities 政策声明 = syscall 与盒能力笼同一对账机制（seam §6.1 已登记）                                                                                                                                    |
 | A10（工具/ABI rev） | ctx/deps/`plugin()` 糖类型定义；analyze 对账（scope 键↔命名空间、`box()`、能力漂移）；词汇扩展通道（fs 命名根、process 参数化、sql 命名 db/事务、http 流式）                                                              |
@@ -690,7 +691,7 @@ if err then ... end
 
 **D13.2 kind = 封闭枚举（2026-10-09 用户拍板）**——宿主产生的全部 kind 是 ABI 冻结的封闭集合（演进走 A10 ABI rev）。形态两类：能力族 = 两级串 `"族.具体"`（fs/http/sql/process/盒 `box.trap`，消族内撞名——`invalid` 系在 fs/http 各有语义）；服务四态与 business = 单级通用词（跨上下文同格复用，无撞名面）。作者分支集合可对账 = analyze 四层防线可查“处理了哪些族”（A10 登记）。开放字符串被否：严格制下等于没有分类。
 
-**D13.3 服务四态平移 + Business 载荷落 data**——ADR-0018 S5 四态原位平移为四个 kind：`"unavailable"` / `"method_missing"` / `"timeout"` / `"business"`；服务调用族的 kind 集合就此四格，不立第五。`Err(Business, Value)` → `kind = "business"` + `data = 提供方自定义 Value`——**business 是唯一 data 形状由非宿主定义的族**，其 data SSOT = 服务契约文档（A7 配套）。
+**D13.3 服务四态平移 + Business 载荷落 data**——ADR-0018 S5 四态原位平移为四个 kind：`"unavailable"` / `"method_missing"` / `"timeout"` / `"business"`；服务调用族的 kind 集合就此四格，不立第五。`Err(Business, Value)` → `kind = "business"` + `data = 提供方自定义 Value`——**business 是唯一 data 形状由非宿主定义的族**，其 data SSOT = 服务契约文档（A7 配套）。（2026-10-09 修订注："唯一"开一例例外 = 宿主注入的契约违约封套，data = ABI 固定形状 `{ violation: string }`，§A7.4 D19.1。）
 
 ### A5.3 错误族清单（2026-10-09 定案）
 
@@ -784,7 +785,7 @@ if err then error(err) end
 | 去向                | 内容                                                                                                                                                   |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | A10（工具/ABI rev） | 未检查 err 的 lint 形状（D15.3 第一条）；kind 处理面对账（D13.2）；兜底子类提格通道（D14.7）；验证项 = 两槽关联 narrowing 的 pinned Luau 实测（D12.1） |
-| A7（schema DSL）    | business data 形状 = 契约文档职责（D13.3/D15.3 第五条）                                                                                                |
+| A7（schema DSL）    | business data 形状 = 契约文档职责（D13.3/D15.3 第五条）——**已兑现 = §A7.3 D18.1**（contract.yml `errors:` 节 + README 职责）                           |
 | 任务 6（journal）   | 事件 listener 抛错记日志的 journal 政策（D15.2）；`fs.invalid_path` 完整拒绝原因的 host 侧记录政策（D14.2，插件可见 message 通用化）                   |
 | Creator 文档        | 作者契约五条（D15.3）；处置三习语（D15.1）；“族 → 建议动作”对照表（D14.6）；形态速查（Ok 状态字段 vs Err 分界，D14.1 判据 1）                          |
 | 扩展位              | `unavailable` data `reason` 类场景字段（D14.6，真实摩擦 → ABI rev）                                                                                    |
@@ -945,7 +946,7 @@ end
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A4（await/交错）       | 挂起窗口可变风险 = §A6.2 D2.1 理由 2 已用（快照必须先于挂起）；handler 等待邮箱让路语义 = **A4.1 已收官**（2026-10-08 §A4.1 自由交错定案，理由 2 的“让路”从预案变现实）                                                                                                                                                                                                                                                                               |
 | A5（错误/Result）      | 流式中途错误封套（§A6.5 登记）；盒 trap/业务错误封套——err 通道 = `result<list<u8>, list<u8>>` 第二坨字节（§A6.6 D6.1）；**2026-10-09 两项均已兑现 = §A5.3 D14.3/D14.4**                                                                                                                                                                                                                                                                               |
-| A7（schema DSL）       | int64 标注必须可表达（§A6.1 严格制配套）；`buffer` 类型词预留、限 ctx 面（§A6.4 D4.2）；盒 WIT 琐碎签名形态已定（§A6.6 D6.1，WIT 形式化归 A7）                                                                                                                                                                                                                                                                                                        |
+| A7（schema DSL）       | int64 标注必须可表达（§A6.1 严格制配套）；`buffer` 类型词预留、限 ctx 面（§A6.4 D4.2）；盒 WIT 琐碎签名形态已定（§A6.6 D6.1，WIT 形式化归 A7——**已收官 = §A7（2026-10-09）**：int64 = `integer` 词 D17.1；`buffer` 限 ctx 面原位 D17.1；WIT 机械生成 D19.2）                                                                                                                                                                                          |
 | A10（工具/ABI rev）    | 边界转换违规写码期/生成期检查进四层防线（§A6.2 登记）；验证项 = Luau 类型检查器区分 integer/number 否（§A6.2）、WIT 递归 variant 支持度（§A6.6）；ABI rev 演进通道兑现例 = §A6.1 严格制摩擦、§A6.4 Bytes 提正、§A6.6 TLV 位布局冻结后再演进                                                                                                                                                                                                           |
 | 任务 4（配置格式）     | audit 族降档开关面 = 配置键（§A6.7 D7.1）                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 任务 5（session 模型） | journal `session` 字段复审——现行倾向 session = 插件层实体，条目不押 session 字段（§A6.7）                                                                                                                                                                                                                                                                                                                                                             |
@@ -954,3 +955,129 @@ end
 | 结案                   | userdata 流式句柄 = 淘汰（§A6.5 D5.2，§A3.1 留题闭环）                                                                                                                                                                                                                                                                                                                                                                                                |
 | 实现期清单             | metis-luau = `push_int64_exact` raw push 收口（§A6.1；代码原型 = wasm-research 补遗 3，可直抄）；metis-value = `Int(i64)` + `BTreeMap` + Send+Sync（§A6.3）；metis-codec = TLV 位分配表定稿 + 纯 Rust round-trip 测试基线（§A6.6 D6.2）；`fs.read` UTF-8 校验（§A6.4 D4.3）；流式句柄族三源（§A6.5 D5.4）；journal = JSONL + Int 字符串惯例（§A6.7 D7.3）；预算数值类（快照 entry 数/嵌套/总字节、流式缓冲、blob 阈值、audit 开关默认值）= 实现期配置 |
 | Creator 文档           | 算术面口径（VM 运算符对 integer 报错、`integer.*` 库、只传不比算、大整数字面量 `123i`，§A6.1）；边界规则清单进 Creator 上下文（§A6.2 四层防线登记）                                                                                                                                                                                                                                                                                                   |
+
+## A7 schema DSL（2026-10-09 收官）
+
+### A7.0 边界与前提
+
+本题定**数据形状的机器可读写法**（schema DSL）：载体与记法、类型词汇表、契约包形态、对账与运行期校验、生成物单源。不归本题：事件 payload 的 manifest 声明位置（A8）；analyze/lint/类型定义生成的工具形态（A10）；config schema 的字段级属性（required/default/volatile/secret = ADR-0006 + §A2.5 已冻结，本题只把 `type:` 取值接入新词汇表）。下列既定项只盘点、全文不动：
+
+| 来源           | 既定项                                                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| ADR-0006       | schema 必须 Rust 能读（加载前校验/审批/对账都发生在跑插件代码之前）；Luau 侧不定义 schema                                               |
+| ADR-0007       | YAML 1.2 受限子集 = 统一配置格式；parser crate 实现期选型（schema 解析复用同一选型线，零新增依赖）                                      |
+| ADR-0018 S2/S6 | manifest 方法集对账已有（注册 = 激活点原子动作）；方法 schema 与事件 payload schema 共享同一 DSL；演化 = 加方法兼容/删改破坏（epoch+1） |
+| ADR-0024       | WIT = 盒侧形式化，schema 先行绑定生成                                                                                                   |
+| §A2.3 / §A2.5  | 同名不同 schema = 安装期响亮失败；provides 全形 map 预留 `contract:` 引用位                                                             |
+| §A5.2 D13.3    | business data 形状 SSOT = 服务契约文档（本章 D18.1 兑现）                                                                               |
+| §A6.1 / §A6.4  | int64 标注必须可表达（严格制配套）；`buffer` 词预留、限 ctx 面                                                                          |
+| §A6.6 D6.1     | 盒 WIT 签名 = 琐碎形态（每方法一导出，bytes 进 `result<bytes, bytes>` 出）——类型信息不在 WIT 层，WIT 由 schema 机械生成（D19.2）        |
+
+### A7.1 载体与记法（2026-10-09 定案）
+
+**D16.1 载体 = YAML 纯数据（2026-10-09 用户拍板）**——与 ADR-0006/0007 同源：config schema 已是 manifest.yml 里的 YAML；校验器单一实现（A2.2）分层生效：编辑器面（yaml-language-server）只覆盖 YAML 骨架——表达式串在引号内，JSON schema 的 `pattern` 正则表达不了嵌套 record/union；串内语法的校验面 = `sdk check` / loader 两面同管线，报错措辞逐字一致。淘汰：
+
+- **WIT 一把抓**：表达不了 required/default/secret/volatile 与"限 ctx 面"标注；无 map/any 类型（`Value::Map` 是中心类型）；盒侧签名已定琐碎形态（D6.1），类型信息本就不在 WIT 层；
+- **Luau 类型文件为源**：执行取 schema = 安装期跑未审计代码，信任模型倒置（审批门前置 = ADR-0006 立身之本）；静态解析 = 新依赖 + 子集守卫的持续教学负担（Luau 类型语法远大于本词汇表）+ `integer` 词 Luau 类型系统未必有（A10 验证项）——严格制最要紧处先撞墙；
+- **自造文件格式**：config/manifest 的 YAML 甩不掉，净增第八种格式；高亮/LSP/parser/模型熟悉度全从零（ADR-0007 淘汰格式扩散的理由原样适用）；
+- **JSON Schema / JTD**：前者 = 纯结构记法的啰嗦晚期形态（record 膨胀实例见 D16.2 对照）；后者覆盖面接近（int64/封闭 record/nullable）但任意 union 缺失、`buffer`/`function`/ctx-only 全靠自造扩展——买标准之名行方言之实。
+
+**D16.2 记法 = YAML 管结构，表达式串管形状（2026-10-09 用户拍板）**——元数据/清单/属性走 YAML 结构（name/version/方法清单/config 属性）；**一切类型形状 = 行内表达式串**：
+
+```yaml
+# lib/memory/contract.yml
+name: memory
+version: 2
+methods:
+    recall: "({ key: string }) -> any"
+    remember: "({ key: string, value: any, tags: array<string>? }) -> boolean"
+errors: # per-method business data 形状（可选；D13.3 配套兑现——服务族 kind 固定四态不立第五，契约唯一可声明的错误面 = business data）
+    recall: "{ reason: string, retry_after_ms: number? }"
+```
+
+- 产生式 = 基元词与字符串字面量 / `array<T>` / `map<T>` / record `{ 字段: T, ... }` / union `A | B` / optional `T?`（= `T | nil` 糖）；签名 = `(参数) -> 返回`，参数两形态——`名: T` 列表（ctx 面多参数）/ 单匿名 record（服务面恒单参数 = §A3.5 单 args 惯例的直接拼写）。就此冻结：加新叶子词/新产生式 = A10 ABI rev 议题。parser 手写 ~百行、零新依赖，报错走 A2.2 校验器同管线。
+- **服务方法返回形状不得为 `nil` 或含 nil 的 union**——§A5.1 D12.1"Ok 载荷永不为 nil"在 schema 面的原位约束（唯一例外 = 流式 read 族 EOF 位，ctx 面）；`T?` 的合法位 = record 字段 / ctx 面可选参数与流式 EOF / 事件 payload。词法细则：`?` 只缀原子/泛型/record（union 成员带 `?` 非法，写 `A | B | nil`）；record 键 = 标识符；字面量转义/空白等细则归实现期定稿，不属"新产生式"冻结范围。
+- **引号税写实**：表达式串必须加引号（YAML 中冒号+空格与 `{}` 是特殊字符）；串内失去 YAML 结构校验，报错定位 = 串内偏移。
+- **记号借用 Luau 眼缘，词汇是自有词表**——不声称 Luau 子集（Luau 数组写 `{T}` 我们写 `array<T>`；`integer` 词 Luau 类型系统未必存在，A10 验证项原位）；schema → `.d.luau` 的翻译归生成器（D19.2）。
+- 这是项目首个"需 parse 的字符串"（manifest/config 此前全纯结构）——它是 schema 词汇表的组成件，非第八种文件格式（ADR-0007 的淘汰对象 = 文件级格式）。
+- config schema 的 `type:` 取值接入同一表达式语法（`type: array<string>` 白拿）；required/default/volatile/secret 属性不动（ADR-0006/§A2.5）。
+
+### A7.2 类型词汇表（2026-10-09 定案）
+
+**D17.1 词汇表全表（2026-10-09 用户拍板）**——对照 `Value` 变体全集（§A6.0）直接映射：
+
+| 词                       | 对应               | 说明                                                                                                                                                                                 |
+| ------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `nil`/`boolean`/`string` | Nil/Bool/String    |                                                                                                                                                                                      |
+| `integer`                | Int(i64)           | §A6.1 严格制配套：integer ≠ number，两个词都要                                                                                                                                       |
+| `number`                 | Float(f64)         |                                                                                                                                                                                      |
+| `array<T>`               | Array              | §A6.2 D2.3 严格二分                                                                                                                                                                  |
+| `map<T>`                 | Map（键恒 string） | §A6.3 BTreeMap                                                                                                                                                                       |
+| record `{...}`           | Map 的封闭子形     | 字段名固定可校验（err 封套/opts 表）；与 map 分词保住"字段封闭"校验力（契约优先 = §A6.2 D2.3）——err 封套自此可精确写：`{ kind: "fs.not_found" \| ..., message: string, data: any? }` |
+| `A \| B`（含字面量）     | —                  | `string \| nil` 三态返回（返回位仅限流式 EOF/事件面；服务返回禁含 nil = D16.2）；`"unavailable" \| "timeout"` 把 kind 写准                                                           |
+| `T?`                     | —                  | = `T \| nil`；record 字段与返回值同写法                                                                                                                                              |
+| `buffer`                 | 不经 Value         | **限 ctx 面**（§A6.4 D4.2 原位），deps/provide/事件签名禁用（analyze 可静态强制）                                                                                                    |
+| `function`               | 不经 Value         | **限 ctx 面**（回调只出现在 ctx：timer/on/exclusive/fanout；服务边界 Value 不含 function = §A6.2 D2.2）                                                                              |
+| `any`                    | 任意 Value         | 占位词；business data 想精确就写细形状，不想就 `any` + README                                                                                                                        |
+
+**D17.2 三个小取舍（2026-10-09 用户拍板）**——
+
+1. **record 与 map 分词**：record = 字段名固定；map = 键开放。合并会丢掉"字段封闭"校验力。
+2. **optional 记法**：表达式串里一律 `T?`；config schema 的 `required` 属性不动——两个面各有各的写法，不强行统一。
+3. **`bytes` 不立词**：提正触发器维持 §A6.4 D4.1 原位（首个跨插件二进制消费者 → ADR 演进）。
+
+### A7.3 契约包与对账（2026-10-09 定案）
+
+**D18.1 契约包形态（2026-10-09 用户拍板）**——`lib/<name>/` 目录三件套：
+
+```
+lib/memory/
+  contract.yml   # 机器读：方法签名 + business data 形状 + 版本（D16.2 示例即其全文形态）
+  README.md      # 人读：重试语义、data 字段含义等（§A5 D13.3/D14.6 说的"契约文档" = 此文件）
+  init.luau      # 可选：平台契约附带工具函数时才有（ADR-0019 lib 惯例不动）
+```
+
+- 插件私有服务（§A2.4 第三层）v1 形态不变：manifest 方法集机器可查 + 文档约定（ADR-0018 S6）；契约包 = 可选升级，不强制。
+- **字段规则**：`name:` 缺省 = 目录名（manifest 同先例），写了则须 ≡ 目录名，不符 = 响亮失败；`version:` = **生态契约必填、平台内嵌契约禁写**（内嵌层版本 ≡ 核心版本，写了 = 冗余漂移源）。D16.2 示例 = 生态契约形态。
+
+**D18.2 引用位与版本规则（2026-10-09 用户拍板）**——manifest provides 全形 map 的预留字段兑现（§A2.5）：
+
+```yaml
+provides:
+    memory:
+        methods: [remember, recall]
+        contract: lib/memory # 平台内嵌契约：必不带版本号（契约版本 ≡ 核心版本，ADR-0019 C3）
+        # contract: lib/acme-memory@2     # 生态契约：必带主版本
+```
+
+版本 = **单个整数，破坏性变更才 bump**（与 ADR-0018 S6"删改破坏 epoch+1"对齐；加方法兼容不 bump）。`contract:` 值 = lib 目录路径（非 require 串；对应 alias = `@lib/memory`）；生态引用必带 `@N`、内嵌引用必不带；`@N` 与契约包 `version:` 字段不符 = 安装期响亮失败。
+
+**D18.3 对账规则（2026-10-09 用户拍板）**——方法集对账已有（ADR-0018 S2：manifest provides 声明 vs 激活点实际注册）；本章追加一层：**声明了 `contract:` 的，再对签名形状**。"同名不同 schema"的判定 = **规范化后逐字段结构相等**；规范化规则四条写实：record 字段序无关 / union 成员序无关 / `T?` 展开为 `T | nil` / 空白无关（其余词法细则归实现期）。**集合规则**：实际注册 ≡ manifest `methods:` ⊆ 契约方法集——缺 = 消费方运行期 `method_missing`（D13.3 四态原位，"加方法兼容"由此成立：契约长大不破坏旧提供方）；超出契约 = 安装期响亮失败。不同 = 安装期响亮失败（§A2.3 原位）。schema 对账 = 区分契约竞标与撞名的机械裁判（§A2.3），自此有牙。
+
+### A7.4 运行期校验与生成物（2026-10-09 定案）
+
+**D19.1 运行期校验做全量（2026-10-09 用户拍板）**——作用面 = 声明了 `contract:` 的服务调用（ctx 面参数校验 = 宿主各方法自带，§A4.4 D10.3 fail-fast 族，不在本条）。宿主在 CallService 两跳中间（转换出 Value 树之后、投递之前）walk 一遍 schema：
+
+- **参数形状不符 = 调用方响亮报错**——静态可查（analyze 写码期对账），按 §A5.3 D14.1 判据 2 属契约违反族，与 §A6.2 D2.2 不可转换值同一哲学；
+- **返回形状不符 = 调用方收 `Err(business)`**，data = ABI 固定形状 `{ violation: string }`（宿主定义的违约描述——D13.3"business data 由提供方定义"的唯一例外，彼处已加修订注）；违约现场进 host 侧 journal（提供方排查通道）；
+- **`errors:` 节不进运行期校验面**——business data 走错误通道，校验它 = 二次失败源（§A5.4 D15.2"错误通道自身必须无敌"原位）；其约束面 = analyze 静态对账 + 类型生成 + 文档；
+- 契约写 `any` 的槽位天然免校验——想宽就写 any，诚实不模糊；唯一例外 = Nil 返回：D12.1 是 schema 之外的 blanket 运行期检查，一切服务返回 Nil = 违约（不受 any 豁免）；
+- 成本写实：一次树遍历，相对跨 VM 深读 + N 次建表（§A6.2 的 1+N 结构）是同阶小头；v1 不做投机优化。与 §A6.2 D2.3"契约优先"的关系：彼 = 转换层按契约判定 Array/Map 那一半，本条补齐另一半（字段缺失/类型不符）。
+
+**D19.2 生成物单源原则（2026-10-09 用户拍板）**——schema 是三类生成物的唯一来源（生成器归 A10 工具面）：① Luau 类型产物（`.d.luau` 定义文件 + 契约包里 `export type` 模块）；② 盒 WIT 琐碎签名（机械生成，D6.1 形态已定）；③ Creator 文档骨架。**生态写实**：Luau 生态接触面 = 生成物而非 YAML——挂接全用生态既有机制（`luau-analyze --definitions` / luau-lsp definitionFiles 配置 / `@lib` require 模块图类型解析，alias 机制 = ADR-0019 已确认官方实现）；生成而非手写正是生态最大规模先例（Roblox 全套 API 类型定义 = 机器 dump 生成，luau-lsp 消费）；Luau 生态无"数据形状 schema 文件"惯例（pesde/wally manifest 管包不管形状），YAML schema 不与任何生态惯例冲突。方向永远单向：schema → Luau 类型，绝不反向（ADR-0006 原位）。盒方法签名的 schema 住处预定 = 包内 `boxes/<name>.yml` 随包（细节随 wasm32-wasip2 管线归 A10；v1 Luau 链路无盒）。
+
+**D19.3 ctx 方法集 = 核心自描述用同一 DSL（2026-10-09 用户拍板）**——否则 `buffer`/`function`"限 ctx 面"没有落点，且类型生成器只有一套。per-plugin 的 `config`/`deps` 类型由该插件自己的 manifest + 引用契约生成（工具归 A10）；`plugin()` 糖的泛型推导写法 = A10 验证项。
+
+### A7.5 联动登记汇总（章末）
+
+| 去向                                 | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A8（事件静态声明）                   | 事件 payload 形状写法 = 本章词汇表与表达式串（ADR-0018 S6 共享 DSL 兑现）；声明位置（manifest `events` 字段 / 契约包 events 节）归 A8                                                                                                                                                                                                                                                                                                                                                                        |
+| A10（工具/ABI rev）                  | 表达式串 parser（~百行手写零依赖，进 `sdk check`/analyze 同管线）；schema → `.d.luau`/`export type` 模块/WIT/文档骨架四个生成器；对账规范化细则（D18.3）；盒 schema 文件住处随 wasm 管线定稿（D19.2）；per-plugin config/deps 类型生成（D19.3）；词汇表/产生式演进 = ABI rev（D16.2 冻结纪律）。**验证项 +3**：luau-lsp 与 luau-analyze CLI 对 `.luaurc` alias 的类型解析一致性；definition files 挂接细节（luau-lsp 各版本）；`plugin()` 糖泛型推导实测（D19.3）——integer/number 区分（§A6.2 登记）原位不动 |
+| 任务 9（marketplace）                | 契约包分发形态（contract.yml + README.md）随市场元数据一并设计                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Creator 文档                         | 词汇表全表（D17.1）；契约作者指南（contract.yml 写法 + README 职责）；服务契约 README 必含项（business data 形状、重试语义，§A5 D13.3/D14.6 原位）                                                                                                                                                                                                                                                                                                                                                           |
+| 任务 6（journal）                    | 契约违约现场的 journal 条目形状与归类（D19.1）                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 实现期清单                           | 表达式串 parser + 规范化比较器（纯函数 crate 候选）；运行期 schema walk 校验器（D19.1）；表达式串词法细则定稿（D16.2）                                                                                                                                                                                                                                                                                                                                                                                       |
+| §A2.8/§A3.12/§A3.13/§A5.5/§A6.8 修订 | 五处登记行兑现注 + §A5.2 D13.3 修订注（D19.1 违约封套例外；本 change 已同步）                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| seam-capabilities                    | §6.1 A7 行新增 + A6 行收官注补登（本 change 已同步）                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| service-registry                     | §6 第 2/3 条收官注 + §7 版本号行修订注（本 change 已同步）                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
