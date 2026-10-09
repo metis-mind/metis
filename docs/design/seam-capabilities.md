@@ -254,7 +254,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 | A6 边界转换   | **A6 已收官**（2026-10-08，[luau-abi](luau-abi.md) §A6.0–§A6.8）：大 Value 零拷贝/Arc 表示、Bytes 扩展位与 buffer 关系、流式句柄族、盒线编码 TLV、journal 格式草案                                                                                                                         |
 | A7 schema DSL | **A7 已收官**（2026-10-09，[luau-abi](luau-abi.md) §A7.0–§A7.5）：YAML 骨架 + 表达式串记法；类型词汇表（`buffer`/`function` 限 ctx 面）；契约包三件套与对账；运行期校验；生成物单源（`.d.luau`/WIT/文档骨架）                                                                              |
 | A8 事件声明   | **A8 已收官**（2026-10-09，[luau-abi](luau-abi.md) §A8.0–§A8.5）：manifest events 双名单（意图层 + analyze 对账）；形状定义唯一住处 = 契约命名空间（核心内嵌 / lib/ 生态 / 插件随包三来源）；启用期对账 + emit 跟名校验；插件 emit `internal/` = 响亮；不立通配                            |
-| A9 能力门槛   | syscall 政策声明对账 = 安装面（与盒能力笼同一对账机制）                                                                                                                                                                                                                                    |
+| A9 能力门槛   | **A9 已收官**（2026-10-09，[luau-abi](luau-abi.md) §A9.0–§A9.4）：对账时机统一 = 启用期（D24——本行原“安装面”登记措辞平移）；inject 缺失三分 + warn 提醒 / 依赖禁环启用期 / 盒对账启用期（D25）；能力门强制点总表 + 编排面（事件/服务）不立能力门 = 能力间接化合法（D26）                   |
 | A10 工具形态  | `metis sdk` analyze 管线 = 四层防线写码期/安装期（§1.5）                                                                                                                                                                                                                                   |
 
 ### 6.2 journal 正式设计（任务 6）输入

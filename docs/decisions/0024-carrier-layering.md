@@ -1,6 +1,6 @@
 # 0024. 载体分层：盒管模型（Luau 管 + wasm 盒 + 核心内建件）
 
-- Status: accepted
+- Status: accepted（Consequences 议题地图回填行中「A9 能力政策声明对账 = 盒能力笼的安装面」的时机措辞已被「启用期」取代——对账时机统一 = 启用期，2026-10-09 定案于 [luau-abi](../design/luau-abi.md) §A9.1 D24；正式局部 supersede 随 Luau ABI 冻结 ADR 一并立）
 - Date: 2026-10-05
 
 ## Context

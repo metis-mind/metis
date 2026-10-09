@@ -1,6 +1,6 @@
 # 0018. 服务注册表与 inject 设计
 
-- Status: accepted（「插件服务 v1 文档约定起步」（S6）的可选升级通道 = 插件随包契约，2026-10-09 定案于 [luau-abi](../design/luau-abi.md) §A8.2 D21.2；正式局部 supersede 随 Luau ABI 冻结 ADR 一并立）
+- Status: accepted（「插件服务 v1 文档约定起步」（S6）的可选升级通道 = 插件随包契约，2026-10-09 定案于 [luau-abi](../design/luau-abi.md) §A8.2 D21.2；正式局部 supersede 随 Luau ABI 冻结 ADR 一并立。另：S2/S3 的「加载期响亮」时机措辞已精确化为「启用期」——对账时机统一 = 启用期，2026-10-09 定案于同文 §A9.1 D24，同批随冻结 ADR 吸收）
 - Date: 2026-10-02
 
 ## Context
