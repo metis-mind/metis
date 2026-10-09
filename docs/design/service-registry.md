@@ -127,7 +127,7 @@ Provider/Consumer 两角已锁（§2/§3：manifest 双声明 + 只认 key + 禁
 > 产品模型注（2026-10-03 用户确认，纠正此前隐含前提）：core = 插件管理与组合机器 + syscall 层 VM 基底（为满足核心层任务的原语可提供），**不提供任何 agent 领域服务**；llm/tools 等框架级能力的实现是插件（发行可捆绑参考实现，可替换），契约仍必须 `lib/` 契约包。详见 [ADR-0021](../decisions/0021-extension-language-runtime.md)。
 
 2. **载体形态登记**：`lib/` 契约包细节与"纯 manifest 契约包"候选的取舍，依赖 manifest 格式（`lib/` 引用语法已定 = [ADR-0019](../decisions/0019-crate-layout.md)）——归 ABI 任务——**2026-10-09 已收官** = [luau-abi](luau-abi.md) §A7.3 D18.1（契约包 = contract.yml + README.md + 可选 init.luau）
-3. **schema 化路径**：方法签名级校验归 ABI 任务的 schema DSL，**与事件 payload schema 共享同一套**；Definition 包届时从"常量+文档"升级为"常量+schema+文档"——**2026-10-09 已收官** = [luau-abi](luau-abi.md) §A7（YAML 骨架 + 表达式串记法；包形态 = contract.yml + README.md + 可选 init.luau）
+3. **schema 化路径**：方法签名级校验归 ABI 任务的 schema DSL，**与事件 payload schema 共享同一套**；Definition 包届时从"常量+文档"升级为"常量+schema+文档"——**2026-10-09 已收官** = [luau-abi](luau-abi.md) §A7（YAML 骨架 + 表达式串记法；包形态 = contract.yml + README.md + 可选 init.luau）；**事件侧兑现 + 第三来源 = §A8（2026-10-09）**：事件 payload schema 同 DSL 收官；契约命名空间增“插件随包”来源（provides 的 `contract:` 引用随之裸名化，模块 require 不受影响）
 4. **契约演化规则**：加方法 = 兼容（消费者重启但旧代码照常工作）；删方法/改签名 = 破坏（epoch+1 全消费者重启 + 调用期 `Err(MethodMissing)` 当场响亮）。schema 化后安装/审批时静态判定变更级别，审批界面显示"此更新破坏 N 个消费者"
 5. **自省目录**：注册表 + 双声明使服务目录（谁提供什么/方法集/谁依赖谁）纯推导可得；对模型暴露（Harness `cordis_inspect` 两级形态：列表省 token、详查带文档）登记 ABI tooling
 

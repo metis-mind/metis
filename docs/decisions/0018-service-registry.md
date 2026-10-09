@@ -1,6 +1,6 @@
 # 0018. 服务注册表与 inject 设计
 
-- Status: accepted
+- Status: accepted（「插件服务 v1 文档约定起步」（S6）的可选升级通道 = 插件随包契约，2026-10-09 定案于 [luau-abi](../design/luau-abi.md) §A8.2 D21.2；正式局部 supersede 随 Luau ABI 冻结 ADR 一并立）
 - Date: 2026-10-02
 
 ## Context
