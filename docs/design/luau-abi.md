@@ -33,6 +33,9 @@
 | 线程（协作式） | 作者视角的执行流：核心登记并调度（handler 本体 / `fanout` 子），ctx 调用 = 可挂起陷入；实现对象 = Luau coroutine，OS 映射 = 内核调度线程（§A4.3）                       |
 | 协程（裸协程） | 插件自建 Luau coroutine：控制流件（生成器等），切换不进核心；经 shim 可透明调 ctx——挂起冒泡到恢复者线程（§A4.3）；OS 映射 = 用户态协程                                  |
 | 可调度队列     | 每 fiber 单只 FIFO 队列：新消息（经在飞预算闸门接纳）/ 完成恢复 / `fanout` 子创建共用入队；worker 取队首跑到挂起或结束（§A4.2）                                         |
+| 错误封套       | `err` 数据表 `{ kind, message, data? }`：kind 定控制流 / message 人读 / data 按族查表；普通数据表非 frozen（§A5.2 D13.1）                                               |
+| kind           | 错误种类标识：封闭枚举；能力族 = 两级串 `"族.具体"`（`fs.not_found`），服务四态/business = 单级通用词；全集冻结进 ABI，演进走 A10 ABI rev（§A5.2 D13.2）                |
+| 兜底格         | 底层错误空间开放的族必设的诚实格（`fs.io`/`http.error`/`sql.error`），message 留原文；禁 message 匹配做控制流，子类提格走 ABI rev（§A5.3 D14.7）                        |
 
 ## A1 插件包形态与入口契约（2026-10-06 收官）
 
@@ -215,7 +218,7 @@ v1 顶层字段（封闭集）：
 
 ### A3.0 边界与前提
 
-ctx = 插件代码手里唯一的宿主句柄；Rust 侧形态 = `Context { fiber: FiberId, runtime: RuntimeHandle }`（[ADR-0013](../decisions/0013-context-scope.md)），身份随身，效应归属 / 能力门 / journal 拦截全挂在它上面。本题定**容器形态 + 方法清单 + 参数/返回形状**；不归本题：挂起与交错细则（A4）、失败封套形状（A5——本节示例的失败面一律从简）、schema 对账（A7）、类型定义（A10）。前提（已定不议）：编排面 = 事件四模式 + provide/inject（[ADR-0014](../decisions/0014-dispatch-semantics.md) / [0018](../decisions/0018-service-registry.md)）；`setup(ctx, config)` 签名（A1.1）；经 ctx 注册的一切自动入账本（A1.2）；inject 只写 manifest（ADR-0018 S3）；sleep 红线（A1.4）。
+ctx = 插件代码手里唯一的宿主句柄；Rust 侧形态 = `Context { fiber: FiberId, runtime: RuntimeHandle }`（[ADR-0013](../decisions/0013-context-scope.md)），身份随身，效应归属 / 能力门 / journal 拦截全挂在它上面。本题定**容器形态 + 方法清单 + 参数/返回形状**；不归本题：挂起与交错细则（A4）、schema 对账（A7）、类型定义（A10）。失败封套 = **§A5 已收官**（2026-10-09）；本章示例的失败面仍从简（err 槽省略处见 §A5.1 两槽形态）。前提（已定不议）：编排面 = 事件四模式 + provide/inject（[ADR-0014](../decisions/0014-dispatch-semantics.md) / [0018](../decisions/0018-service-registry.md)）；`setup(ctx, config)` 签名（A1.1）；经 ctx 注册的一切自动入账本（A1.2）；inject 只写 manifest（ADR-0018 S3）；sleep 红线（A1.4）。
 
 ### A3.1 容器形态：frozen table
 
@@ -266,14 +269,14 @@ return { setup = setup }
 | ------------------------------ | ------------------------ | ----------------------------------------- |
 | `ctx.emit(name, payload)`      | fire-and-forget          | 无（不挂起，不等监听者）                  |
 | `ctx.serial(name, payload)`    | 注册序逐个调，终止值短路 | 首个终止值；无人认领 = nil                |
-| `ctx.parallel(name, payload)`  | 等全部（allSettled）     | 逐项结果数组                              |
+| `ctx.parallel(name, payload)`  | 等全部（allSettled）     | 逐项结果数组（条目形状 = §A5.4 D15.2）    |
 | `ctx.waterfall(name, payload)` | 顺序变换链               | 变换后值；中途否决 = nil；无监听者 = 原值 |
 
 - **监听者返回约定**（ADR-0014 的 Luau 映射）：serial 返回非 nil = 终止值并短路；waterfall 返回新值继续链 / nil 否决；parallel 返回值进逐项结果；emit 返回值被忽略。
 
 ### A3.5 provide 形状与 setup 内限定
 
-- `ctx.provide(key, 方法表)`：方法表 = 提供方自己的普通 table（宿主不冻结——提供方 VM 内部物）；**注册 = 激活点捕获方法函数引用快照**，事后改表不影响消费侧路由（与烘焙快照哲学一致）；方法收单 args、返单值；抛错/主动失败 → `Err(Business)`（封套 A5）。多服务 = 多次调用，逐 key 独立（S1 附议）。
+- `ctx.provide(key, 方法表)`：方法表 = 提供方自己的普通 table（宿主不冻结——提供方 VM 内部物）；**注册 = 激活点捕获方法函数引用快照**，事后改表不影响消费侧路由（与烘焙快照哲学一致）；方法收单 args、返单值；抛错/主动失败 → `Err(Business)`（封套 = §A5.4 D15.2 写实）。多服务 = 多次调用，逐 key 独立（S1 附议）。
 - **setup 内限定**：Active 后 provide = 响亮报错。S2“注册 = 激活转换点原子动作 + manifest 对账”只在激活窗口成立；激活后补注册绕过对账、打破“注册即可用、可用即 Active 一个布尔”。S2 的显式化，非新约束。
 
 ### A3.6 timer 三方法与两种唤醒路径
@@ -314,19 +317,19 @@ ctx.timer.sleep(2_000)   -- 挂起当前协程 2 秒；期间邮箱下一条消�
   1. **词法归一**（纯字符串，不碰盘）：解掉 `.`/`..`/重复分隔符 → 标准形；confined scope 判结果是否仍在根内，逃逸即拒——杀 `./x/../../../etc` 类词法逃逸。
   2. **物理 canonicalize**（解 symlink 后再验）：confined scope 验“仍在 canonical 根内”；global 验“未命中豁免清单”——**豁免必须验在 canonical 之后**，否则放个指向 secrets store 的软链即绕过。
      TOCTOU 硬化（检查与 open 之间的路径偷换：`openat2(RESOLVE_BENEATH)` / open 后 fstat 复核）归实现期清单；ABI 只冻结两段式语义。
-- **六方法**（三 scope 同方法集）：`read(path) -> string` / `write(path, content)`（原子写 tmp+rename，seam §5.2；**自动建父目录**——私域/绑定根内无共享语义，省一个 mkdir）/ `append(path, content)`（**原子追加**：单次调用整体落盘不撕裂，跨插件顺序不承诺 = 分布式现实——2026-10-08 §A4.1 D1.8 提为独立方法；原“append = read+write 组合”的前提 = actor 串行无并发写者，随 §A4.1 自由交错失效）/ `list(dir?) -> array` / `delete(path)` / `exists(path) -> bool`。glob/mkdir 等一律不立。大文件/二进制 = A6 的 Bytes/buffer 扩展位（2026-10-07 §A6.4 兑现：静态二进制读写 = `readbytes -> buffer` / `writebytes` 分立方法；`read` 保 UTF-8 契约、非 UTF-8 响亮失败指路 `readbytes`；大文件归 §A6.5 流式句柄）；read 带大小预算（实现期配置）。
+- **六方法**（三 scope 同方法集）：`read(path) -> string` / `write(path, content)`（原子写 tmp+rename，seam §5.2；**自动建父目录**——私域/绑定根内无共享语义，省一个 mkdir）/ `append(path, content)`（**原子追加**：单次调用整体落盘不撕裂，跨插件顺序不承诺 = 分布式现实——2026-10-08 §A4.1 D1.8 提为独立方法；原“append = read+write 组合”的前提 = actor 串行无并发写者，随 §A4.1 自由交错失效）/ `list(dir?) -> array` / `delete(path)` / `exists(path) -> bool`。glob/mkdir 等一律不立。大文件/二进制 = A6 的 Bytes/buffer 扩展位（2026-10-07 §A6.4 兑现：静态二进制读写 = `readbytes -> buffer` / `writebytes` 分立方法；`read` 保 UTF-8 契约、非 UTF-8 = `Err(fs.invalid_utf8)` 指路 `readbytes`（§A5.3 D14.2）；大文件归 §A6.5 流式句柄）；read 带大小预算（实现期配置）。
 
 ### A3.8 http 单方法
 
 ```luau
-local resp = ctx.http.request({
+local resp, err = ctx.http.request({
   method = "POST",              -- 缺省 GET
   url = "https://api.openai.com/v1/chat/completions",
   headers = { ["content-type"] = "application/json" },
   body = json.encode(payload),
   timeout_ms = 30_000,          -- 可覆盖，但必须有上限（seam §5.2 强制超时）
 })
--- resp = { status = 200, headers = {...}, body = "..." }
+-- resp = { status = 200, headers = {...}, body = "..." }；4xx/5xx 不是 err，是 resp.status（§A5.3 判据 1）
 ```
 
 - 单方法 + opts table：HTTP 的语义复杂度天然是命名参数；get/post 糖归 SDK 插件层，核心保持一格。
@@ -338,11 +341,11 @@ local resp = ctx.http.request({
 ```luau
 ctx.sql.exec("CREATE TABLE IF NOT EXISTS intents (id TEXT PRIMARY KEY, payload TEXT)")
 ctx.sql.exec("INSERT INTO intents VALUES (?, ?)", { id, json.encode(payload) })
-local rows = ctx.sql.query("SELECT * FROM intents WHERE due < ?", { now })
+local rows, err = ctx.sql.query("SELECT * FROM intents WHERE due < ?", { now })
 -- rows = { { id = "...", payload = "..." }, ... }
 ```
 
-- 两方法按有无结果集分：`exec`（DDL/DML → 受影响行数）/ `query`（→ 行数组，列名→值）。**只许参数化占位 `?`**：注入防护 + 类型转换单挂点；分页参数 = 实现期配置（seam §6.3）。（2026-10-08 修订注：v1 不立 BLOB 列，遇 BLOB 响亮失败指路“存 TEXT 或走 fs”；列映射 = NULL→Null / INTEGER→`Int(i64)` / REAL→Float / TEXT→String，§A6.4 D4.3。）
+- 两方法按有无结果集分：`exec`（DDL/DML → 受影响行数）/ `query`（→ 行数组，列名→值）。**只许参数化占位 `?`**：注入防护 + 类型转换单挂点；分页参数 = 实现期配置（seam §6.3）。（2026-10-08 修订注：v1 不立 BLOB 列，遇 BLOB = `Err(sql.error)` 指路“存 TEXT 或走 fs”——2026-10-09 §A5.3 判据 2 精确化：查询遇 BLOB = 运行期数据决定，走 Err 通道；列映射 = NULL→Null / INTEGER→`Int(i64)` / REAL→Float / TEXT→String，§A6.4 D4.3。）
 - **每插件一个私有 db**（`sqlite: true` 无参数，§A2.5）：物理位置 core 管理、**不在本插件 fs 私域子树内**（自己的 `ctx.fs` 够不到 = 手滑写花结构性不存在）；global scope 可达（维护/调试正道，§A3.7）。生命周期随插件私有数据政策（卸载保留与否归任务 4）。
 - **价值定位**：fs+JSON 管整张读写小状态；ctx.sql 管多记录条件查询（索引/WHERE/排序/分页——编排层手写 = 在最慢的一层重新发明 sqlite）；共享归服务层（物理共享 db = schema 归属/迁移/锁三烂摊子 + 提供方可替换性死亡；“共享关系存储”收敛后的正当形态 = 平台契约 + 参考实现插件，§A2.4 三层已留位）。核心提供而非盒自包的理由：journal 粒度（`sql_call`/`sql_result` vs 盒内经 fs 的 `fs_write` 字节流，审计与 replay 同降档）+ WAL/崩溃一致性白拿。近消费者：memory、schedule（seam §5.5 梯度二）、session/历史。
 - **事务 = 扩展位**：候选 = 原子 batch（一组语句一次调用、不可挂起，无脚枪）/ tx 回调；带真实用例再审。
@@ -355,12 +358,12 @@ local rows = ctx.sql.query("SELECT * FROM intents WHERE due < ?", { now })
 
 ```luau
 -- 一次性：exec = spawn + 收齐输出 + wait 的糖；强制超时（与 http 同纪律），超时杀进程组
-local r = ctx.process.exec({ argv = { "git", "status", "--short" }, timeout_ms = 60_000 })
+local r, err = ctx.process.exec({ argv = { "git", "status", "--short" }, timeout_ms = 60_000 })
 -- r = { code = 0, stdout = "...", stderr = "..." }
 
 -- 长驻/交互：spawn 返回句柄（冻结表烘焙，§A3.1 统一模型）
-local p = ctx.process.spawn({ argv = { "npm", "run", "dev" }, cwd = root, env = { PORT = "3000" } })
-local chunk = p.read_stdout()     -- 挂起读一块；EOF = nil（read_stderr 同理，分流不合并）
+local p, err = ctx.process.spawn({ argv = { "npm", "run", "dev" }, cwd = root, env = { PORT = "3000" } })
+local chunk, err = p.read_stdout()  -- 挂起读一块；三态 = chunk / nil(EOF) / nil,err（§A5.3 D14.3；read_stderr 同理，分流不合并）
 p.write("y\n")                   -- 写 stdin
 p.signal("term")
 local exit = p.wait()             -- 挂起等退出 → { code = 0 }
@@ -380,7 +383,7 @@ A1.5 行为规则的实现机制确认（spike §1 PASS，无新决策）：**�
 
 ```luau
 local parser = ctx.box("parser")   -- manifest boxes: [parser]；未声明 = 响亮报错（fail-closed）
-local ast = parser.parse(source)   -- 挂起式调用：盒内 ms 级计算不堵共享 executor
+local ast, err = parser.parse(source)  -- 挂起式调用：盒内 ms 级计算不堵共享 executor
 ```
 
 - **访问器 `ctx.box(name)`**：盒不是服务依赖（不卡激活门），是按需获取的能力句柄——与能力门同走 ctx 挂载位（seam §2.3）；analyze 对账 `box()` 调用（§A2.5/A10）形状衔接。
@@ -393,7 +396,7 @@ local ast = parser.parse(source)   -- 挂起式调用：盒内 ms 级计算不�
 | 去向                | 内容                                                                                                                                                                                                                      |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A4（await/交错）    | 挂起点 = ctx 方法调用处（seam §6.1 已登记）；插件内自由交错 + `ctx.exclusive`（§A4.1）——**A4 全章已收官**（2026-10-08 §A4.1 + 2026-10-09 §A4.2–§A4.6：单队列 FIFO / coroutine shim / 保险丝总表 / 卸载细则）              |
-| A5（错误/Result）   | 一切效应/服务/盒/process 调用的失败封套形状（本节示例失败面一律从简）                                                                                                                                                     |
+| A5（错误/Result）   | **已收官**（2026-10-09 §A5.0–§A5.5：多返回值 `res, err` / err 封套 / 族清单 / 处置习语）——本章示例失败面仍从简，err 槽省略处见 §A5.1                                                                                      |
 | A6（边界转换）      | 流式句柄族形态统一再审（http SSE/大 body、fs 大文件、process 流式；userdata 届时再审）；盒线编码/零拷贝/Bytes（**2026-10-08 已收官**：§A6.5 流式族 + userdata 淘汰、§A6.6 盒线编码 TLV、§A6.4 Bytes 维持扩展位）          |
 | A7（schema DSL）    | deps 烘焙方法集的 schema 来源（contract 对账）；盒 WIT                                                                                                                                                                    |
 | A8（事件静态声明）  | manifest `events` 字段（on/emit 面的静态化）                                                                                                                                                                              |
@@ -590,7 +593,7 @@ D1.3 的 fan-out 理由随 shim 修订（本 change 已同步）：结论不变�
 4. 被登记线程裸 yield（D9.3）→ worker 杀线程
 5. `fanout` 子协程未随 handler 完结（D1.3）→ host 取消（结构化纪律）
 6. 卸载期注册新账（§A1.2 结算期规则，D11.2 推广至 Unloading 全程）→ 响亮错误
-7. 不可转换值跨界（§A6.2 D2.2）→ 响亮失败
+7. 不可转换值跨界（§A6.2 D2.2）→ 响亮失败（**错误通道例外** = §A5.4 D15.2：error 值落字符串化摘要）
 
 兜底保险丝层（非 fail-fast，最后手段）：VM 时间盒 / S5 调用超时 / bounded 邮箱 + 在飞预算回压 / 加载总预算（A1.4）/ drain 总预算（fiber.md §10）。
 
@@ -644,6 +647,151 @@ fiber.md §3/§10 已定 drain 骨架（LIFO、disposer 可 await、超时强制
 | seam-capabilities   | §1.3 coroutine 行注（shim 透明化）+ §6.1 A4 行更新（本 change 已同步）                                                                                                                                                      |
 | loader/安装事务     | 事务式重载纪律（cordis 对账，D11.5）                                                                                                                                                                                        |
 
+## A5 错误与 Result 习语（2026-10-09 收官）
+
+### A5.0 边界与前提
+
+本题定**一切效应/服务/盒/process 调用的失败封套形状 + 作者面处置习语**。下列既定项只盘点、全文不动：
+
+| 来源              | 既定项                                                                                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ADR-0018 S5       | 服务调用 `Result` = `Ok(Value)` / `Err(Unavailable)` / `Err(MethodMissing)` / `Err(Timeout)` / `Err(Business, Value)`；Business = 契约义务必须显式处理；超时不取消（扩展位） |
+| ADR-0014          | 事件总线错误 = fail-open：emit 记日志；parallel 收集每项 Result；serial/waterfall 记日志后继续；错误不进控制流                                                               |
+| seam §2.2         | sync 直挂件 = 同步错误返回；async 两跳件 = Result 主战场                                                                                                                     |
+| §A4.4 D10.2/D10.3 | 在飞预算超限 = 纯回压不立响亮档；fail-fast 检测面七条 = 契约违反即错（不经 Result 通道）                                                                                     |
+| §A4.5 D11.3       | 卸载窗口 = host 立即注入 `Err(Unavailable)`                                                                                                                                  |
+| §A1.2             | disposer 抛错逐个吞掉，不中断其他清理                                                                                                                                        |
+| §A3.5             | provide 方法抛错/主动失败 → 消费方收 `Err(Business)`（封套 = §A5.4 D15.2 写实）                                                                                              |
+
+总基调沿用 A 系列严格制（类型/形态精确匹配零隐式 coercion；演进通道 = A10 ABI rev）。
+
+### A5.1 Result 的 Luau 呈现形态（2026-10-09 定案）
+
+**D12.1 多返回值 `res, err`（2026-10-09 用户拍板）**——挂起式 ctx 调用失败经**值通道**返回，不立异常主通道：
+
+```luau
+local content, err = ctx.fs.read(path)
+if err then ... end
+```
+
+- 形态依据：Lua 生态最强惯例（`io.open` → `nil, errmsg`；`pcall` → `ok, ...`）；Luau narrowing 走单变量惯例（`if res then`/`assert(res)` 收窄成立；两槽关联 narrowing 依签名形态，A10 类型定义以 pinned Luau 实测为准 = 验证项，§A5.5 登记）；挂起式直线写法（§A4）把 promise 藏起来后，reject 的唯一去处 = 返回值。
+- **`assert` 升级习语白拿**：`local content = assert(ctx.fs.read(p))`——assert 见 falsy 首值即抛第二值，“不处理、失败即炸 handler”的 fail-fast 姿态一行写完；精细处理的作者走 `if err then` 分支。两种姿态各得其所。
+- **ABI 纪律：Ok 载荷永不为 nil**——消 `nil, nil` 歧义；“成功但无返回”的方法（如 `ctx.sql.exec` DDL）Ok 载荷 = 受影响行数或 `true`，逐方法写实。唯一例外 = 流式 read 族的显式 EOF 位（§A5.3 D14.3）。
+- **淘汰封套表**（`r.ok`/`r.value`）：每次调用过字段税；`assert(r.ok)` 炸不出错误内容；反 Lua 惯例，Creator 场景学习成本 +1。淘汰异常主通道（error/pcall 为唯一路径）：与 fail-open 哲学冲突（ADR-0014——跨边界错误不该默认炸线程），且“async = Result 主战场”（seam §2.2）既定。
+- **纪律作用面** = 效应/服务/盒/process 两槽调用；编排面（事件派发/fanout join）不走两槽——失败语义 = ADR-0014 fail-open 与 D15.2 收集制，serial/waterfall 的 nil 返回合法（§A3.4 serial 无人认领 / waterfall 否决）。sync 直挂件失败 = 抛错（mlua Err → Lua error 的自然形态；seam §2.1“失败 = 同步返回错误”的作者面兑现）。
+
+### A5.2 错误封套形状（2026-10-09 定案）
+
+**D13.1 err = 数据表封套 `{ kind, message, data? }`（2026-10-09 用户拍板）**——
+
+- 三字段分工 = **作者契约头条**：**`kind` 定控制流，`message` 只进日志/人读，`data` 按族查表**。
+- 普通数据表（§A6.2 D2.1 快照纪律产物），**非 frozen**——frozen 是句柄/方法表待遇，err 是纯数据。
+- 淘汰：字符串 message（机器分支退化为字符串匹配，违严格制）；三返回值摊平（与 D12.1 两槽形态冲突，assert 接不住）。
+
+**D13.2 kind = 封闭枚举（2026-10-09 用户拍板）**——宿主产生的全部 kind 是 ABI 冻结的封闭集合（演进走 A10 ABI rev）。形态两类：能力族 = 两级串 `"族.具体"`（fs/http/sql/process/盒 `box.trap`，消族内撞名——`invalid` 系在 fs/http 各有语义）；服务四态与 business = 单级通用词（跨上下文同格复用，无撞名面）。作者分支集合可对账 = analyze 四层防线可查“处理了哪些族”（A10 登记）。开放字符串被否：严格制下等于没有分类。
+
+**D13.3 服务四态平移 + Business 载荷落 data**——ADR-0018 S5 四态原位平移为四个 kind：`"unavailable"` / `"method_missing"` / `"timeout"` / `"business"`；服务调用族的 kind 集合就此四格，不立第五。`Err(Business, Value)` → `kind = "business"` + `data = 提供方自定义 Value`——**business 是唯一 data 形状由非宿主定义的族**，其 data SSOT = 服务契约文档（A7 配套）。
+
+### A5.3 错误族清单（2026-10-09 定案）
+
+**D14.1 三条分界判据（2026-10-09 用户拍板）**——清单的生成规则；将来新能力进门按判据走，不再逐格拍脑袋：
+
+1. **Err vs Ok 内状态字段**：**Ok 载荷是否仍完整成立**。HTTP 4xx/5xx = 完整响应 → `Ok{status}`；进程 exit 1 = 完整结果 → `Ok{code}`；文件没读到/请求没发出去 = 无载荷可言 → `Err`。状态码/exit code 分支是 Ok 载荷上的正常业务分支，与 kind 枚举无关（HTTP 状态码几百个一个都不进 kind——“错误码多”的担忧由此消解）。
+2. **Err vs 响亮报错**：**契约违反（静态/结构可查）= 响亮报错**（D10.3 家族：manifest 未声明能力、参数形状错、exclusive 嵌套）；**运行期数据决定的失败 = Err**（作者无法静态避免：文件是否存在、对端是否可达）。
+3. **kind 细分粒度**：**调用方会据此做不同动作**才独立格（`not_found` → 创建它；`permission_denied` → 放弃报告）；动作相同合并一格。OS 错误空间开放处**诚实设兜底格**（`fs.io` 等），message 保留原文——假装封闭是自欺。
+
+**D14.2 效应族 kind 清单**——
+
+| 族      | kind                   | 触发                                                                                                                                                                                                                      |
+| ------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| fs      | `fs.not_found`         | read/list/delete 目标不存在                                                                                                                                                                                               |
+|         | `fs.permission_denied` | OS 层拒绝（EACCES/EPERM/EROFS，动作相同 = 放弃）                                                                                                                                                                          |
+|         | `fs.invalid_path`      | 两段式解析拒绝全族：逃逸/豁免命中/循环/超长（作者动作一致 = 修路径）；TOCTOU 竞态窗口同格。**message 政策 = 通用化，不点名豁免命中**（防插件探测受保护根位置——豁免清单 §A3.7）；完整原因归 host 侧 journal（任务 6 登记） |
+|         | `fs.invalid_utf8`      | `read` UTF-8 校验失败，message 指路 `readbytes`（§A6.4 D4.3“响亮失败”措辞随本章精确化，本 change 已同步）                                                                                                                 |
+|         | `fs.invalid_type`      | read 目录 / list 文件                                                                                                                                                                                                     |
+|         | `fs.too_large`         | read 预算超限                                                                                                                                                                                                             |
+|         | `fs.io`                | 兜底（message = OS 原文）                                                                                                                                                                                                 |
+| http    | `http.timeout`         | 强制超时命中（与 S5 `"timeout"` 不同族：彼 = 服务调用 deadline，此 = 外部请求超时）                                                                                                                                       |
+|         | `http.connect`         | DNS/TCP/TLS/连接中断一格（动作相同）                                                                                                                                                                                      |
+|         | `http.policy`          | 域名白名单/SSRF/跨域重定向拒绝（部署者数据 → Err，与 D14.5 能力缺失两界不混）                                                                                                                                             |
+|         | `http.too_large`       | 响应预算超限                                                                                                                                                                                                              |
+|         | `http.invalid`         | URL 畸形等值层参数错误（参数**形状**错仍走响亮，判据 2）                                                                                                                                                                  |
+|         | `http.error`           | 兜底：响应畸形/解压失败/重定向异常（对称 `fs.io`）                                                                                                                                                                        |
+| sql     | `sql.constraint`       | 约束违反（唯一冲突 → 改走 UPDATE，唯一值得机器分支的）                                                                                                                                                                    |
+|         | `sql.error`            | 语法/schema 漂移/BUSY/IO 全兜底（SQLite 错误空间开放）                                                                                                                                                                    |
+| process | `process.spawn_failed` | 命令不存在/权限/fork 失败                                                                                                                                                                                                 |
+|         | `process.timeout`      | exec 强制超时杀组                                                                                                                                                                                                         |
+|         | `process.gone`         | write/signal 已退出进程（高频竞态）；read 在进程死后 = 正常 EOF 不算错误                                                                                                                                                  |
+| timer   | —                      | **无 Err 面**；参数非法 = 响亮报错                                                                                                                                                                                        |
+
+写实两条：process 输出截断 = **Ok 载荷加 `truncated = true` 字段**，不立 kind（不丢已收数据）；非零 exit = `Ok{code}` 同理。
+
+**D14.3 流式 read 三态 + 错误复用属主族枚举**——`local chunk, err = stream:read()`：**chunk 有值 = 数据 / `nil, nil` = EOF / `nil, err` = 中途错误**。`nil, nil` = read 族的显式 EOF 位（Lua 惯例 `file:read()` 同形；§A3.10 示例已暗示），不算违反 D12.1——纪律精确化为“普通 ctx 调用 Ok 载荷永不为 nil；流式 read 族签名自带 EOF 位”。**流式不立新 kind**：fs 流报 `fs.*`、http 流报 `http.*`、process 流报 `process.*`——三态形状只加 EOF 位，错误种类与一次性调用同族。
+
+**D14.4 盒错误二态**——**盒业务错误**（盒主动 err 通道 = `result<list<u8>, list<u8>>` 第二坨字节，§A6.6 D6.1）一律 `kind = "business"`，`data` = 盒自定义 Value 透传（TLV 解码）——与 §A3.5 provide 抛错同待遇：盒 = 能力制品，其业务错误对调用方 = Business；宿主封闭枚举不为盒开口。**盒 trap**（wasm 崩溃）= 宿主产生，`kind = "box.trap"`，message = trap 原文；trap 后句柄处置（实例重建政策）归实现期/盒生命周期，本章不立。
+
+**D14.5 能力缺失 = 响亮报错（边界确认）**——未声明能力的 ctx 方法调用（含 `ctx.box` 未声明盒）= 响亮报错，不进 Result——manifest 声明是静态物，作者写错 = 契约违反族（判据 2），与 §A3.12“未声明 = 响亮报错 fail-closed”对齐。部署政策拒绝（http 白名单等）是运行期数据 → Err（`http.policy`），两界不混。
+
+**D14.6 不立“可重试”标识（2026-10-09 用户拍板）**——`err.retryable` 布尔被否，三理由：① 可重试性 = 错误性质 × 操作幂等性 × 业务语义的乘积，宿主只看得到第一个因子，标一个 bit = 超出知识范围的承诺（同一 `http.timeout`，GET 安全 POST 重复下单）；② 布尔标识诱导无退避无上限的裸重试反模式——核心不替作者做重试决策 = D10.1/D11.5 同一哲学第三次兑现；③ 信息来源不明的单 bit = 严格制意义上的模糊处理。替代物三件套：kind 分格已含动作信息（判据 3 副产品：瞬态族 timeout/connect/io vs 持久族 policy/invalid/not_found 边界天然清晰）；“族 → 建议动作”对照表进 Creator 文档（知识沉淀，§A5.5 登记）；`data` = 诚实的演进通道（实例方向 = `unavailable` 的 data 带 `reason`，走 A10 ABI rev 不破坏封套）。**边界写实**：ADR-0018 S4“自动重试否决”= 框架不自动恢复提供方，不禁止作者重试单次调用（作者契约第三条）。business 族的重试语义归服务契约文档（A7 配套），封套不替提供方表态。
+
+**D14.7 覆盖性纪律（2026-10-09 用户拍板）**——封闭空间（服务四态/政策拒绝）= 枚举即全集；开放空间（OS/网络库/SQLite）= 高频动作格 + 诚实兜底格 + ABI rev 提格通道。每个底层错误空间开放的族必须设兜底格（`fs.io`/`http.error`/`sql.error`）。**封边 = 作者契约第二条：禁 message 匹配做控制流**——想对兜底子类（`fs.io` 里的 ENOSPC）分支 = 提 ABI rev 把该子类提为独立格；没有这条，兜底格就是字符串匹配的温床，判据白立。v1 不追求枚举完满：该可分支处必精确、暂不可分支处禁偷渡，真实摩擦出现再议。
+
+### A5.4 作者处置习语与未捕获归宿（2026-10-09 定案）
+
+**D15.1 处置三习语**——
+
+```luau
+-- 1. 精细分支：机器分支只看 kind；处理不了的 kind 走透传升级（= 习语 3 内联版）
+local content, err = ctx.fs.read(path)
+if err then
+  if err.kind == "fs.not_found" then content = default else error(err) end
+end
+
+-- 2. assert 升级：失败即炸当前 handler（fail-fast 姿态，D12.1）
+local content = assert(ctx.fs.read(path))
+
+-- 3. 透传升级：整个 err 表当错误值抛出 → 经 D15.2 映射落消费方 data，沿调用链值无损透传（Lua 版 `?`；
+--    kind 归 business——消费方对嵌套封套的分支靠契约文档，D13.3）
+local content, err = ctx.fs.read(path)
+if err then error(err) end
+```
+
+**写实：`return nil, err` 不是合法升级通道**——provide 返单值契约（§A3.5）下第二值被丢 = 消费方收 `Ok(nil)`（自破 D12.1 纪律）；事件面 nil 首值有既有语义（§A3.4 serial 无人认领 / waterfall 否决）= 错误被静默重解释。插件内跨函数升级 = `error(err)` 唯一通道。
+
+**D15.2 插件内 throw 归宿总表 + 映射规则**——先立结果条目形状：parallel/fanout 的逐项结果条目 = `{ ok = true, value = ... }` / `{ ok = false, err = <封套> }`——`ok` 判别位消“成功条目恰为带 kind 字段的 table”的不可分（严格制契约优先同精神，§A6.2 D2.3）。
+
+| 抛错点                                 | 归宿                                                              | 依据                                |
+| -------------------------------------- | ----------------------------------------------------------------- | ----------------------------------- |
+| `setup` 体                             | 加载失败，响亮报告部署者                                          | A1 加载期纪律                       |
+| 事件 listener（emit/serial/waterfall） | fail-open 记日志，不进控制流                                      | ADR-0014 既定；journal 政策归任务 6 |
+| 事件 listener（parallel）              | 该项结果 = `{ ok = false, err = {kind="business", data=错误值} }` | ADR-0014 既定，本条写实封套         |
+| 服务 handler（provide 方法）           | 消费方收 `Err{kind="business", data=错误值}`                      | §A3.5 既定，本条写实映射            |
+| fanout 子协程未捕获                    | 该子结果条目同上（business 收集）                                 | §A4.1 D1.3“返回各 Result”的写实     |
+| disposer                               | 逐个吞掉，不中断其他清理                                          | §A1.2 既定                          |
+
+映射规则：`error(v)` → `data = v` 经 §A6.2 深快照；**v 不可转换或超快照预算（entry 数/嵌套/字节）= data 落字符串化摘要，不二次失败**（错误通道自身必须无敌；§A6.2 D2.2/§A4.4 D10.3#7 的错误通道 carve-out，彼处已加修订注）；运行时错误（非 `error()` 抛出）→ `data = 错误消息字符串`。**一格统收，v1 不立 uncaught 独立格**——分层已自洽：handler 级失败（故意或 bug）= Business；插件级死亡 = Unavailable；真实摩擦 → ABI rev。
+
+**D15.3 作者契约五条**（本章纪律汇总，与 §A4.3 D9.4 同构）——
+
+1. **err 槽必检**——两槽返回值要么分支、要么 `assert`/`error(err)` 升级；裸丢弃 = 静默吞错（lint 形状归 A10）。
+2. **kind 定控制流，message 只进日志**——禁 message 匹配（D14.7 封边）。
+3. **重试自由、幂等自负**——核心不做重试决策（D14.6）。
+4. **Ok 载荷永不为 nil**——唯一例外 = 流式 read 族 EOF 位（D14.3）。
+5. **data 按族查表**——business 的 data 形状 SSOT = 服务契约文档（A7 配套）。
+
+### A5.5 联动登记汇总（章末）
+
+| 去向                | 内容                                                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A10（工具/ABI rev） | 未检查 err 的 lint 形状（D15.3 第一条）；kind 处理面对账（D13.2）；兜底子类提格通道（D14.7）；验证项 = 两槽关联 narrowing 的 pinned Luau 实测（D12.1） |
+| A7（schema DSL）    | business data 形状 = 契约文档职责（D13.3/D15.3 第五条）                                                                                                |
+| 任务 6（journal）   | 事件 listener 抛错记日志的 journal 政策（D15.2）；`fs.invalid_path` 完整拒绝原因的 host 侧记录政策（D14.2，插件可见 message 通用化）                   |
+| Creator 文档        | 作者契约五条（D15.3）；处置三习语（D15.1）；“族 → 建议动作”对照表（D14.6）；形态速查（Ok 状态字段 vs Err 分界，D14.1 判据 1）                          |
+| 扩展位              | `unavailable` data `reason` 类场景字段（D14.6，真实摩擦 → ABI rev）                                                                                    |
+| §A3.x 修订          | §A3.0 前提行指针（A5 已收官）；§A3.5 封套指针 → D15.2；§A3.8/§A3.9/§A3.10/§A3.12 示例回填 err 槽（本 change 已同步）                                   |
+| §A6.x 修订          | §A6.4 D4.3 UTF-8/BLOB“响亮失败”→ Err 通道精确化（D14.2，本 change 已同步）；§A6.5/§A6.6/§A6.8 登记行兑现注（本 change 已同步）                         |
+| seam-capabilities   | §6.1 A5 行更新（本 change 已同步）                                                                                                                     |
+
 ## A6 边界转换细则（2026-10-08 收官）
 
 ### A6.0 边界机制与前提
@@ -680,7 +828,7 @@ fiber.md §3/§10 已定 drain 骨架（LIFO、disposer 可 await、超时强制
   3. **journal 落盘**：syscall 边界拦截录的必须是宿主拥有的数据。
      反向（宿主 → 插件）无此问题：容器 = frozen table 无元表（§A3.1），注入即冻结 = 天然快照。waterfall 每跳变换返回值同样跨界、同纪律。
 - **1 + N 成本结构与 Arc 共享**：emit/parallel/waterfall 投递成本 = 1 次源 VM 深读 + N 次目标 VM 建表；中间 metis `Value` 不可变 → **一份实例 N 处引用（`Arc`），Rust 侧零额外克隆**（事件路径 = §A6.3 Arc 表示的头号用户）。N 次建表 = 不可约物理成本（独立堆/GC，共享对象即击穿隔离地基）；惰性代理表（元表拦截按需读）已被 §A3.1 无元表封死。N 份建表彼此独立、源不可变（Send + Sync），可 executor 并行。实测锚：深**往返** ~300ns/entry、单向约半（方向性推断）（[wasm-research](../research/wasm-research.md) 补遗 1 + 补遗 3 方向标定）——业务粒度事件（百 entry × 小 N）≈ 数十 µs；瓶颈防线 = 粒度纪律（大载荷走 §A6.4/§A6.5，不搭事件的车，seam §3.2 约束 3），不做投机优化（seam §3.3）。
-- **D2.2：不可转换值一律响亮失败**（2026-10-07 用户拍板）——
+- **D2.2：不可转换值一律响亮失败**（2026-10-07 用户拍板；2026-10-09 修订注：**错误通道 carve-out = §A5.4 D15.2**——`error(v)` 的 v 不可转换或超预算时不响亮、落字符串化摘要，错误通道自身必须无敌）——
   - 嵌套 `function`/`userdata`/`thread`：`Value` 无对应变体 → 报错；
   - 循环引用表：`Value` 是纯树 → 报 cycle；
   - **带元表的表**：元表对迭代不可见，`__index` 默认字段快照抓不到——静默丢语义不可接受。报错指路："参数表带元表，元表不跨界——请显式铺平成纯数据表"。检测 = 一次 `getmetatable`；纯数据字面量表无元表是常态；
@@ -708,22 +856,23 @@ fiber.md §3/§10 已定 drain 骨架（LIFO、disposer 可 await、超时强制
 - **D4.2：buffer = Luau 侧二进制法定形态**：ctx 方法二进制参数/返回用它（宿主经 mlua Buffer API 直读内存，一次甚至零次拷贝）；永不跨插件。登记去向 A7：schema 词汇表预留 `buffer` 类型词，**限定 ctx 面可用、deps/provide 签名禁用**（analyze 可静态强制）。
 - **D4.3：方法面二进制切割**——
   - **fs**：+`readbytes(path) -> buffer` / `writebytes(path, buffer)` 分立方法（§A3.7 扩展位兑现，本节已同步修订注）。淘汰 opts 多态（返回类型由运行时值决定 = 动态形态，违 §A6.1/D2.3 严格精神）；大文件归 §A6.5 流式。
-  - **`fs.read` 加 UTF-8 校验**（收隐藏裂缝）：文本方法保 UTF-8 契约——`read` 返回值要进 journal 而 `Value::String` 强校验，不拦则调用"成功"、journal 录制时炸在离现场很远的地方；失败 = 响亮失败指路 `readbytes`。O(n) scan 相对 I/O 可忽略。
+  - **`fs.read` 加 UTF-8 校验**（收隐藏裂缝）：文本方法保 UTF-8 契约——`read` 返回值要进 journal 而 `Value::String` 强校验，不拦则调用“成功”、journal 录制时炸在离现场很远的地方；失败 = `Err(fs.invalid_utf8)` 指路 `readbytes`（2026-10-09 §A5.3 D14.2 精确化：“响亮失败”原意 = 绝不静默返回乱码，Err 通道满足之）。O(n) scan 相对 I/O 可忽略。
   - **http**：二进制 body 整体归 §A6.5 流式（大载荷主流）。
-  - **sql**：v1 不立 BLOB 列；查询遇 BLOB = 响亮失败指路"存 TEXT（base64/hex）或走 fs"。列映射 = NULL→Null / INTEGER→`Int(i64)`（整数链路已通，精确）/ REAL→Float / TEXT→String。
+  - **sql**：v1 不立 BLOB 列；查询遇 BLOB = `Err(sql.error)` 指路“存 TEXT（base64/hex）或走 fs”（2026-10-09 §A5.3 判据 2 精确化：运行期数据决定 → Err 通道）。列映射 = NULL→Null / INTEGER→`Int(i64)`（整数链路已通，精确）/ REAL→Float / TEXT→String。
   - **process**：输出文本向；大二进制输出归 §A6.5 流式或写文件绕行。
 
 ### A6.5 流式句柄族（2026-10-07 定案）
 
-模板 = §A3.10 spawn 句柄（拉式 read、挂起、EOF=nil、冻结表烘焙、管道缓冲自然背压）；本节 = 推广为族规范 + 三家源就位。
+模板 = §A3.10 spawn 句柄（拉式 read、挂起、三态返回（§A5.3 D14.3）、冻结表烘焙、管道缓冲自然背压）；本节 = 推广为族规范 + 三家源就位。
 
-- **D5.1 族语义 = 拉式 `read()`**（挂起 = async 两跳，直线写法不变；EOF = nil）。背压天然：宿主缓冲预算顶满 → 生产者自然停（TCP 窗口 / pipe 阻塞）；fs 无背压概念（pull 即读）。淘汰推式回调：慢消费 = 丢数据或无限缓冲，timer 的合并丢弃政策对数据流是损坏非降级。
+- **D5.1 族语义 = 拉式 `read()`**（挂起 = async 两跳，直线写法不变；EOF/中途错误三态 = §A5.3 D14.3）。背压天然：宿主缓冲预算顶满 → 生产者自然停（TCP 窗口 / pipe 阻塞）；fs 无背压概念（pull 即读）。淘汰推式回调：慢消费 = 丢数据或无限缓冲，timer 的合并丢弃政策对数据流是损坏非降级。
 - **D5.2 userdata 正式结案 = 淘汰**（§A3.1 留题）：全族句柄 = frozen table 烘焙方法集（统一模型第四次兑现）；状态全在 Rust 闭包，table 只是门面；userdata 必挂元表破容器纪律、与 deps/盒/process 句柄形态分裂。迭代习语 = while 循环（无 `__iter` 可用）：
 
 ```luau
 while true do
-    local chunk = stream.read()        -- 挂起直到有数据或 EOF
-    if chunk == nil then break end     -- EOF = nil（§A3.10 既定）
+    local chunk, err = stream.read()     -- 挂起直到有数据 / EOF / 错误（三态，§A5.3 D14.3）
+    if err then error(err) end           -- 中途错误 ≠ EOF：升级（或按 kind 处置）——裸 break = 静默吞错
+    if chunk == nil then break end       -- EOF
     -- ...
 end
 ```
@@ -734,7 +883,7 @@ end
   - **http**：`ctx.http.stream(...) -> { read, status, headers, close }`（§A3.8 扩展位兑现；参数形状同 request）。**分立方法**非 opts 多态（返回类型由运行时值决定 = 动态形态，违 §A6.1/D2.3 严格精神）。流式上传 v1 不立（中等块 buffer 一次性给），登记扩展位。
   - **process**：§A3.10 已就位（read_stdout/read_stderr/write/signal/wait/kill），chunk 按 D5.3 定 buffer。
 - **D5.5 生命周期与背压**：`close()` 幂等；句柄 = 账本条目、插件卸载强 close（drain 铁律同 timer/process：http = drop 连接、fs = 关 fd、openwrite 未 close = 弃 tmp）；宿主缓冲预算数值归实现期配置。
-- **登记**：journal 流式政策 = 开流/关流元数据条目 + chunk 内容默认不进（§A3.10 spawn 政策推广为族政策），blob 引用粒度归 §A6.7/任务 6；流式中途错误封套归 A5；扩展位 = http 流式上传、SSE/行迭代内建件。
+- **登记**：journal 流式政策 = 开流/关流元数据条目 + chunk 内容默认不进（§A3.10 spawn 政策推广为族政策），blob 引用粒度归 §A6.7/任务 6；流式中途错误封套 = **§A5.3 D14.3 已兑现**（三态 + 复用属主族枚举）；扩展位 = http 流式上传、SSE/行迭代内建件。
 - **形态速查**（string/buffer/UTF-8 一图流）：**string = "我保证是文本"**（边界 UTF-8 校验背书，违例在调用点炸）；**buffer = "一堆字节"**（无承诺无校验，自己负责解读）。作者只需答一个问题：这数据是文本吗？
 
 | 交付形态   | 文本 → string                                         | 字节 → buffer                 |
@@ -746,10 +895,10 @@ end
 
 边界性质（§A6.0 对照的盒侧展开）：盒有独立线性内存，一切值必须编码成字节、memcpy 拷入、对端解码——序列化不可免，**线上编码格式 = 核心↔盒的 ABI 面**（选定即冻结，演进走 A10 ABI rev 纪律）。
 
-- **D6.1 接口分层 = 琐碎 WIT 签名**（2026-10-08 用户拍板）：`list<u8>` 进、`result<list<u8>, list<u8>>` 出 + 自描述值格式；Value 演进只动 codec crate，WIT 永停琐碎形态；错误出参 = err 分支同样一坨字节，封套格式归 A5；**导出形态 = 每方法一个琐碎签名导出**（WIT export 名 = 方法名——§A3.12 按盒导出清单烘焙方法集的接线不变；淘汰单 `call` + TLV 内分发：方法面退化为运行时数据，analyze/能力对账失静态抓手）。
+- **D6.1 接口分层 = 琐碎 WIT 签名**（2026-10-08 用户拍板）：`list<u8>` 进、`result<list<u8>, list<u8>>` 出 + 自描述值格式；Value 演进只动 codec crate，WIT 永停琐碎形态；错误出参 = err 分支同样一坨字节，封套格式 = **§A5.3 D14.4 已兑现**（盒业务错误 = `business` 透传 / trap = `box.trap`）；**导出形态 = 每方法一个琐碎签名导出**（WIT export 名 = 方法名——§A3.12 按盒导出清单烘焙方法集的接线不变；淘汰单 `call` + TLV 内分发：方法面退化为运行时数据，analyze/能力对账失静态抓手）。
 - **D6.2 值格式 = TLV 家族**（2026-10-08 用户拍板）：tag 字节 + 内联载荷（MessagePack 精神）；i64 内联无间接（高频 scalar 友好，对照分析见下）；单 codec crate 双 target；位分配表归 codec 实现期定稿，**首盒发布前冻结**，之后走 A10 ABI rev；**字节流带格式版本字段**（演进钩子 = ABI 级决定，具体位置归位分配表；版本不识 = 解码前响亮失败，不等解码炸——ADR-0024 C3 的 WIT 指纹对账在琐碎签名下退化为常量，格式版本字段替补为演进载体）；NaN-word 留作参照系（惰性/随机访问需求若随盒流式触发器出现，经 ABI rev 再议）。
 - **D6.3 盒流式 v1 不立**（2026-10-08 用户拍板）：批式调用覆盖 v1 全部确认场景；扩展位 + 触发器 = 首个流式盒消费者，预定形态 = host imports 回调流（详见下；可跑在 WASI 0.3 async host import 之上，ADR-0024 §3 同缝）；大 Value 政策 = 一次 memcpy 物理地板，“零拷贝” = 无中间缓冲、host 侧从 `Arc<Value>` 借用编码。
-- **登记**：WIT 递归 variant 支持度 = 验证项（归 A10 工具链议题）；盒 trap/业务错误封套归 A5（§A3.13 已登记）；盒 WIT 签名归 A7（§A3.13 已登记）；codec 复用候选 = **撤回**（§A6.7 D7.3 定案 JSONL，对账 ADR-0007 + 调研规避项）；实现期 = codec 位分配表定稿 + 纯 Rust round-trip 测试基线。
+- **登记**：WIT 递归 variant 支持度 = 验证项（归 A10 工具链议题）；盒 trap/业务错误封套 = **§A5.3 D14.4 已兑现**（2026-10-09）；盒 WIT 签名归 A7（§A3.13 已登记）；codec 复用候选 = **撤回**（§A6.7 D7.3 定案 JSONL，对账 ADR-0007 + 调研规避项）；实现期 = codec 位分配表定稿 + 纯 Rust round-trip 测试基线。
 
 背景与概念地基（2026-10-08 用户问答沉淀）：
 
@@ -795,7 +944,7 @@ end
 | 去向                   | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A4（await/交错）       | 挂起窗口可变风险 = §A6.2 D2.1 理由 2 已用（快照必须先于挂起）；handler 等待邮箱让路语义 = **A4.1 已收官**（2026-10-08 §A4.1 自由交错定案，理由 2 的“让路”从预案变现实）                                                                                                                                                                                                                                                                               |
-| A5（错误/Result）      | 流式中途错误封套（§A6.5 登记）；盒 trap/业务错误封套——err 通道 = `result<list<u8>, list<u8>>` 第二坨字节（§A6.6 D6.1）                                                                                                                                                                                                                                                                                                                                |
+| A5（错误/Result）      | 流式中途错误封套（§A6.5 登记）；盒 trap/业务错误封套——err 通道 = `result<list<u8>, list<u8>>` 第二坨字节（§A6.6 D6.1）；**2026-10-09 两项均已兑现 = §A5.3 D14.3/D14.4**                                                                                                                                                                                                                                                                               |
 | A7（schema DSL）       | int64 标注必须可表达（§A6.1 严格制配套）；`buffer` 类型词预留、限 ctx 面（§A6.4 D4.2）；盒 WIT 琐碎签名形态已定（§A6.6 D6.1，WIT 形式化归 A7）                                                                                                                                                                                                                                                                                                        |
 | A10（工具/ABI rev）    | 边界转换违规写码期/生成期检查进四层防线（§A6.2 登记）；验证项 = Luau 类型检查器区分 integer/number 否（§A6.2）、WIT 递归 variant 支持度（§A6.6）；ABI rev 演进通道兑现例 = §A6.1 严格制摩擦、§A6.4 Bytes 提正、§A6.6 TLV 位布局冻结后再演进                                                                                                                                                                                                           |
 | 任务 4（配置格式）     | audit 族降档开关面 = 配置键（§A6.7 D7.1）                                                                                                                                                                                                                                                                                                                                                                                                             |
