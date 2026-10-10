@@ -1,6 +1,6 @@
 # Metis — 接缝能力集设计（syscall 原语 × 胶水边界 × 出区通道）
 
-> 状态：living design doc——六块全部讨论定论（2026-10-05）；冻结 ADR 随 Luau ABI 固化一并立（ABI 议题地图任务 3）。
+> 状态：living design doc——六块已冻结 = [ADR-0025](../decisions/0025-seam-capabilities.md)（2026-10-10）。本文档保持 living：细则澄清继续沉淀于此；语义变更走 ADR-0025 演进纪律（新增/毕业 = [ADR-0024](../decisions/0024-carrier-layering.md) §4 四判据；能力词汇 additive 增补同步 bump `abi_rev`，[ADR-0026](../decisions/0026-luau-abi.md)）。
 > 来源：ABI 议题地图 B1+B2 合并议题（"接缝能力集"）。前提：产品模型（core = 插件管理与组合机器 + syscall 层 VM 基底，不提供 agent 领域服务）；载体分层 = [ADR-0024](../decisions/0024-carrier-layering.md)（盒管模型）。实测依据：`../research/wasm-research.md` 补遗 1（mlua/wasmtime 双 spike）。
 > 相关 ADR：[0003](../decisions/0003-module-require-discipline.md) / [0007](../decisions/0007-yaml-config-subset.md) / [0008](../decisions/0008-creator-mode-self-modification.md) / [0011](../decisions/0011-actor-execution-model.md) / [0013](../decisions/0013-context-scope.md) / [0015](../decisions/0015-payload-value-model.md) / [0017](../decisions/0017-programmatic-spawn-deferred.md) / [0021](../decisions/0021-extension-language-runtime.md) / [0022](../decisions/0022-value-int64.md) / [0023](../decisions/0023-core-restart-semantics.md) / [0024](../decisions/0024-carrier-layering.md)
 
@@ -211,7 +211,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 - **http**（`ctx.http.request`）：透明 gzip（§4.2 判出的主场景在此吸收）；**强制超时**（不允许无 deadline 请求）；响应默认进内存带预算，大 body/SSE 走流式（§3.2 约束①）；**域名白名单细化归 A2**（prompt 注入 → 数据外泄是 agent 头号攻击面，声明粒度是安全权重最高的一格）
   - 配套政策（**白名单政策 SSOT = [luau-abi](luau-abi.md) §A2.5**，2026-10-06 落位）：跨域重定向须重新对账（open-redirect 旁路）；SSRF = 解析结果非全局单播即拒（含 v6）+ 白名单显式授予内网 + 最终解析结果判定钉住；明文 http 须 `http://` 显式标记——细则以该节为准
 - **timer**（`ctx.timer.after/every/sleep`）：replay 按史注入不按墙钟；注册为 fiber 的一笔 effect、卸载随 LIFO drain 自动取消（无孤儿）；**无能力门，但 `every` 设最小间隔政策**（机制在此，数值实现期配置；DSH 先例 5 分钟硬下限锚的是**持久调度**梯度，见 §5.5）；cron 形态登记；sleep = 挂起当前协程、宿主直接唤醒（2026-10-07 [luau-abi](luau-abi.md) §A3.6 增，A1.4 红线形态）
-- **process**（`ctx.process.*`）：**开门**（原为 spawn v1 不给；形状 SSOT = [luau-abi](luau-abi.md) §A3.10）——能力声明 `process: true` 无参数；强制超时 / 进程组杀 / 无孤儿（账本 drain）/ journal 全量元数据；命令级审批归插件层策略机器（§A2.6 两层授权分工）。**支配关系**：process 继承核心进程 OS 全权——fs 三段式/两条豁免/http 白名单**均不经由它强制**（子进程里读 secrets store、curl 任意域物理可行）；审批面按 ⊇ `global: write` + 任意域 http 的权重展示；外墙 = OS 级沙箱，归部署组成（任务 4/实现期登记）。**编程式 spawn 插件派生仍推迟**（[ADR-0017](../decisions/0017-programmatic-spawn-deferred.md)，与本条无涉）；MCP stdio 监管机器 host 自持不变
+- **process**（`ctx.process.*`）：**开门**（原为 spawn v1 不给；形状 SSOT = [luau-abi](luau-abi.md) §A3.10）——能力声明 `process: true` 无参数；强制超时 / 进程组杀 / 无孤儿（账本 drain）/ journal 全量元数据；命令级审批归插件层策略机器（§A2.6 两层授权分工）。**支配关系**：process 继承核心进程 OS 全权——fs 三 scope 分段/两条豁免/http 白名单**均不经由它强制**（子进程里读 secrets store、curl 任意域物理可行）；审批面按 ⊇ `global: write` + 任意域 http 的权重展示；外墙 = OS 级沙箱，归部署组成（任务 4/实现期登记）。**编程式 spawn 插件派生仍推迟**（[ADR-0017](../decisions/0017-programmatic-spawn-deferred.md)，与本条无涉）；MCP stdio 监管机器 host 自持不变
 
 ### 5.3 汇总映射（喂 journal kind 表 + 能力声明面）
 

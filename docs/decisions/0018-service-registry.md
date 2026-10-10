@@ -1,6 +1,6 @@
 # 0018. 服务注册表与 inject 设计
 
-- Status: accepted（「插件服务 v1 文档约定起步」（S6）的可选升级通道 = 插件随包契约，2026-10-09 定案于 [luau-abi](../design/luau-abi.md) §A8.2 D21.2；正式局部 supersede 随 Luau ABI 冻结 ADR 一并立。另：S2/S3 的「加载期响亮」时机措辞已精确化为「启用期」——对账时机统一 = 启用期，2026-10-09 定案于同文 §A9.1 D24，同批随冻结 ADR 吸收）
+- Status: accepted（四格由 [ADR-0026](0026-luau-abi.md) 局部取代/细化（2026-10-10，supersede 批次 #2–#5）：S5 `Err(Unavailable)` 落点细化 = 可选依赖常驻缺席走 deps 字段不存在（结构性 nil），该错误归运行期窗口；S5 依赖环「等待环只超时」收窄 = required 依赖环启用期硬拒；S3「加载响亮失败」与 S2「重复 key 静态扫描」的时机措辞精确化 = 启用期；S6「插件服务 v1 文档约定起步」补可选升级通道 = 插件随包契约 `contract.yml`）
 - Date: 2026-10-02
 
 ## Context

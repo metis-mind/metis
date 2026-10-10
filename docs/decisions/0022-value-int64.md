@@ -1,6 +1,6 @@
 # 0022. Value 增加 Int(i64)：Luau 原生整数对接
 
-- Status: accepted（Decision 过渡纪律条中「ABI 版本纪律归 tooling 议题」已收官 = manifest `abi_rev` 单整数 min 语义机制，2026-10-10 定案于 [luau-abi](../design/luau-abi.md) §A10.1 D27；正式固化随 Luau ABI 冻结 ADR 一并立）
+- Status: accepted（Decision「过渡纪律」条由 [ADR-0026](0026-luau-abi.md) 结案（2026-10-10，supersede 批次 #6）：整数链路已通（FFlag + raw push 收口），2⁵³ 过渡映射未启用即退役；「ABI 版本纪律归 tooling 议题」已兑现 = manifest `abi_rev` 单整数 min 语义）
 - Date: 2026-10-03
 
 ## Context

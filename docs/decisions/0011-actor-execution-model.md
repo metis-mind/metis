@@ -1,6 +1,6 @@
 # 0011. 执行模型：actor 语义 + tokio
 
-- Status: accepted（「同一时刻一个插件最多一个回调在执行……串行性绝对」的 run-to-completion 解读 = 局部 supersede 意向已登记于 [luau-abi](../design/luau-abi.md) §A4.1，2026-10-08 定案插件内自由交错；正式 supersede 随 Luau ABI 冻结 ADR 一并立）
+- Status: accepted（Decision 首格「同一时刻一个插件最多一个回调在执行……串行性绝对」由 [ADR-0026](0026-luau-abi.md) 局部取代（2026-10-10，supersede 批次 #1）= 插件内协作式自由交错：同一瞬间至多一条协程在 CPU 上、多条回调可在飞交错、切换仅在挂起点；「插件作者写无锁顺序代码」保留）
 - Date: 2026-09-30
 
 ## Context

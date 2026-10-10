@@ -1,6 +1,6 @@
 # 0024. 载体分层：盒管模型（Luau 管 + wasm 盒 + 核心内建件）
 
-- Status: accepted（Consequences 议题地图回填行中「A9 能力政策声明对账 = 盒能力笼的安装面」的时机措辞已被「启用期」取代——对账时机统一 = 启用期，2026-10-09 定案于 [luau-abi](../design/luau-abi.md) §A9.1 D24；正式局部 supersede 随 Luau ABI 冻结 ADR 一并立。另：Consequences C4「ABI 版本化第一天设计归 A10」已兑现 = §A10.1 D27（2026-10-10）；`metis sdk` 包装 wasm32-wasip2 管线的回填行接口位 = §A10.2 D28.1 `sdk box *` 族登记）
+- Status: accepted（Consequences 议题地图回填行中「能力政策声明对账 = 盒能力笼的安装面」的「安装面」由 [ADR-0026](0026-luau-abi.md) 局部取代（2026-10-10，supersede 批次 #7）= 启用期；Consequences 风险登记表 C4「ABI 版本化第一天设计归 A10」已兑现 = 同 ADR 的 `abi_rev` 机制；`metis sdk` 包装 wasm32-wasip2 管线接口位已登记 = 同 ADR `sdk box *` 族）
 - Date: 2026-10-05
 
 ## Context
