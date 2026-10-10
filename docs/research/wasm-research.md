@@ -354,3 +354,21 @@ fn set_global_i64(lua: &Lua, name: &'static CStr, v: i64) -> LuaResult<()> {
 ```
 
 做不到的一环（决定绕行必须在 raw 栈上完成）：`Value::Integer` 的 f64 入栈硬编码在 mlua 内部，覆盖缝 `IntoLua::push_into_stack` 依赖未公开导出的 `RawLua`，外部 crate 无法写"更好的 IntoLua"。
+
+## 补遗 4（2026-10-10）：WIT 递归类型支持度实测——全形态拒绝
+
+> 性质：addendum——为 `../design/luau-abi.md` A10 登记的验证项"WIT 递归 variant 支持度"（§A6.6）跑的实测。工具 = bytecodealliance/wasm-tools **1.261.0**（2026-10-02 stable）。结论供 §A10.0 引用。
+
+五种递归形态逐一验证（文本解析与 `--wasm` 二进制编码两种模式结果一致）：
+
+| 形态 | 示例骨架 | 结果 |
+| ---- | -------- | ---- |
+| 直接递归 variant | `variant value { nil, num(f64), child(value) }` | ❌ 拒绝 |
+| 经 `list` 间接 | `arr(list<value>)` | ❌ 拒绝 |
+| 经 `option` 间接 | `node(option<tree>)` | ❌ 拒绝 |
+| record 字段递归 | `record node { children: list<node> }` | ❌ 拒绝 |
+| variant↔record 互递归 | `record entry { val: value }` + `variant value { entries(list<entry>) }` | ❌ 拒绝 |
+
+报错统一为 resolve 阶段 `error: type \`X\` depends on itself`，工具链未提供任何开关绕过——当前 WIT 工具链不支持任何形式的递归类型。对本项目零冲击：D6.1 已取琐碎签名形态（每方法只搬 `list<u8>`），schema→WIT 生成器永不输出递归类型；本实测是对该选型的独立印证。
+
+附带发现（影响将来生成器）：`float64`/`float32` 已改名 `f64`/`f32`，旧拼写在 1.261.0 直接报错（可设 `WIT_REQUIRE_F32_F64=0` 临时豁免）。
