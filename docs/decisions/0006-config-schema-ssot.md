@@ -1,6 +1,6 @@
 # 0006. 配置 schema SSOT：纯数据 manifest
 
-- Status: accepted
+- Status: accepted（config 值住处修订意向 = 插件目录 `config.yml`（[config-format](../design/config-format.md) D36）；schema SSOT 与「校验先于插件代码运行」不变；`volatile` 标注退役意向 = D36/D37；正式 supersede 归任务 4（配置格式设计）冻结 ADR）
 - Date: 2026-09-29
 
 ## Context

@@ -1,7 +1,7 @@
 # Metis — Session 模型与配置作用范围（种子稿）
 
 > 状态：🌱 种子稿，未定稿。由 2026-09-30 Context/事件系统讨论派生（用户提问：多个 session 在跑时，只为自己环境做的修改会影响其他 session，怎么办？调研里是否有说明？）。
-> 正式设计排在任务 5（配置格式）之后。本文档固化讨论结论与 Harness 调研答案，避免丢失。
+> 正式设计排在任务 4（配置格式设计）之后。本文档固化讨论结论与 Harness 调研答案，避免丢失。
 
 ---
 
@@ -23,7 +23,7 @@
 
 Harness 四层：bundle（插件作者出厂默认）→ profile（部署者选的组合）→ home（本机用户覆盖）→ CLI overlay（本次启动覆盖）。**四层全是 server 范围**。
 
-metis v1：只两层（[ADR-0007](../decisions/0007-yaml-config-subset.md) 已定）——人类手写层（机器永不重写）+ agent overlay 层（机器只写这层，Creator 事务落盘点）。profile 的 v1 等价物 = 启动 `--config` 选人类层文件，零新机制；bundle/profile 全套是包分发时代的 machinery，等分发来了再长回（[ADR-0004](../decisions/0004-plugin-forms.md)）。
+metis v1：只两层（[ADR-0007](../decisions/0007-yaml-config-subset.md) 已定）——人类手写层（机器永不重写）+ agent overlay 层（机器只写这层，Creator 事务落盘点）。profile 的 v1 等价物 = 启动 `--config` 选人类层文件，零新机制；bundle/profile 全套是包分发时代的 machinery，等分发来了再长回（[ADR-0004](../decisions/0004-plugin-forms.md)）。（2026-10-11 修订注：overlay 收缩为装配补丁层——配置值住处 = 插件目录 `config.yml`，机器写它走审批事务（ADR-0008）；见 [config-format](config-format.md) §C2.6 D36。）
 
 ### 轴 2：作用范围（影响谁 → 爆炸半径）
 
@@ -38,13 +38,13 @@ metis v1：只两层（[ADR-0007](../decisions/0007-yaml-config-subset.md) 已�
 1. **它变了，别的 session 该跟着变吗？** 该 → 全局树；不该 → session 范围
 2. **它是拓扑/静态设置，还是会话动态偏好？** 动态偏好 → runtime state，根本不进 YAML（loader 协调为"管理员级变更"设计，不承载每会话高频变动）
 
-机器（模型）写入约束：只能写 agent overlay（全局，走审批）或 preset revision（session 级）；永远碰不到人类层。
+机器（模型）写入约束：只能写 agent overlay（全局，走审批）或 preset revision（session 级）；永远碰不到人类层。（2026-10-11 修订注：写入面随 D36 平移——overlay 只剩装配补丁；插件配置值经审批事务写插件目录 `config.yml`；「永远碰不到人类层」不变：`metis.yml` 正本与 secrets store 机器仍不写。）
 
 ## 4. 与既有决策的汇合点
 
 - preset 的 session 子树挂载 = **编程式 spawn（D7）+ 子树作用域（D2/isolate）的交集** → 本议题正式设计时，D2/D7 一起回来
 - 机制地基已备：子 fiber = 父的 effect（[ADR-0010](../decisions/0010-fiber-core.md)）；Context parent 链预留（[ADR-0013](../decisions/0013-context-scope.md)）；inject 驱动的加载排序（[ADR-0001](../decisions/0001-inject-runtime-checks.md)）
-- preset 复用 entry 树 YAML 语法与 loader 机制 → 必须在配置格式（任务 5）定稿后设计
+- preset 复用 entry 树 YAML 语法与 loader 机制 → 必须在配置格式（任务 4）定稿后设计
 
 ## 5. v1 范围建议与待决清单
 

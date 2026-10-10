@@ -153,6 +153,8 @@ Provider/Consumer 两角已锁（§2/§3：manifest 双声明 + 只认 key + 禁
 └── config/               ← entry 树 YAML
 ```
 
+（2026-10-11 修订注：部署根布局 SSOT 移交 [config-format](config-format.md) §C1.1 D29——`config/` 目录形修订为根级 `metis.yml` 单文件（D30）；插件 = 目录单形态（D35）；新增 `secrets.yml`/`journal/`/`overlay.yml` 等件。）
+
 - 框架级契约包随核心版本演进（v1 monorepo 内 `lib/`；**内嵌二进制 + 磁盘数据目录两层**，[ADR-0019](../decisions/0019-crate-layout.md) C3）
 - **lib 模块在每个插件 VM 里是独立副本**（模块缓存随 VM 生灭，[ADR-0005](../decisions/0005-vm-topology.md)）→ lib 必须**纯代码**（函数/常量/schema），顶层囤可变全局状态 = 各插件看到不同世界
 - lib 变更 = 反向传递闭包定位失效插件集 → 重启（[ADR-0003](../decisions/0003-module-require-discipline.md)）→ 管理员级变更走审批；v1 lib 无独立版本号（2026-10-09 修订注：内嵌层维持原位——契约版本 ≡ 核心版本；契约包 `version:` 字段 = 生态契约专属，[luau-abi](luau-abi.md) §A7.3 D18.1/D18.2）
