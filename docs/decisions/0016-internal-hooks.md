@@ -1,6 +1,6 @@
 # 0016. internal/* 钩子处置：v1 开二、留二、删四、转一
 
-- Status: accepted（`internal/update` 💤 钩子的配置更新否决职能以定向 hook（入口 table `on_config` 字段）实现 = [config-format](../design/config-format.md) D42，钩子本身维持不开；`internal/config` 仍随 `!!luau` 复活处置（[ADR-0002](0002-config-as-pure-data.md)）；正式 supersede 归任务 4（配置格式设计）冻结 ADR）
+- Status: accepted（`internal/update` 💤 钩子的配置更新否决职能以定向 hook（入口 table `on_config` 字段）实现 = [config-format](../design/config-format.md) D42，钩子本身维持不开；`internal/config` 仍随 `!!luau` 复活处置（[ADR-0002](0002-config-as-pure-data.md)）；正式批次已吸收 = [ADR-0027](0027-config-format.md) 批次 #10（2026-10-11））
 - Date: 2026-10-02
 
 ## Context

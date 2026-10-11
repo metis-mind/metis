@@ -207,7 +207,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 
 ### 5.2 通道逐项
 
-- **fs**（`ctx.fs.*` 等）：**三 scope（private/workspace/global），SSOT = [luau-abi](luau-abi.md) §A3.7**（2026-10-07 落位，原为“v1 = 每插件私有数据目录”单一形态）——preopen 哲学不变：private 免绑定、workspace 部署绑定（任务 4）、global = 用户世界 − 两条豁免（secrets store / journal）；读/写分档按 scope 声明；写 = 临时文件 + rename **原子写**（[ADR-0023](../decisions/0023-core-restart-semantics.md) 落盘要求的落点）。（2026-10-11 修订注：三 scope 收窄 = private/global 两档，workspace 与绑定机制不立——[config-format](config-format.md) §C5.1 D44；正式 supersede 归任务 4 冻结 ADR。）
+- **fs**（`ctx.fs.*` 等）：**三 scope（private/workspace/global），SSOT = [luau-abi](luau-abi.md) §A3.7**（2026-10-07 落位，原为“v1 = 每插件私有数据目录”单一形态）——preopen 哲学不变：private 免绑定、workspace 部署绑定（任务 4）、global = 用户世界 − 两条豁免（secrets store / journal）；读/写分档按 scope 声明；写 = 临时文件 + rename **原子写**（[ADR-0023](../decisions/0023-core-restart-semantics.md) 落盘要求的落点）。（2026-10-11 修订注：三 scope 收窄 = private/global 两档，workspace 与绑定机制不立——[config-format](config-format.md) §C5.1 D44；正式 supersede 已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #9（2026-10-11）。）
 - **http**（`ctx.http.request`）：透明 gzip（§4.2 判出的主场景在此吸收）；**强制超时**（不允许无 deadline 请求）；响应默认进内存带预算，大 body/SSE 走流式（§3.2 约束①）；**域名白名单细化归 A2**（prompt 注入 → 数据外泄是 agent 头号攻击面，声明粒度是安全权重最高的一格）
   - 配套政策（**白名单政策 SSOT = [luau-abi](luau-abi.md) §A2.5**，2026-10-06 落位）：跨域重定向须重新对账（open-redirect 旁路）；SSRF = 解析结果非全局单播即拒（含 v6）+ 白名单显式授予内网 + 最终解析结果判定钉住；明文 http 须 `http://` 显式标记——细则以该节为准
 - **timer**（`ctx.timer.after/every/sleep`）：replay 按史注入不按墙钟；注册为 fiber 的一笔 effect、卸载随 LIFO drain 自动取消（无孤儿）；**无能力门，但 `every` 设最小间隔政策**（机制在此，数值实现期配置；DSH 先例 5 分钟硬下限锚的是**持久调度**梯度，见 §5.5）；cron 形态——**结案 = 维持不立**（[config-format](config-format.md) §C8.2 D51）；sleep = 挂起当前协程、宿主直接唤醒（2026-10-07 [luau-abi](luau-abi.md) §A3.6 增，A1.4 红线形态）
@@ -224,7 +224,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 | process       | `ctx.process.*`            | `process`（无参数）                                         | `process_spawn` / `process_exit`（元数据族；流式内容政策归任务 6） | record/注入到头（副作用出视野不可回滚，任务 6 登记） |
 | 时间/随机读取 | 原位替换 / `crypto.random` | 无门                                                        | `nondeterminism_read` ★                                            | record/注入（PRNG 部分 recompute）                   |
 
-（kind 表全文 = `../research/journal-replay-research.md` §7.3；本表 = syscall 部分回填。2026-10-08 修订注：kind 表去 agent 化 + 录制分族政策（★ 全录 / audit 降档）已定案 = [luau-abi](luau-abi.md) §A6.7——调研 §7.3 的 `llm_*`/`session_*` 不属核心 kind。）（2026-10-11 修订注：fs 行「三 scope」复述收窄 = private/global 两档；§6.1 A2/A3 行同——[config-format](config-format.md) §C5.1 D44；正式 supersede 归任务 4 冻结 ADR。）
+（kind 表全文 = `../research/journal-replay-research.md` §7.3；本表 = syscall 部分回填。2026-10-08 修订注：kind 表去 agent 化 + 录制分族政策（★ 全录 / audit 降档）已定案 = [luau-abi](luau-abi.md) §A6.7——调研 §7.3 的 `llm_*`/`session_*` 不属核心 kind。）（2026-10-11 修订注：fs 行与 §5.2 process 行「三 scope」复述收窄 = private/global 两档；§6.1 A2/A3 行同——[config-format](config-format.md) §C5.1 D44；正式 supersede 已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #9（2026-10-11）。）
 
 ### 5.4 replay 分族原则
 

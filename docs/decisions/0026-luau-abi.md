@@ -1,6 +1,6 @@
 # 0026. Luau ABI 冻结（A1–A10）与既有 ADR 局部 supersede 批次
 
-- Status: accepted（局部 supersede 意向登记：fs scope 集收窄 = `{private, global}`、workspace scope 与 `ctx.workspace` 命名空间移除、cwd 缺省 = 用户家目录 = [config-format](../design/config-format.md) §C5 D44/D45；演进纪律破坏式变更通道，正式批次归任务 4（配置格式设计）冻结 ADR；Consequences「配置树绑定 / secrets store 细节 / audit 降档开关面归任务 4」三项**全部结案**（配置树绑定 = 不立；余两项 = 兑现）= [config-format](../design/config-format.md) §C5/§C6/§C8.1（2026-10-11，兑现/结案均非 supersede））
+- Status: accepted（局部 supersede 意向登记：fs scope 集收窄 = `{private, global}`、workspace scope 与 `ctx.workspace` 命名空间移除、cwd 缺省 = 用户家目录 = [config-format](../design/config-format.md) §C5 D44/D45；演进纪律破坏式变更通道，正式批次已吸收 = [ADR-0027](0027-config-format.md) 批次 #6/#7/#8/#12/#13/#14（2026-10-11）；Consequences「配置树绑定 / secrets store 细节 / audit 降档开关面归任务 4」三项**全部结案**（配置树绑定 = 不立；余两项 = 兑现）= [config-format](../design/config-format.md) §C5/§C6/§C8.1（2026-10-11，兑现/结案均非 supersede））
 - Date: 2026-10-10
 
 ## Context

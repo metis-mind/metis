@@ -1,6 +1,6 @@
 # 0007. 统一配置格式：YAML 1.2 受限子集
 
-- Status: accepted（overlay 收缩为装配补丁层意向登记 = [config-format](../design/config-format.md) D36；机器写面 = overlay + 插件目录 `config.yml`（经审批事务，注释保留/格式稳定纪律**已兑现 = D40**）；正式 supersede 归任务 4（配置格式设计）冻结 ADR）
+- Status: accepted（overlay 收缩为装配补丁层意向登记 = [config-format](../design/config-format.md) D36；机器写面 = overlay + 插件目录 `config.yml`（经审批事务，注释保留/格式稳定纪律**已兑现 = D40**）；正式 supersede 已吸收 = [ADR-0027](0027-config-format.md) 批次 #4（2026-10-11））
 - Date: 2026-09-29
 
 ## Context

@@ -1,6 +1,6 @@
 # 0002. 配置即纯数据（v1 跳过 `!!luau`）
 
-- Status: accepted（配置值 keyed diff 与 volatile 快路径机器退役意向登记 = [config-format](../design/config-format.md) D36/D37，退役后的协调与替代语义 = D41/D42；配置纯数据纪律不变；正式 supersede 归任务 4（配置格式设计）冻结 ADR）
+- Status: accepted（配置值 keyed diff 与 volatile 快路径机器退役意向登记 = [config-format](../design/config-format.md) D36/D37，退役后的协调与替代语义 = D41/D42；配置纯数据纪律不变；正式 supersede 已吸收 = [ADR-0027](0027-config-format.md) 批次 #1（2026-10-11））
 - Date: 2026-09-29
 
 ## Context
