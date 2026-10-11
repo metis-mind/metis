@@ -1,6 +1,6 @@
 # 0025. 接缝能力集冻结：stdlib 卫生 / 挂载语义 / 内建件清单 / 出区通道
 
-- Status: accepted
+- Status: accepted（fs scope 收窄意向登记 = private/global 两档、workspace 不立，外墙「归部署组成」结案 = [config-format](../design/config-format.md) §C5 D44/D45；正式 supersede 归任务 4（配置格式设计）冻结 ADR）
 - Date: 2026-10-10
 
 ## Context

@@ -1,6 +1,6 @@
 # 0026. Luau ABI 冻结（A1–A10）与既有 ADR 局部 supersede 批次
 
-- Status: accepted
+- Status: accepted（局部 supersede 意向登记：fs scope 集收窄 = `{private, global}`、workspace scope 与 `ctx.workspace` 命名空间移除、cwd 缺省 = 用户家目录 = [config-format](../design/config-format.md) §C5 D44/D45；演进纪律破坏式变更通道，正式批次归任务 4（配置格式设计）冻结 ADR）
 - Date: 2026-10-10
 
 ## Context
