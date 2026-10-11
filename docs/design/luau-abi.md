@@ -189,7 +189,7 @@ v1 顶层字段（封闭集）：
   - `fs` = **scope map**（2026-10-07 §A3.7 修订：原为 `read | write` 单值枚举）：`{ private: read|write, workspace: read|write, global: read|write }`，简形 `fs: read|write` ≡ `{ private: … }`；write ⊃ read（淘汰布尔对——非法态需额外规则堵）。无路径参数：private 免绑定、workspace 部署绑定（任务 4）、global = 用户世界 − 两条豁免——SSOT = §A3.7。（2026-10-11 修订注：scope map 键收窄 = `{private, global}`，workspace 与绑定机制不立 = [config-format](config-format.md) §C5.1 D44；正式 supersede 已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #6（2026-10-11）。）
   - `http: [api.openai.com, "*.anthropic.com"]` 域名白名单：精确 host + `*.` 子域通配（**任意深度子域、不含 apex**，apex 须单列；通配覆盖宽度 = 审批面审查点）；不表达端口。配套规则：**scheme = 缺省 https-only，明文须显式标记 `http://` 前缀**（审批面可见——本机 sidecar 正例 = `http://localhost`；写 `https://` = 响亮报错教学"https 为缺省，直接写 host"）；**SSRF = 解析结果非全局单播地址即拒**（覆盖 v4/v6 各非公开段与 `::ffff:` mapped 形态，比枚举段不漏），**白名单显式列出内网目标 = 显式授予**，判定对象 = 每次连接实际使用的**最终解析结果**、检查与 connect 之间不得重解析（防 DNS rebinding）；**跨域重定向重新对账**（新目标同样过上述两关，防 open-redirect 旁路）。
   - `sqlite: true`（私有 db，无参数）。
-  - timer 无门（`every` 最小间隔 = 政策非门）；纯算内建件无需声明；`process: true` 无参数（2026-10-07 §A3.10 开门：原为 spawn v1 不给——命令不可预测，声明面不假装有粒度）。
+  - timer 无门（`every` 最小间隔 = 政策非门）；纯算内建件无需声明；`process: true` 无参数（2026-10-07 §A3.10 开门：原为 spawn v1 不给——命令不可预测，声明面不假装有粒度）。（2026-10-11 修订注：+`mount: true` 候选登记 = [instance-model](instance-model.md) §S3.3 D63——子树挂载元权限（激活代码运行）；正式进字段面 + `abi_rev` bump 归其冻结批次。）
   - **缺省 fail-closed**：节缺省 = 无能力；键缺省 = 无该能力；未声明调用 = 运行时响亮报错指路 manifest；`sdk analyze` 写码期对账。
 - **boxes = 显式列表**：`boxes: [parser]`。**双向对账**：声明了没文件 = 响亮（打包不完整启用期炸，而非运行期）；有文件未声明 = 响亮（防残留盒无意加载）；`sdk analyze` 对账 Luau 侧 `box()` 调用（写码期炸）。（2026-10-09 修订注：对账时机原写“安装期炸”——统一 = 启用期，§A9.1 D24 / §A9.2 D25.5；安装期只解析登记进部署索引。）淘汰目录惯例（纯观察无意图可对账——声明≠观察）；淘汰 map 形（per-box 参数无落位需求，YAGNI；能力收窄/资源限额若出现经 A10 ABI rev 演进）。
   - **盒能力 = 属主包络**：host imports 授予范围 = 属主 capabilities 同一面；**启用期进口对账**（2026-10-09 修订注：原“安装期进口对账”——同上平移，§A9.2 D25.5）——盒自描述进口清单 ⊆ manifest 能力声明，超集响亮（ADR-0024 §6 能力笼落位）；per-box 收窄登记扩展位；时钟/随机 = 无门基础件。
@@ -421,6 +421,7 @@ local ast, err = parser.parse(source)  -- 挂起式调用：盒内 ms 级计算�
 | seam §5.1/5.2/5.3   | 子进程门开门 + kind 表补 `process_spawn`/`process_exit`（本 change 已同步）                                                                                                                                                                                            |
 | §A2.5               | capabilities 词汇修订：fs → scope map 三键 + 简形；+`process`（本 change 已同步）                                                                                                                                                                                      |
 | 任务 4（配置格式）  | workspace/命名根绑定机制、env 收紧政策、cwd 政策——**已收官 = [config-format](config-format.md) §C5**（2026-10-11：绑定机制/env 收紧结案 = 不立，cwd 缺省 = 家目录，D44/D45）；db 卸载保留政策——**已兑现** = [config-format](config-format.md) §C7.1 D48（2026-10-11）  |
+| 任务 5（实例模型）  | `ctx.mount`/`unmount` 方法族 + `mount` 能力键登记 = [instance-model](instance-model.md) §S3.3 D63 / §S3.4 D64（2026-10-11）；additive 增补 + `abi_rev` bump 归其冻结批次                                                                                               |
 | 任务 6（journal）   | kind 表补 process 两条；spawn 流式内容粒度政策；process replay 族；sleep 复用 timer kind；journal 查询接口（豁免的正当访问面）                                                                                                                                         |
 | 默认插件集立项      | shell tool = process 能力参考实现（近需求）                                                                                                                                                                                                                            |
 | 扩展位              | `ctx.once`；fs 命名根；process 流式富形态；sql 事务（batch/tx）与命名 db；http 流式上传（2026-10-08 §A6.5：下载流式 = `ctx.http.stream` 已兑现）；userdata 流式句柄 = **结案淘汰**（2026-10-08 §A6.5 D5.2，不再是扩展位）                                              |
@@ -1305,6 +1306,7 @@ events:                                 # 事件形状 = 本契约定义的事�
 - **问题写实**：没声明 `fs` 的插件 A 调服务 B 间接读写文件 = 绕过能力门吗？答案 = **合法，且是设计本意**。能力门管**出区通道**（seam §5.1 闭门论证：效应出沙盒只有四条门——磁盘 fs/sqlite、网络 http、时间推进 timer、子进程 process）；服务调用不出区——请求交给提供方，效应由提供方自己的能力包络承担。**能力间接化 = 服务存在的意义**（LLM 工具 = 服务方法投影，S1 既定，同此一理）。
 - **审批面推论**：部署审批的完整图景 = **capabilities（直接包络）+ inject（间接包络：能经哪些服务碰到什么）+ events listen（信息流入面）三栏并示**——§A2.6 审批闸门的画面补全；展示原则归 Creator/审批文档。
 - 结构约束优先于动态裁决的既有立场不变（§A2.6）；"只收可信来源"的场景走服务调用点对点通道（D20.2 已述同型）。
+- （2026-10-11 修订注：编排面立场出现**第一个例外**——`mount` 立能力门：mount = 激活新代码的元权限，间接化论证在「激活新的」处断开；[instance-model](instance-model.md) §S3.3 D63。capabilities + `mount` 键正式进字段面 + `abi_rev` bump 归其冻结批次。）
 
 **D26.3 小收口两条（2026-10-09 用户拍板）**：
 

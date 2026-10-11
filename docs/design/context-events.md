@@ -138,7 +138,7 @@ serial 的"注册顺序 + 首认领"只是 host 内置的默认路由策略；**
 
 v1 只走声明式 entry 树，`ctx:spawn` 推迟。理由：警惕第二条生命周期路径（Harness eval 退役教训的一般化）；插件要动态性，用自己的 fiber effect 挂内部任务（JoinHandle 入账）即可覆盖；机制已备（子 fiber = 父的 effect），真需要时开箱即用。
 
-**汇合点**：preset 的 session 子树挂载 = spawn + 子树作用域的交集 → session 模型设计时 D2/D7 一起回来（见 `docs/design/session-model.md`）。
+**汇合点**：preset 的 session 子树挂载 = spawn + 子树作用域的交集 → session 模型设计时 D2/D7 一起回来（见 `docs/design/session-model.md`）。（2026-10-11 修订注：**D7 半已结案** = mount 通道唯一 + spawn 维持关闭——[instance-model](instance-model.md) §S3.6 D66；D2 半（isolate/intercept 复审）归其 S4。）
 
 ## 7. 监听器生命周期与派发安全细则（随 D3 确认，固化于 [ADR-0014](../decisions/0014-dispatch-semantics.md)）
 
