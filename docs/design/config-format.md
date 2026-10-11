@@ -1,7 +1,7 @@
 # Metis — 配置格式设计（living doc）
 
 > 状态：living design doc——任务 4（配置格式设计）工作站。**已冻结 = [ADR-0027](../decisions/0027-config-format.md)**（2026-10-11：C1–C9 九章冻结 + 既有 ADR supersede 批次 14 条同批吸收）；保持 living：细则澄清与教学条继续沉淀，语义修订走 ADR-0027 演进纪律。
-> 来源：任务 4。前提文档：[luau-abi](luau-abi.md)（已冻结 = ADR-0026）、[seam-capabilities](seam-capabilities.md)（已冻结 = ADR-0025）、[session-model](session-model.md)（种子稿，任务 5 输入）。
+> 来源：任务 4。前提文档：[luau-abi](luau-abi.md)（已冻结 = ADR-0026）、[seam-capabilities](seam-capabilities.md)（已冻结 = ADR-0025）、[session-model](session-model.md)（种子稿；2026-10-11 已吸收 → [instance-model](instance-model.md)，任务 5 = 实例模型）。
 > 相关 ADR：[0027](../decisions/0027-config-format.md)（冻结）/ [0002](../decisions/0002-config-as-pure-data.md) / [0004](../decisions/0004-plugin-forms.md) / [0006](../decisions/0006-config-schema-ssot.md) / [0007](../decisions/0007-yaml-config-subset.md) / [0008](../decisions/0008-creator-mode-self-modification.md) / [0023](../decisions/0023-core-restart-semantics.md)。
 
 ---
@@ -108,7 +108,7 @@ plugins:
 - **归一规则**：entry 值 `null` ≡ `{}`（全部缺省）。校验器归一；机器写 overlay 用 `{}`（diff 可读性）。
 - **加载顺序不靠声明序**（inject 拓扑驱动，ADR-0001）；受限 YAML 子集里 map 键序无语义。
 - key 必须是合法目录名（禁 `/`、`.`/`..` 等）；校验进 loader/`sdk check` 同一实现（§A2.2 校验器单一实现、多面暴露哲学）。
-- **已知牺牲**：Cordis `id` 的真实职能 = 同插件多实例（同一份代码、两份配置、各挂一份）；v1 答案 = 复制目录（`llm-openai-a/`/`llm-openai-b/`），代码重复与升级改 N 份的代价明记；复审触发器同 D32（任务 5 子树）。
+- **已知牺牲**：Cordis `id` 的真实职能 = 同插件多实例（同一份代码、两份配置、各挂一份）；v1 答案 = 复制目录（`llm-openai-a/`/`llm-openai-b/`），代码重复与升级改 N 份的代价明记；复审触发器同 D32（任务 5 = 实例模型，子树落地）。
 
 ### C2.2 D32 entry 字段集 = `{ enabled }` 封闭集（2026-10-11 用户拍板）
 
@@ -119,7 +119,7 @@ plugins:
 - **正面词 `enabled`（缺省启用）**，淘汰 Cordis 的 `disabled`（其 detached 行是准入失败产物，我们无此概念）；翻转 = 拓扑变更走 C4 diff。
 - **未知字段 = 响亮报错**（与 manifest 政策 §A2.1 同款 typo 防线）。
 - **config 不在 entry 树**：值住处 = 插件目录 `config.yml`（D36）。
-- **不立并登记触发器**：`isolate` / 部署侧重命名（§A2.3 撞名本地解后两条）、`intercept`（Cordis：给某服务名下所有后代合并配置）、`group`/嵌套子树——四者都依赖**子树**概念，而子树 = 任务 5（session 模型）preset 议题；v1 撞名本地解 = 部署者二选一（`enabled` 足够表达），全程不改源码。触发器 = 首个真实撞名需求或任务 5 子树落地，同批复审。§A2.3 登记就此结案。
+- **不立并登记触发器**：`isolate` / 部署侧重命名（§A2.3 撞名本地解后两条）、`intercept`（Cordis：给某服务名下所有后代合并配置）、`group`/嵌套子树——四者都依赖**子树**概念，而子树 = 任务 5（实例模型，原 session 模型）议题；v1 撞名本地解 = 部署者二选一（`enabled` 足够表达），全程不改源码。触发器 = 首个真实撞名需求或任务 5 子树落地，同批复审。§A2.3 登记就此结案。
 - （2026-10-11 结案注：C5 绑定字段不立——绑定机制整体不立 = D44；封闭集维持 `{ enabled }` 不变。）
 
 ### C2.3 D33 顶层节封闭集（2026-10-11 用户拍板）
@@ -165,22 +165,22 @@ plugins:
 
 ### C2.9 联动登记汇总（C2）
 
-| 去向                                   | 内容                                                                                                                                                                                                               |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| luau-abi §A9.4                         | entry 启用/禁用字段形态——**已兑现 = D32**（本 change 修订注同步）                                                                                                                                                  |
-| luau-abi §A2.3                         | isolate/重命名结案（不立 + 触发器，D32）——修订注同步                                                                                                                                                               |
-| luau-abi §A2.0/§A2.1/§A2.5/§A2.7/§A3.3 | 配置树边界、身份规则、秘密解析点、config 键约定、setup config 来源——修订注同步（D36）                                                                                                                              |
-| luau-abi §A1.3                         | 纯代码 niche 平移为无 manifest 目录插件（D35）——修订注同步                                                                                                                                                         |
-| ADR-0002/0004/0006/0007/0008           | 局部 supersede——**已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #1/#2/#3/#4/#5**（2026-10-11）                                                                                                      |
-| session-model §3                       | 机器写入约束随 overlay 收缩——修订注同步                                                                                                                                                                            |
-| luau-abi §A9.1/§A9.2                   | 部署索引覆盖（目录扫描全量、含未装配件与解析失败政策）与 D25.1 行三收窄（= 休眠件；未装配件走行四同族响亮）——修订注同步（D34）；**已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #14**（2026-10-11） |
-| C3/C4                                  | overlay 装配补丁语义、keyed diff 装配面协调、D37 机制展开、部署 `lib/` 契约重对账时机（§A8.5 D22.6）——**已兑现 = D38–D43**（2026-10-11）                                                                           |
-| C5                                     | **已收官**（2026-10-11，D44/D45）：绑定机制整体不立（fs scope 收窄 = private/global）；env 不立收紧；cwd 缺省 = 家目录                                                                                             |
-| 任务 5（session 模型）                 | per-session/preset 实例级配置通道（`config.yml` 是部署级单份，张力登记）；子树落地时 isolate/重命名同批复审（D32）                                                                                                 |
-| 任务 9（marketplace）                  | 包内容 vs 部署区/运行期区三分随包形态定稿（D35）；升级后配置 vs 新 schema 对账报告                                                                                                                                 |
-| sdk 工具面                             | `config.yml` 模板脚手架；配置全景聚合；未装配件提示（D34）；key 合法目录名校验（D31）                                                                                                                              |
-| 扩展位                                 | fs watch 实时感知（D37）；isolate/重命名/intercept/group（D32）                                                                                                                                                    |
-| 实现期清单                             | `config.yml` 读取/校验/秘密解析/默认值合成管线（D36）；`.luaurc` 自动生成与校验（D29）；gitignore 脚手架（D29）；部署索引目录扫描（D34）                                                                           |
+| 去向                                                                          | 内容                                                                                                                                                                                                               |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| luau-abi §A9.4                                                                | entry 启用/禁用字段形态——**已兑现 = D32**（本 change 修订注同步）                                                                                                                                                  |
+| luau-abi §A2.3                                                                | isolate/重命名结案（不立 + 触发器，D32）——修订注同步                                                                                                                                                               |
+| luau-abi §A2.0/§A2.1/§A2.5/§A2.7/§A3.3                                        | 配置树边界、身份规则、秘密解析点、config 键约定、setup config 来源——修订注同步（D36）                                                                                                                              |
+| luau-abi §A1.3                                                                | 纯代码 niche 平移为无 manifest 目录插件（D35）——修订注同步                                                                                                                                                         |
+| ADR-0002/0004/0006/0007/0008                                                  | 局部 supersede——**已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #1/#2/#3/#4/#5**（2026-10-11）                                                                                                      |
+| session-model §3                                                              | 机器写入约束随 overlay 收缩——修订注同步                                                                                                                                                                            |
+| luau-abi §A9.1/§A9.2                                                          | 部署索引覆盖（目录扫描全量、含未装配件与解析失败政策）与 D25.1 行三收窄（= 休眠件；未装配件走行四同族响亮）——修订注同步（D34）；**已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #14**（2026-10-11） |
+| C3/C4                                                                         | overlay 装配补丁语义、keyed diff 装配面协调、D37 机制展开、部署 `lib/` 契约重对账时机（§A8.5 D22.6）——**已兑现 = D38–D43**（2026-10-11）                                                                           |
+| C5                                                                            | **已收官**（2026-10-11，D44/D45）：绑定机制整体不立（fs scope 收窄 = private/global）；env 不立收紧；cwd 缺省 = 家目录                                                                                             |
+| 任务 5（实例模型 = [instance-model](instance-model.md)，原 session 模型重构） | per-实例/preset 实例级配置通道（`config.yml` 是部署级单份，张力登记）——归其 S4；子树落地时 isolate/重命名同批复审（D32）——同归其 S4                                                                                |
+| 任务 9（marketplace）                                                         | 包内容 vs 部署区/运行期区三分随包形态定稿（D35）；升级后配置 vs 新 schema 对账报告                                                                                                                                 |
+| sdk 工具面                                                                    | `config.yml` 模板脚手架；配置全景聚合；未装配件提示（D34）；key 合法目录名校验（D31）                                                                                                                              |
+| 扩展位                                                                        | fs watch 实时感知（D37）；isolate/重命名/intercept/group（D32）                                                                                                                                                    |
+| 实现期清单                                                                    | `config.yml` 读取/校验/秘密解析/默认值合成管线（D36）；`.luaurc` 自动生成与校验（D29）；gitignore 脚手架（D29）；部署索引目录扫描（D34）                                                                           |
 
 ## C3 补丁分层（2026-10-11 收官）
 
