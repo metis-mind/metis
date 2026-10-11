@@ -1,6 +1,6 @@
 # 0024. 载体分层：盒管模型（Luau 管 + wasm 盒 + 核心内建件）
 
-- Status: accepted（Consequences 议题地图回填行中「能力政策声明对账 = 盒能力笼的安装面」的「安装面」由 [ADR-0026](0026-luau-abi.md) 局部取代（2026-10-10，supersede 批次 #7）= 启用期；Consequences 风险登记表 C4「ABI 版本化第一天设计归 A10」已兑现 = 同 ADR 的 `abi_rev` 机制；`metis sdk` 包装 wasm32-wasip2 管线接口位已登记 = 同 ADR `sdk box *` 族）
+- Status: accepted（Consequences 议题地图回填行中「能力政策声明对账 = 盒能力笼的安装面」的「安装面」由 [ADR-0026](0026-luau-abi.md) 局部取代（2026-10-10，supersede 批次 #7）= 启用期；Consequences 风险登记表 C4「ABI 版本化第一天设计归 A10」已兑现 = 同 ADR 的 `abi_rev` 机制；`metis sdk` 包装 wasm32-wasip2 管线接口位已登记 = 同 ADR `sdk box *` 族；§5「在途调用排空细节归插件热更新设计」意向登记 = [config-format](../design/config-format.md) D42（重挂载复用 §A4.5 卸载排空路径，盒与属主同生共死原样），正式 supersede 归任务 4（配置格式设计）冻结 ADR）
 - Date: 2026-10-05
 
 ## Context
