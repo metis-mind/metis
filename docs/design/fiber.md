@@ -115,4 +115,4 @@ type Disposer = Box<dyn FnOnce() -> BoxFuture<'static, ()> + Send>;
 派生待办（登记不决）：
 
 - **跨重启状态政策**：进程死则 VM 全灭——什么状态落盘活下来（落盘 seam 原子写）、agent 自身连续性（进行中的对话、待审批）如何恢复，与 journal/replay 设计强耦合（2026-10-12 修订注：方向已定 = **fresh-start**——崩溃恢复复用本节全量 load 路径，journal 不参与状态重建（[journal](journal.md) D75）；落盘活下来 = 插件自建 fs/sql 持久化 + 审批机器文件原子写；agent 连续性归插件层；细则结案归 journal.md J3。）
-- **优雅关闭细则**：in-flight 服务调用与邮箱残留处置已定（2026-10-09 [luau-abi](luau-abi.md) §A4.5：四段时序关闸→优雅窗口→强杀→drain；对手方即 `Err(Unavailable)`、残留丢弃）；SIGTERM 处理、drain 总预算数值 = 实现期议题
+- **优雅关闭细则**：in-flight 服务调用与邮箱残留处置已定（2026-10-09 [luau-abi](luau-abi.md) §A4.5：四段时序关闸→优雅窗口→强杀→drain；对手方即 `Err(Unavailable)`、残留丢弃）；SIGTERM 处理、drain 总预算数值 = 实现期议题（2026-10-12 修订注：优雅关闭的 journal 侧义务**已定 = [journal](journal.md) D83**——writer 作为 drain 参与者排干通道 + 最终 fsync 后才退出，干净重启零窗口；SIGTERM 处理与 drain 总预算数值仍 = 实现期议题。）

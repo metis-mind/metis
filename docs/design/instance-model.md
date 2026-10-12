@@ -301,7 +301,7 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 
 ### S4.7 D73 journal-replay 开放问题 6 结案 = 维持内部流量（2026-10-12 用户拍板）
 
-- **结案**：跨实例服务调用在 D68 边界下**结构性不存在**（兄弟互不可见、向下无 inject）；唯一跨边界服务流量 = 实例沿 parent 链上调租户服务 = 同租户树内部流量——`service_call`/`service_result` 族维持「内部流量、replay 重算不注入」原政策（kind 表 = 调研 §7.3 / seam §5.3，不动）。（2026-10-12 修订注：「replay 重算不注入」半句随 replay 不立消解 = [journal](journal.md) D75；kind 表 SSOT = journal.md D78（内部流量族 = 可配档，默认档归 J2）；「内部流量」结论本体不动。）
+- **结案**：跨实例服务调用在 D68 边界下**结构性不存在**（兄弟互不可见、向下无 inject）；唯一跨边界服务流量 = 实例沿 parent 链上调租户服务 = 同租户树内部流量——`service_call`/`service_result` 族维持「内部流量、replay 重算不注入」原政策（kind 表 = 调研 §7.3 / seam §5.3，不动）。（2026-10-12 修订注：「replay 重算不注入」半句随 replay 不立消解 = [journal](journal.md) D75；kind 表 SSOT = journal.md D78（内部流量族 = 可配档；键面与默认档**已收官 = D79/D80**，默认 `summary`）；「内部流量」结论本体不动。）
 - **扩展位登记**：「跨租户共享插件实例」（D59 扩展位）或 handle 服务面出口（D68 扩展位）将来开放时，边界输入问题重开。
 - **联动**：journal-replay-research 开放问题 6 标结注（本 change 已同步）。
 
