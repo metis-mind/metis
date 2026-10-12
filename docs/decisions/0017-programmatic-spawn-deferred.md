@@ -1,6 +1,6 @@
 # 0017. 编程式 spawn v1 推迟
 
-- Status: accepted
+- Status: accepted（汇合点结案 = [ADR-0028](0028-instance-model.md)（2026-10-12）：spawn 的第一真实用户 = mount——声明驱动 + 素材约束 + 能力门 = 编程式实例化唯一通道（D66）；通用 `ctx:spawn` 维持关闭，扩展位原样）
 - Date: 2026-10-02
 
 ## Context

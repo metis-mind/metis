@@ -1,6 +1,6 @@
 # 0013. Context 的 Rust 形态与作用域裁剪
 
-- Status: accepted
+- Status: accepted（强制复审点结案 = [ADR-0028](0028-instance-model.md)（2026-10-12）：isolate/intercept 维持不立、isolate 语义由实例作用域 + parent 链遮蔽天然给出（D68/D69）；「Context 预留 parent 链」已消费 = 实例服务解析沿 parent 链先查自己作用域再向上）
 - Date: 2026-10-01
 
 ## Context

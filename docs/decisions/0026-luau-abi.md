@@ -1,6 +1,6 @@
 # 0026. Luau ABI 冻结（A1–A10）与既有 ADR 局部 supersede 批次
 
-- Status: accepted（局部 supersede 意向登记：fs scope 集收窄 = `{private, global}`、workspace scope 与 `ctx.workspace` 命名空间移除、cwd 缺省 = 用户家目录 = [config-format](../design/config-format.md) §C5 D44/D45；演进纪律破坏式变更通道，正式批次已吸收 = [ADR-0027](0027-config-format.md) 批次 #6/#7/#8/#12/#13/#14（2026-10-11）；Consequences「配置树绑定 / secrets store 细节 / audit 降档开关面归任务 4」三项**全部结案**（配置树绑定 = 不立；余两项 = 兑现）= [config-format](../design/config-format.md) §C5/§C6/§C8.1（2026-10-11，兑现/结案均非 supersede））
+- Status: accepted（局部 supersede 意向登记：fs scope 集收窄 = `{private, global}`、workspace scope 与 `ctx.workspace` 命名空间移除、cwd 缺省 = 用户家目录 = [config-format](../design/config-format.md) §C5 D44/D45；演进纪律破坏式变更通道，正式批次已吸收 = [ADR-0027](0027-config-format.md) 批次 #6/#7/#8/#12/#13/#14（2026-10-11）；Consequences「配置树绑定 / secrets store 细节 / audit 降档开关面归任务 4」三项**全部结案**（配置树绑定 = 不立；余两项 = 兑现）= [config-format](../design/config-format.md) §C5/§C6/§C8.1（2026-10-11，兑现/结案均非 supersede）；任务 5（实例模型）批次已吸收 = [ADR-0028](0028-instance-model.md) 批次 #1–#5（2026-10-12：capabilities + `mount` 键与 `ctx.mount`/`unmount` 方法族 additive 进字段面、核心 `abi_rev` +1；秘密引用解析源扩展 = `config.yml` ∪ 声明 overlay；A9 判定面同作用域化；journal 属主每租户一本 + session/实例字段结案；A2 撞名本地解复审结案记录））
 - Date: 2026-10-10
 
 ## Context
