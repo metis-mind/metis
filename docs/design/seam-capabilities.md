@@ -39,6 +39,8 @@ Luau 0.740 实测全局面里**效应级**非确定性源仅两处（无 `io`/`p
 
 replay 纪律前提：版本 pinning（replay 默认用录制期代码）已排除 recompute 的脆性主场景（`../research/journal-replay-research.md` 第七部分 M4）。
 
+（2026-10-12 修订注：本表「replay」列与版本 pinning 前提**消解**——replay 引擎不立 = [journal](journal.md) D75；「每次读取记 `nondeterminism_read`」「fiber 启动记种子一条」随之不立。宿主注入时钟 / 确定性 PRNG / `randomseed` tombstone 的处置本体不动——其正当性由测试确定性纪律（AGENTS.md Style 构造注入）独立承担，不依赖 replay。）
+
 ### 1.2 os 面四函数
 
 | 函数             | 处置                                                                                                                                                                                                                                               |
@@ -82,8 +84,8 @@ replay 纪律前提：版本 pinning（replay 默认用录制期代码）已排�
 ### 1.6 实现期验证项（登记）
 
 - 数字格式化 locale 无关性断言（`tostring`/`string.format` 跨机器一致，事关 journal payload 一致性）
-- 指针身份串（`tostring` 默认地址表示、`string.format('%p')`）随进程堆布局逐次运行变化、且不经 `nondeterminism_read`——**不在确定性保证内**；replay 比对的归一化政策归任务 6（`../research/journal-replay-research.md` 开放问题 4 同族）
-- table hash 遍历序：同构建确定；跨构建由 journal `code_ref.host_version` 覆盖
+- 指针身份串（`tostring` 默认地址表示、`string.format('%p')`）随进程堆布局逐次运行变化、且不经 `nondeterminism_read`——**不在确定性保证内**；replay 比对的归一化政策归任务 6（`../research/journal-replay-research.md` 开放问题 4 同族）（2026-10-12 修订注：归一化比对政策**消解**——replay 不立 = [journal](journal.md) D75；「不在确定性保证内」写实不动。）
+- table hash 遍历序：同构建确定；跨构建由 journal 的 host_version 锚点覆盖（2026-10-12 修订注：`code_ref` 字段面修订为锚点条目携带制——host_version 由 `boot` 条目携带 = [journal](journal.md) D76）。
 
 ## 2. 挂载语义与粒度规则
 
@@ -93,7 +95,7 @@ replay 纪律前提：版本 pinning（replay 默认用录制期代码）已排�
 
 1. **纯算**：无效应；失败 = 同步返回错误，无异步状态
 2. **内生有界**：最坏耗时 µs~亚 ms 级可预估、无病态输入形态——sync 闭包是 native 代码，在 VM interrupt 时间盒覆盖**之外**（爆炸半径保险①只管 Luau 码，`context-events.md` §0.4），且占用共享 executor 线程
-3. **无调用点决策**：不需能力门、无政策可设；journal 条目（如 `nondeterminism_read`）由宿主闭包自动记录，不要求作者感知（确定性件 replay 重算即可；需 record 的读取件由闭包内完成）
+3. **无调用点决策**：不需能力门、无政策可设；journal 条目（如 `nondeterminism_read`）由宿主闭包自动记录，不要求作者感知（确定性件 replay 重算即可；需 record 的读取件由闭包内完成）（2026-10-12 修订注：`nondeterminism_read` 不立、「replay 重算」消解——replay 不立 = [journal](journal.md) D75；「闭包自动记录、作者无感知」本体不变，kind 表 = journal.md D78。）
 
 "有界"的落地 = 三件套：设计期算法复杂度账（O(n) 可知）→ 输入被 VM 内存限额硬封顶 → 实现期微基准断言钉死耗时上界。
 
@@ -183,19 +185,19 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 
 ### 4.2 逐项定案
 
-| 件           | 定案                                                                              | 要点                                                                                                                                                                                                                                               |
-| ------------ | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| json         | 进（已锁）                                                                        | `json.encode/decode`（随 Luau 生态惯例）；流式/SAX 不进 v1（走盒）                                                                                                                                                                                 |
-| crypto       | 进（已锁，wasm 双重印证）                                                         | v1 = sha256/sha512 + hmac + `crypto.random`（CSPRNG，record）+ AES-GCM；hash 配流式双形态（§2.5 首个实例）；md5/sha1/签名族/xxhash 登记                                                                                                            |
-| regex        | 进                                                                                | 线性引擎（无病态输入）；方言无 lookaround/backreference，报错须可行动；预编译（宿主侧缓存）+ 一次性双 API                                                                                                                                          |
-| diff         | 进（高置信中最弱：论据 = 自我修改链系统级高频——审批 diff / edit 工具 / 版本对账） | 结构化 hunks 为主、unified 文本派生；sync + 预算，超大走盒                                                                                                                                                                                         |
-| uuid         | 进                                                                                | v4 + v7（时间序，journal/事件 ID 友好）；编排级随机 PRNG 派生（§1.1 原则），replay 免费                                                                                                                                                            |
-| hex / base64 | 进                                                                                | 独立小库；base64 标准方言默认、urlsafe 可选                                                                                                                                                                                                        |
-| timefmt      | 进                                                                                | `format(ts, fmt)` + ISO8601 parse；`os.date` 薄壳共享引擎（§1.2）；**v1 = UTC only**，IANA 时区登记扩展位                                                                                                                                          |
-| **gzip**     | **判出 → 盒**                                                                     | 主场景（http gzip）由 http 能力内部透明解压吸收；归档处理 = 业务粒度盒。四判据"敢画出去"的示范                                                                                                                                                     |
-| yaml         | 进（边缘：论据 = 同引擎一致性 + 边际成本≈零，非通用度）                           | `yaml.parse/stringify`；与 config 同引擎同子集（[ADR-0007](../decisions/0007-yaml-config-subset.md)），↔Value 映射同 [ADR-0015](../decisions/0015-payload-value-model.md)                                                                          |
-| sqlite       | 进，**内建效应能力位**                                                            | `ctx.sql.*`；每插件私有 db（能力声明授予）；参数化查询（事务 = 扩展位，2026-10-07 [luau-abi](luau-abi.md) §A3.9 修订）；结果集分页参数 = 实现期配置（原为“分页/迭代器（§3.2 约束①首个应用）”，同修订）；**状态与 replay 关系登记任务 6**，不在此答 |
-| git          | 扩展位维持                                                                        | 领域相关 + 重依赖（git2）+ 低频；真实场景走盒/外部服务                                                                                                                                                                                             |
+| 件           | 定案                                                                              | 要点                                                                                                                                                                                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| json         | 进（已锁）                                                                        | `json.encode/decode`（随 Luau 生态惯例）；流式/SAX 不进 v1（走盒）                                                                                                                                                                                                                          |
+| crypto       | 进（已锁，wasm 双重印证）                                                         | v1 = sha256/sha512 + hmac + `crypto.random`（CSPRNG；2026-10-12 注：原「record」标注随 replay 不立消解 = [journal](journal.md) D75）+ AES-GCM；hash 配流式双形态（§2.5 首个实例）；md5/sha1/签名族/xxhash 登记                                                                              |
+| regex        | 进                                                                                | 线性引擎（无病态输入）；方言无 lookaround/backreference，报错须可行动；预编译（宿主侧缓存）+ 一次性双 API                                                                                                                                                                                   |
+| diff         | 进（高置信中最弱：论据 = 自我修改链系统级高频——审批 diff / edit 工具 / 版本对账） | 结构化 hunks 为主、unified 文本派生；sync + 预算，超大走盒                                                                                                                                                                                                                                  |
+| uuid         | 进                                                                                | v4 + v7（时间序，journal/事件 ID 友好）；编排级随机 PRNG 派生（§1.1 原则）——（2026-10-12 注：「replay 免费」随 replay 不立消解 = [journal](journal.md) D75）                                                                                                                                |
+| hex / base64 | 进                                                                                | 独立小库；base64 标准方言默认、urlsafe 可选                                                                                                                                                                                                                                                 |
+| timefmt      | 进                                                                                | `format(ts, fmt)` + ISO8601 parse；`os.date` 薄壳共享引擎（§1.2）；**v1 = UTC only**，IANA 时区登记扩展位                                                                                                                                                                                   |
+| **gzip**     | **判出 → 盒**                                                                     | 主场景（http gzip）由 http 能力内部透明解压吸收；归档处理 = 业务粒度盒。四判据"敢画出去"的示范                                                                                                                                                                                              |
+| yaml         | 进（边缘：论据 = 同引擎一致性 + 边际成本≈零，非通用度）                           | `yaml.parse/stringify`；与 config 同引擎同子集（[ADR-0007](../decisions/0007-yaml-config-subset.md)），↔Value 映射同 [ADR-0015](../decisions/0015-payload-value-model.md)                                                                                                                   |
+| sqlite       | 进，**内建效应能力位**                                                            | `ctx.sql.*`；每插件私有 db（能力声明授予）；参数化查询（事务 = 扩展位，2026-10-07 [luau-abi](luau-abi.md) §A3.9 修订）；结果集分页参数 = 实现期配置（原为“分页/迭代器（§3.2 约束①首个应用）”，同修订）；**状态与 replay 关系——消解**（replay 不立 = [journal](journal.md) D75，2026-10-12） |
+| git          | 扩展位维持                                                                        | 领域相关 + 重依赖（git2）+ 低频；真实场景走盒/外部服务                                                                                                                                                                                                                                      |
 
 ## 5. 出区通道
 
@@ -210,7 +212,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 - **fs**（`ctx.fs.*` 等）：**三 scope（private/workspace/global），SSOT = [luau-abi](luau-abi.md) §A3.7**（2026-10-07 落位，原为“v1 = 每插件私有数据目录”单一形态）——preopen 哲学不变：private 免绑定、workspace 部署绑定（任务 4）、global = 用户世界 − 两条豁免（secrets store / journal）；读/写分档按 scope 声明；写 = 临时文件 + rename **原子写**（[ADR-0023](../decisions/0023-core-restart-semantics.md) 落盘要求的落点）。（2026-10-11 修订注：三 scope 收窄 = private/global 两档，workspace 与绑定机制不立——[config-format](config-format.md) §C5.1 D44；正式 supersede 已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #9（2026-10-11）。）
 - **http**（`ctx.http.request`）：透明 gzip（§4.2 判出的主场景在此吸收）；**强制超时**（不允许无 deadline 请求）；响应默认进内存带预算，大 body/SSE 走流式（§3.2 约束①）；**域名白名单细化归 A2**（prompt 注入 → 数据外泄是 agent 头号攻击面，声明粒度是安全权重最高的一格）
   - 配套政策（**白名单政策 SSOT = [luau-abi](luau-abi.md) §A2.5**，2026-10-06 落位）：跨域重定向须重新对账（open-redirect 旁路）；SSRF = 解析结果非全局单播即拒（含 v6）+ 白名单显式授予内网 + 最终解析结果判定钉住；明文 http 须 `http://` 显式标记——细则以该节为准
-- **timer**（`ctx.timer.after/every/sleep`）：replay 按史注入不按墙钟；注册为 fiber 的一笔 effect、卸载随 LIFO drain 自动取消（无孤儿）；**无能力门，但 `every` 设最小间隔政策**（机制在此，数值实现期配置；DSH 先例 5 分钟硬下限锚的是**持久调度**梯度，见 §5.5）；cron 形态——**结案 = 维持不立**（[config-format](config-format.md) §C8.2 D51）；sleep = 挂起当前协程、宿主直接唤醒（2026-10-07 [luau-abi](luau-abi.md) §A3.6 增，A1.4 红线形态）
+- **timer**（`ctx.timer.after/every/sleep`）：replay 按史注入不按墙钟——（2026-10-12 修订注：**消解**，replay 不立 = [journal](journal.md) D75）；注册为 fiber 的一笔 effect、卸载随 LIFO drain 自动取消（无孤儿）；**无能力门，但 `every` 设最小间隔政策**（机制在此，数值实现期配置；DSH 先例 5 分钟硬下限锚的是**持久调度**梯度，见 §5.5）；cron 形态——**结案 = 维持不立**（[config-format](config-format.md) §C8.2 D51）；sleep = 挂起当前协程、宿主直接唤醒（2026-10-07 [luau-abi](luau-abi.md) §A3.6 增，A1.4 红线形态）
 - **process**（`ctx.process.*`）：**开门**（原为 spawn v1 不给；形状 SSOT = [luau-abi](luau-abi.md) §A3.10）——能力声明 `process: true` 无参数；强制超时 / 进程组杀 / 无孤儿（账本 drain）/ journal 全量元数据；命令级审批归插件层策略机器（§A2.6 两层授权分工）。**支配关系**：process 继承核心进程 OS 全权——fs 三 scope 分段/两条豁免/http 白名单**均不经由它强制**（子进程里读 secrets store、curl 任意域物理可行）；审批面按 ⊇ `global: write` + 任意域 http 的权重展示；外墙 = OS 级沙箱，归部署组成（任务 4/实现期登记）。**编程式 spawn 插件派生仍推迟**（[ADR-0017](../decisions/0017-programmatic-spawn-deferred.md)，与本条无涉）；MCP stdio 监管机器 host 自持不变。（2026-10-11 修订注：外墙「归部署组成（任务 4 登记）」结案 = 核心不立机制、部署组成事项——[config-format](config-format.md) §C5。）
 
 ### 5.3 汇总映射（喂 journal kind 表 + 能力声明面）
@@ -226,9 +228,11 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 
 （kind 表全文 = `../research/journal-replay-research.md` §7.3；本表 = syscall 部分回填。2026-10-08 修订注：kind 表去 agent 化 + 录制分族政策（★ 全录 / audit 降档）已定案 = [luau-abi](luau-abi.md) §A6.7——调研 §7.3 的 `llm_*`/`session_*` 不属核心 kind。）（2026-10-11 修订注：fs 行与 §5.2 process 行「三 scope」复述收窄 = private/global 两档；§6.1 A2/A3 行同——[config-format](config-format.md) §C5.1 D44；正式 supersede 已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #9（2026-10-11）。）
 
+（2026-10-12 修订注：**journal kind 表 SSOT 移交 = [journal](journal.md) D78**（任务 6 J1 收官）；本表「replay」列与 ★ 标注**消解**——replay 引擎不立（journal.md D75）：`nondeterminism_read` 行、fs/sql 的「私有状态族」格、process 的「record/注入到头」格、http/timer 的「record/注入」「按史注入」格随之消解；fs `append` 归族与 process 流式粒度已落位 D78。journal kind 列名义有效，正式面以 journal.md 为准；正式 supersede 归任务 6 冻结批次（拟 ADR-0029）。）
+
 ### 5.4 replay 分族原则
 
-**边界输入族**（http / timer / 非确定读取）= record/注入；**私有状态族**（fs / sqlite）= 与 journal 正式设计一并定——"插件把状态外置后，重放时的世界算什么"是任务 6 的头号输入，不在此硬答。
+**边界输入族**（http / timer / 非确定读取）= record/注入；**私有状态族**（fs / sqlite）= 与 journal 正式设计一并定——"插件把状态外置后，重放时的世界算什么"是任务 6 的头号输入，不在此硬答。（2026-10-12 修订注：**本节整体消解**——replay 不立 = [journal](journal.md) D75；「重放时的世界算什么」问题随 replay 消失；fs/sql 的 journal 面 = 可配 audit 档（D78，默认档归 J2）。）
 
 ### 5.5 时间调度四梯度
 
@@ -237,7 +241,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 | 易失定时（秒–分钟，热更/卸载即消）  | `ctx.timer.after/every`                              | 核心原语（§5.2）                                                                                                                            |
 | 持久调度（跨热更/重启的提醒）       | 插件层 schedule 服务 = sqlite + timer 原语 + journal | 插件层议题登记（DSH `dsh-schedule` 已验证此路线：日志持真相、定时器为易失投影、every ≥5min、错过间隔不补发、墙钟回拨不早发/前跳算 overdue） |
 | 声明式周期任务（cron 式，更可审批） | v1 = config 键约定（[luau-abi](luau-abi.md) §A2.7）  | 一等声明式调度复审——**结案 = 维持不立**（[config-format](config-format.md) §C8.2 D51，2026-10-11）                                          |
-| replay 中的时间                     | 按史注入                                             | 已定（§5.3）                                                                                                                                |
+| replay 中的时间                     | 按史注入                                             | 已定（§5.3）——（2026-10-12 修订注：**消解**，replay 不立 = [journal](journal.md) D75）                                                      |
 
 主被动模型注：timer 不破"插件被动调用"模型——tick 是邮箱消息的一种（[ADR-0011](../decisions/0011-actor-execution-model.md)），`every` = 订阅宿主时钟这个事件源；主被动分界 = **谁拥有循环**，线程式 `while+sleep` 已结构性封死（§2.8 多线程条）。
 
@@ -262,6 +266,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 - kind 表 syscall 部分 = §5.3；私有状态族 replay 政策 = 头号输入；`nondeterminism_read` 已覆盖时间/CSPRNG 读取
 - **写入量账**：§5.3 的 per-call 条目在忙插件下达日百万级（~0.2–0.5 GB/天/插件），单条大 body 可达 10⁷–10⁸B——需录制粒度政策（全量内联 vs blob 引用 vs chunk；http 大 body/SSE 与 LLM 流式同族，参 `../research/journal-replay-research.md` 开放问题 2）——**2026-10-08 已定案**：[luau-abi](luau-abi.md) §A6.7 D7.1（★ 全录 + audit 默认降档 + 阈值 blob 引用）
 - **生成型秘密的落盘政策**：`crypto.random`（record）生成的密钥/token/nonce 会明文进 `nondeterminism_read`——M6 脱敏管线的模式匹配抓不到生成型秘密，需 kind 感知政策（append 加密/擦除 + replay 注入侧解密）——**2026-10-08 已定案**：[luau-abi](luau-abi.md) §A6.7 D7.2（kind 感知加密，按 source 子类分流）
+- （2026-10-12 修订注：本节输入已消费——kind 表 syscall 部分 + 录制分族 = **已兑现**（[journal](journal.md) D78，SSOT 移交）；私有状态族 replay 政策（头号输入）+ `nondeterminism_read` 覆盖 + 生成型秘密落盘政策 = **消解**（replay 不立 = D75）；写入量账与频率整形归 J2；blob/段文件归 J4。）
 
 ### 6.3 实现期登记
 
