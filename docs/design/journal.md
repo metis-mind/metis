@@ -1,20 +1,20 @@
 # Metis — Journal 设计（核心操作/审计日志；living doc）
 
-> 状态：J1 ✅ 定位与条目模型（2026-10-12，D75–D78）；J2 ✅ 审计政策、音量与写入路径（2026-10-12，D79–D83）；J3–J6 待收官。
+> 状态：J1 ✅ 定位与条目模型（D75–D78）；J2 ✅（D79–D83——**可配族面经 D84 骨架化撤销**，全文留档 = 扩展位「可配审计层」预制方案）；J3 ✅ 范围重定 + 崩溃恢复与跨重启连续性（D84–D88）；J4（缩小版）/J6 待收官，J5 缓议。均 2026-10-12。
 > 前提文档：[luau-abi](luau-abi.md) §A6.7（journal 记录格式草案；replay 面修订注见彼）/ [seam-capabilities](seam-capabilities.md) §5.3/§5.4 / [fiber](fiber.md) §10 / [config-format](config-format.md)（D29/D50）/ [instance-model](instance-model.md)（D60/D72/D73）。
 > 调研依据：[journal-replay-research](../research/journal-replay-research.md)（point-in-time 报告；其 §7 映射的 replay 面经本任务方向重定后不再采用——见 D75）。
 > **方向重定（2026-10-12 用户拍板）**：核心**不立 replay 引擎**——崩溃恢复 = fresh-start（[ADR-0023](../decisions/0023-core-restart-semantics.md) 同路径），journal = 核心操作/审计日志，replay = 延期扩展位（J6 登记重开触发器）。§A6.7 草案的 replay 面（★ 族轴 / D7.2 生成型秘密加密 / 概念地基「重启 = 重放」「b = 立身之本」）随之推翻或消解，正式 supersede 归 J6 冻结批次（拟 ADR-0029）；D7.3 格式纪律（JSONL + 格式版本字段 + Int 字符串惯例）不受影响，继续有效。
+> **范围重定（2026-10-12 用户拍板，D84）**：journal v1 = **写死族骨架**——能力使用族其余（http/fs/sql/timer/stream）、内部流量族、聚合摘要族与 `core.audit` 档位面整体不立；写死骨架（生命周期 + 错误现场 + 控制 + `process_*`）不动。动因：崩溃恢复不需要 journal（fresh-start 既定），v1 无逐调用审计的紧迫消费者，骨架实现成本 ≈ 零。被撤面全文留档 = 扩展位「可配审计层」预制方案（触发器 = 首个真实审计需求或安全事件）。
 
 ## 0. 术语锚点
 
 - **journal**：核心的 append-only 操作/审计日志——每租户一本（[instance-model](instance-model.md) D60）、逻辑单流（host 单点定序单写者）、JSONL 一行一条（格式纪律 = [luau-abi](luau-abi.md) §A6.7 D7.3）。
 - **飞行记录仪**：journal 的自用定位——崩溃/故障后的调查源，不是状态重建源（D75）。
 - **锚点条目**：携带版本/配置锚信息的低频生命周期条目（`boot` / fiber 进 Active）；普通条目不背版本税，审计按 `seq` 向前找最近锚点（D76）。
-- **族 / 档位**：kind 表按族组织（生命周期 / 能力使用 / 内部流量 / 错误现场 / 控制 + 聚合摘要族 `window_summary`）；可配族的录制档位 = `core.audit` 三档 `off`/`summary`/`full`（[config-format](config-format.md) §C8.1 D50），键面与默认档 = D79/D80。
-- **窗口（dispatch 窗口）**：一次消息处理（插件被动模型下插件代码只跑在 handler 派发或 setup 里）——聚合摘要的计数单位（D81）。
-- **writer**：每租户一个的 journal 写盘任务——条目的唯一定序者与落盘者（seq 在 writer 分配，文件序 = seq 序；D82）。
+- **族**：kind 表按族组织（生命周期 / 能力使用 / 错误现场 / 控制）。**v1 = 写死族骨架**（D84 范围重定）：能力使用族仅 `process_*` 两条存活；内部流量族 / 聚合摘要族 / 档位概念（`core.audit` 三档）随可配审计面撤销，预制方案留档扩展位。
+- **同步写**：骨架条目低频——intercept 点就地构造 + 序列化 + append + fsync 一步完成，无通道无 writer 任务（D84 收缩自 D82/D83 管线设计；seq 由写入点单线程分配，文件序 = seq 序）。
 - **段文件**：`journal/` 目录下按 seq 区间轮转的物理文件组（布局/保留/归档归 J4）。
-- **blob**：超阈值 payload 的内容寻址存储，条目记 hash + 引用（D7.1 平移；阈值与 GC 归 J4）。
+- **blob**：超阈值 payload 的内容寻址存储（D7.1 平移）——**v1 不立**（D84：骨架无大 payload 场景，process 输出截断注记原位）；设计留档扩展位「可配审计层」。
 
 ## J1 定位与条目模型（2026-10-12 收官）
 
@@ -24,7 +24,7 @@
 
 ### J1.1 D75 定位锤：journal = 核心的操作/审计日志（2026-10-12 用户拍板）
 
-- **定位**：journal = 核心的 append-only 操作/审计日志。消费者三层：**① 核心自己** = 崩溃/故障诊断（飞行记录仪本义：调查，不重建）+ 自审计；**② 插件层** = journal 查询接口（平台能力，J5 设计）；**③ 部署者** = 能力使用审计与调试（ADR-0024 §6 防线 2「藏不住」的兑现面）。
+- **定位**：journal = 核心的 append-only 操作/审计日志。消费者三层：**① 核心自己** = 崩溃/故障诊断（飞行记录仪本义：调查，不重建）+ 自审计；**② 插件层** = journal 查询接口（平台能力，J5 设计）；**③ 部署者** = 能力使用审计与调试（ADR-0024 §6 防线 2「藏不住」的兑现面）。（2026-10-12 修订注：② 插件查询面**缓议** = D84 骨架化（J5 转扩展位）；③ 收窄 = 管理动作/错误现场/process 可见，逐调用能力审计不立；「审计档位变化不许弄坏插件功能」随档位面消解。）
 - **三条「不是」**（边界写实）：不是 replay 事实源（replay 引擎不立 = 扩展位）；不是运行日志（tracing/debug 输出 = 人读诊断面，既有边界不动）；不是插件 transcript（会话轨迹 = 插件层经 fs/sql 自建——DSH session log 已验证的形态；查询接口给插件的是审计关联面，不是存储面——**审计档位变化不许弄坏插件功能**）。
 - **崩溃恢复 = fresh-start**：复用 ADR-0023 同一路径（全量 unload + 全量 load），崩溃与干净重启的差别只在在飞工作丢失多少，恢复路径不分叉。在飞邮箱消息崩溃丢失 = 诚实（D11.4/D11.5 同族：at-most-once、拒绝重投——被杀 handler 可能已发出过回复）。插件跨重启连续性 = 插件自己的 fs/sql 持久化（seam 落盘原子写纪律兜底）；待审批状态 = 审批机器文件原子写，不靠 journal。
 - **正本退位**：fresh-start 后 journal 不是 system of record（正本 = 部署文件 + 插件私有存储），是派生诊断物——段文件轮转/保留/删除 = 纯运维政策，无完整性枷锁（Akka「不删事件」戒律只对 event-sourcing 正本成立）。journal 数据生命周期细则归 J4（[config-format](config-format.md) §C7.0 登记位）。
@@ -64,24 +64,16 @@
 
 ### J1.4 D78 kind 表总装 + 消解记录（2026-10-12 用户拍板）
 
-**分族原则**：生命周期族 + 错误现场族 + 控制族 + `process_*` 两条 = **写死全录**（低频 + 「藏不住」两面：管理动作与异常永远可见；控制族 = 审计自保同族——`journal_gap`（背压丢弃事实）与 `redaction_applied`（脱敏发生事实）若可配关，等于审计失明可由被审计面自己拨档，与 `audit_policy_changed`「谁关了审计窗必须可查」同构）；能力使用族其余 + 内部流量族 = **可配档**（`core.audit` 三档；键面与默认档**已收官 = D79/D80**，2026-10-12）。聚合摘要族（`window_summary`）= summary 档的载体形态，其有无随各族档位与活动走，自身不在 `core.audit` 键面。本表定 kind 存在性与 payload 形状；本表即 payload schema 的 SSOT（D7.3/D77 的还原依据）。
+**分族原则**：生命周期族 + 错误现场族 + 控制族 + `process_*` 两条 = **写死全录**（低频 + 「藏不住」两面：管理动作与异常永远可见；控制族 = 审计自保同族——`journal_gap`（背压丢弃事实）与 `redaction_applied`（脱敏发生事实）若可配关，等于审计失明可由被审计面自己拨档，与 `audit_policy_changed`「谁关了审计窗必须可查」同构）；能力使用族其余 + 内部流量族 = **可配档**（`core.audit` 三档；键面与默认档**已收官 = D79/D80**，2026-10-12）。聚合摘要族（`window_summary`）= summary 档的载体形态，其有无随各族档位与活动走，自身不在 `core.audit` 键面。本表定 kind 存在性与 payload 形状；本表即 payload schema 的 SSOT（D7.3/D77 的还原依据）。（2026-10-12 范围修订注：**可配档面整体撤销 = D84 v1 骨架化**；本表已按骨架重排，被撤 kind 移入表后撤销记录。）
 
 | 族       | kind                                   | 内容要点                                                                                                                                                                            | 来源登记                     |
 | -------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| 生命周期 | `boot`                                 | 租户 boot 完成：host_version + 配置树 hash + 启用插件集摘要（**锚点条目**）                                                                                                         | D76                          |
+| 生命周期 | `boot`                                 | 租户 boot 完成：host_version + 配置树 hash + 启用插件集摘要 + `previous_run`（clean / unclean / first_boot = 崩溃自证 D85）（**锚点条目**）                                         | D76 + D85                    |
+| 生命周期 | `shutdown_clean`                       | 优雅关闭终点标记：drain 排干后写入该租户最后一条 + 最终 fsync；boot 据其存在性判 `previous_run`（D85）                                                                              | D85                          |
 | 生命周期 | `fiber_state_changed`                  | 状态迁移 from→to；进 Active 携带 plugin_revision + config hash（实例件 + 声明 hash）；Failed 带错误摘要（**锚点条目**；[ADR-0016](../decisions/0016-internal-hooks.md) 钩子面镜像） | 调研 §7.3                    |
 | 生命周期 | `mounted` / `unmounted`                | 根 fiber id + 挂载方 fiber + 声明来源指路与 hash + 插件集摘要（D72 人读面 host 日志的 journal 镜像）                                                                                | D72 边界裁定                 |
 | 生命周期 | `config_committed` / `config_rejected` | 应用 = 配置 generation/hash + 来源（审批引用/手写 reload）+ 受影响 entry 摘要；拒绝 = 原因 + 文件指路                                                                               | C4.4                         |
-| 生命周期 | `audit_policy_changed`                 | `core.audit` 换档 旧→新（D50 生效路径；**审计自保**：「谁关了审计窗」必须可查）                                                                                                     | C8.1 衍生                    |
-| 能力使用 | `http_request` / `http_response`       | 方法/域名/状态码/耗时/字节；body 超阈值走 blob 引用（D7.1 平移）                                                                                                                    | seam §5.3                    |
-| 能力使用 | `fs_read` / `fs_write`                 | scope/路径/字节数（`append` 归此族）                                                                                                                                                | seam §5.3 + §A4.1            |
-| 能力使用 | `sql_call` / `sql_result`              | 语句/参数摘要/行数                                                                                                                                                                  | seam §5.3                    |
-| 能力使用 | `process_spawn` / `process_exit`       | 命令/参数/退出码/输出截断注记（**全录写死** = 「藏不住」护栏；spawn 流式内容不进 = §A3.10 平移）                                                                                    | §A3.10/§A3.13                |
-| 能力使用 | `timer_scheduled` / `timer_fired`      | timer id/间隔/届时（sleep 复用 = §A3.6 兑现）                                                                                                                                       | seam §5.3 + §A3.6            |
-| 能力使用 | `stream_opened` / `stream_closed`      | 流句柄 id + 源族（http 下载/process stdout/fs openread）+ 方向 + 关流时字节总量；chunk 内容不立                                                                                     | §A6.5 + D7.1 平移            |
-| 内部流量 | `message_enqueued`                     | 目标 fiber + 消息类（事件四模式/服务调用/dispose/timer tick）+ payload（降档时摘要化）                                                                                              | 调研 §7.3                    |
-| 内部流量 | `dispatch_completed`                   | 四模式派发结果摘要：每消息一条 router 视角（msg kind/name + from + listeners/err/enqueued/ms）；summary 档的内部流量载体（D81 增强）                                                | 调研 §7.3                    |
-| 内部流量 | `service_call` / `service_result`      | 调用方/提供方/方法/结果或 err kind                                                                                                                                                  | 调研 §7.3                    |
+| 能力使用 | `process_spawn` / `process_exit`       | 命令/参数/退出码/输出截断注记（**全录写死** = 「藏不住」护栏；spawn 流式内容不进 = §A3.10 平移）——**能力使用族 v1 仅此两条存活**（D84）                                             | §A3.10/§A3.13                |
 | 错误现场 | `listener_error` / `vm_trap`           | fail-open 监听器抛错落点；VM 层异常                                                                                                                                                 | §A5.5 D15.2 + 调研 §7.3      |
 | 错误现场 | `contract_violation`                   | 契约违约合一（提供方返回违约 D19.1 + emit 违约 D22.4）：violation 描述 + 契约指路                                                                                                   | §A7.5/§A8.5                  |
 | 错误现场 | `fs_invalid_path_detail`               | `fs.invalid_path` 完整拒绝原因（插件可见 message 通用化的互补面 = D14.2）                                                                                                           | §A5.5                        |
@@ -89,47 +81,50 @@
 | 错误现场 | `pending_warn` / `reconcile_failed`    | D25.1 warn（进 Pending 当场/转 Failed 当场：谁缺哪个 key、提供方、指路两条）；启用期对账失败详情（五格）                                                                            | §A9.2/§A9.4                  |
 | 错误现场 | `fanout_cancelled`                     | handler 结束强制取消子协程：handler 指路 + 取消计数                                                                                                                                 | §A4.1 登记                   |
 | 控制     | `unload_gate_closed` / `unload_killed` | 关闸丢弃清单（邮箱 + 可调度队列残留摘要、服务调用即错计数）；强杀点在飞线程清单                                                                                                     | D11.1/D11.4/D11.5            |
-| 控制     | `redaction_applied`                    | 脱敏策略版本 + 命中计数（聚合条目，非每命中一条）                                                                                                                                   | M6 平移                      |
-| 控制     | `journal_gap`                          | 背压丢弃计数 + 族分布 + 时间窗（诚实降级：丢条目可查）；写失败恢复补记同 kind（「seq 区间」措辞经 D82 精确化：writer 定序下被丢条目无 seq）                                         | 2026-10-12 存储/性能讨论增补 |
-| 聚合摘要 | `window_summary`                       | 每（fiber × 窗口）至多一条：档位 = summary 且有活动族的分节计数（http 按域名 / service 按（服务，方法）分键）+ trigger 内联兜底锚（D81；自身不在 `core.audit` 键面）                | J2 新增                      |
+| 控制     | `redaction_applied`                    | 脱敏策略版本 + 命中计数（聚合条目，非每命中一条；骨架脱敏面 = process 参数/错误消息，归 J4）                                                                                        | M6 平移                      |
+| 控制     | `journal_gap`                          | 写失败恢复补记（恢复后一条：失败窗口 + 影响写实；背压丢弃场景随可配面撤销 = D84）                                                                                                   | 2026-10-12 存储/性能讨论增补 |
 
 **消解记录**（随本条落档，各一句理由）：`external_input`（去 agent 化：核心无「session 第一落点」，外部刺激 = 部署文件动作（boot/config 条目）+ 能力族回流）；`fork_created`（fork 退出核心需求集 = §A6.7 概念地基既定）；`session_started`/`session_ended`（D53：核心无 session 概念）；`llm_*`（LLM 调用 = 插件的一次 http，归能力族）；`snapshot_written`（M8 随 replay 消解）；`nondeterminism_read`（D75）；`replay_diverged`（D75）。
+
+**撤销记录**（D84 v1 骨架化，2026-10-12；预制方案留档 = 扩展位「可配审计层」）：能力使用族其余十条（`http_request`/`http_response`/`fs_read`/`fs_write`/`sql_call`/`sql_result`/`timer_scheduled`/`timer_fired`/`stream_opened`/`stream_closed`——v1 无逐调用审计消费者）；内部流量族四条（`message_enqueued`/`dispatch_completed`/`service_call`/`service_result`——同）；聚合摘要族 `window_summary`（载体随可配面消失）；`audit_policy_changed`（`core.audit` 键面不立，无政策可变）。
 
 **mount/unmount 进 journal 的取舍**（D72 留下的「人读面与 journal 边界」裁定）：进——mount = 激活新代码的元权限动作（[instance-model](instance-model.md) D63），审计面少它 = 防线 2 破窗；成本 = 低频两条。D72 人读面 host 日志不动（人读告警与机读审计两通道并存）。
 
 ### J1.5 议题地图（六站）
 
-| 站 | 内容                                                                                                                                                                                                                                                    | 状态          |
-| -- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| J1 | 定位与条目模型（D75–D78）                                                                                                                                                                                                                               | ✅ 2026-10-12 |
-| J2 | 审计政策、音量与写入路径：per-family 默认档；聚合摘要形态；高频族整形；写入管线（异步批量 writer / 背压 `journal_gap` / flush/fsync 政策）；ADR-0024 §6 防线 2 张力结案；D23.3 审计写实的档位依赖对账（内部流量档 ≠ off 才保住「藏不住」）              | ✅ 2026-10-12 |
-| J3 | 崩溃恢复与跨重启连续性：fresh-start 细则（与 ADR-0023 load 路径衔接）；在飞丢失写实；插件持久化模式；agent 连续性 = 插件层结案；崩溃窗口（flush 政策联动）                                                                                              |               |
-| J4 | 写入侧工程：脱敏管线形态（M6；秘密身份注册 = §A2.5 登记位）；blob 阈值/GC；段文件布局/轮转/保留/归档（[config-format](config-format.md) §C1.3 登记位）；journal 数据生命周期（§C7.0 登记位）；写入量实测                                                |               |
-| J5 | 查询接口与人读面：插件面查询接口（形态/能力门/可见范围 = §A3.7 豁免的正当访问面）；部署者 audit 消费面；journal ≠ 运行日志边界写实                                                                                                                      |               |
-| J6 | replay 结案 + v1 收口 + 冻结：replay 引擎 = 扩展位（重开触发器明写）；消解清单落档；supersede 批次（§A6.7 修订面 + seam §5.3/§5.4 + fiber §10 + ADR-0024 §6 注评估）；冻结 = 拟 ADR-0029；冻结前统扫 rationale 层 replay 残留（决策本体不动，措辞注记） |               |
+| 站 | 内容                                                                                                                                                                                                                                                                                                                                                             | 状态          |
+| -- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| J1 | 定位与条目模型（D75–D78）                                                                                                                                                                                                                                                                                                                                        | ✅ 2026-10-12 |
+| J2 | 审计政策、音量与写入路径（D79–D83）——**可配族面经 D84 撤销**，全文留档 = 扩展位「可配审计层」预制方案                                                                                                                                                                                                                                                            | ✅ 2026-10-12 |
+| J3 | 范围重定（D84 v1 骨架化）+ 崩溃恢复与跨重启连续性：fresh-start 细则；在飞丢失写实；插件持久化模式；agent 连续性 = 插件层结案；崩溃窗口叙事（D85–D88）                                                                                                                                                                                                            | ✅ 2026-10-12 |
+| J4 | 写入侧工程（**缩小版** = D84 后）：骨架脱敏（process 参数/错误消息；M6 收窄）；段文件布局/轮转/保留/归档（[config-format](config-format.md) §C1.3 登记位）；journal 数据生命周期（§C7.0 登记位）。消解 = blob/单条目字节上限/写入量实测（骨架无大 payload、音量平凡）                                                                                            |               |
+| J5 | 查询接口与人读面——**缓议 = D84**：骨架无插件查询的紧迫消费者；部署者消费 = jq/文本工具直读段文件；插件面查询接口转扩展位                                                                                                                                                                                                                                         | 缓议          |
+| J6 | replay 结案 + v1 收口 + 冻结：replay 引擎 = 扩展位（重开触发器明写）；消解清单落档；supersede 批次（§A6.7 修订面 + seam §5.3/§5.4 + fiber §10 + ADR-0024 §6 收窄 + ADR-0025 kind 映射格 + ADR-0027 §C8.1 键面不立 + ADR-0028 §S4 service_call 格——后三条 = D84 增补）；冻结 = 拟 ADR-0029；冻结前统扫 rationale 层 replay/审计强度残留（决策本体不动，措辞注记） |               |
 
 ### J1.6 联动登记汇总（J1）
 
-| 去向                                                                           | 内容                                                                                                                                                                                                  |
-| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| luau-abi §A6.7                                                                 | 方向修订注（replay 不立）；D7.1 ★ 轴 / D7.2 / 概念地基 / 登记行修订注；D7.3 Int 标记兑现注 = D77（本 change 已同步）                                                                                  |
-| luau-abi §A6.8                                                                 | 任务 6 行 = J1 收官注 + dispatch 更新（本 change 已同步）                                                                                                                                             |
-| luau-abi §A2.8 / §A3.6 / §A3.7 / §A3.10 / §A3.13                               | 脱敏注册 dispatch = J4；timer kind / 豁免行 / process 两条与流式政策 兑现注 + replay 族消解注（本 change 已同步）                                                                                     |
-| luau-abi §A4.1 / §A4.2 / §A4.5 / §A4.6                                         | append 归族 / fanout 取消 / unload 关闸与强杀两条 兑现注；D8.1/D8.2 免录与钉版 消解注（本 change 已同步）                                                                                             |
-| luau-abi §A5.3 / §A5.4 / §A5.5 / §A7.5 / §A8.0 / §A8.5 / §A9.0 / §A9.2 / §A9.4 | listener_error / fs_invalid_path_detail / contract_violation / event_shape_degraded / pending_warn / reconcile_failed 兑现注（本 change 已同步）                                                      |
-| luau-abi §A7.4 / §A8.4                                                         | D19.1 正文兑现注；D23.3 审计写实档位依赖注（依赖挂进 J2；本 change 已同步）                                                                                                                           |
-| seam-capabilities §5.3 / §5.4 / §6.2 / §1.6 / §4.2                             | kind 表 SSOT 移交注；replay 列 / 分族原则 / 头号问题 / 指针串比对 消解注；输入清单 dispatch 更新（本 change 已同步）                                                                                  |
-| fiber §10                                                                      | 跨重启状态政策方向注 = fresh-start（细则归 J3；本 change 已同步）                                                                                                                                     |
-| config-format §C4.2 / §C4.4 / §C8.1                                            | config_committed / config_rejected 兑现注 + D50 可调面重述注（§C8.1：★ 轴消解 / code_ref 锚点化 / 可调族面 = D78）（本 change 已同步）                                                                |
-| config-format §C1.1 / §C1.3 / §C7.0                                            | 段文件 / blob / journal 数据生命周期 dispatch = J4（本 change 已同步）                                                                                                                                |
-| config-format §C6.2 / §C6.3                                                    | 加密密钥形态消解注；脱敏管线 dispatch = J4（本 change 已同步）                                                                                                                                        |
-| config-format §C8.0 / §C8.3                                                    | audit 档语义 dispatch = J2（本 change 已同步）                                                                                                                                                        |
-| instance-model §S1.6 / §S2.2 / §S4.7                                           | 任务 6 已启动注（每租户一本已吸收 = D75/D76）；跨重启连续性 pointer = J3；D73 行 replay 半句消解 + kind 表 SSOT 指针注（§S4.7）（本 change 已同步）                                                   |
-| ADR-0026                                                                       | §A6.7 修订面 supersede 归 J6 冻结批次（拟 ADR-0029）——Status 行注届时落                                                                                                                               |
-| 实现期清单                                                                     | journal append 管线（异步批量 writer + 有界通道 + `journal_gap` 降级——**已定案 = D82/D83**（2026-10-12，另含丢弃制背压 + 分级 sync；汇总 = J2.6），落地仍归实现期）；段文件轮转（J4）；查询接口（J5） |
-| 扩展位                                                                         | replay 引擎（重开触发器归 J6 明写）                                                                                                                                                                   |
+| 去向                                                                           | 内容                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| luau-abi §A6.7                                                                 | 方向修订注（replay 不立）；D7.1 ★ 轴 / D7.2 / 概念地基 / 登记行修订注；D7.3 Int 标记兑现注 = D77（本 change 已同步）                                                                                                                                                     |
+| luau-abi §A6.8                                                                 | 任务 6 行 = J1 收官注 + dispatch 更新（本 change 已同步）                                                                                                                                                                                                                |
+| luau-abi §A2.8 / §A3.6 / §A3.7 / §A3.10 / §A3.13                               | 脱敏注册 dispatch = J4；timer kind / 豁免行 / process 两条与流式政策 兑现注 + replay 族消解注（本 change 已同步）                                                                                                                                                        |
+| luau-abi §A4.1 / §A4.2 / §A4.5 / §A4.6                                         | append 归族 / fanout 取消 / unload 关闸与强杀两条 兑现注；D8.1/D8.2 免录与钉版 消解注（本 change 已同步）                                                                                                                                                                |
+| luau-abi §A5.3 / §A5.4 / §A5.5 / §A7.5 / §A8.0 / §A8.5 / §A9.0 / §A9.2 / §A9.4 | listener_error / fs_invalid_path_detail / contract_violation / event_shape_degraded / pending_warn / reconcile_failed 兑现注（本 change 已同步）                                                                                                                         |
+| luau-abi §A7.4 / §A8.4                                                         | D19.1 正文兑现注；D23.3 审计写实档位依赖注（依赖挂进 J2；本 change 已同步）                                                                                                                                                                                              |
+| seam-capabilities §5.3 / §5.4 / §6.2 / §1.6 / §4.2                             | kind 表 SSOT 移交注；replay 列 / 分族原则 / 头号问题 / 指针串比对 消解注；输入清单 dispatch 更新（本 change 已同步）                                                                                                                                                     |
+| fiber §10                                                                      | 跨重启状态政策方向注 = fresh-start（细则归 J3；本 change 已同步）                                                                                                                                                                                                        |
+| config-format §C4.2 / §C4.4 / §C8.1                                            | config_committed / config_rejected 兑现注 + D50 可调面重述注（§C8.1：★ 轴消解 / code_ref 锚点化 / 可调族面 = D78）（本 change 已同步）                                                                                                                                   |
+| config-format §C1.1 / §C1.3 / §C7.0                                            | 段文件 / blob / journal 数据生命周期 dispatch = J4（本 change 已同步）                                                                                                                                                                                                   |
+| config-format §C6.2 / §C6.3                                                    | 加密密钥形态消解注；脱敏管线 dispatch = J4（本 change 已同步）                                                                                                                                                                                                           |
+| config-format §C8.0 / §C8.3                                                    | audit 档语义 dispatch = J2（本 change 已同步）                                                                                                                                                                                                                           |
+| instance-model §S1.6 / §S2.2 / §S4.7                                           | 任务 6 已启动注（每租户一本已吸收 = D75/D76）；跨重启连续性 pointer = J3；D73 行 replay 半句消解 + kind 表 SSOT 指针注（§S4.7）（本 change 已同步）                                                                                                                      |
+| ADR-0026                                                                       | §A6.7 修订面 supersede 归 J6 冻结批次（拟 ADR-0029）——Status 行注届时落                                                                                                                                                                                                  |
+| 实现期清单                                                                     | journal append 管线（异步批量 writer + 有界通道 + `journal_gap` 降级——**已定案 = D82/D83**（2026-10-12，另含丢弃制背压 + 分级 sync；汇总 = J2.6），落地仍归实现期）；**次日塌缩 = D84**（同步写 + 逐条 fsync，管线留档扩展位预制方案）；段文件轮转（J4）；查询接口（J5） |
+| 扩展位                                                                         | replay 引擎（重开触发器归 J6 明写）                                                                                                                                                                                                                                      |
 
 ## J2 审计政策、音量与写入路径（2026-10-12 收官）
+
+> （2026-10-12 范围修订注：**本章可配族面整体撤销 = D84 v1 骨架化**——D79 键面 / D80 默认档 / D81 聚合形态不立；D82 收缩存活 = 写失败降级续跑政策（背压/通道/`journal_gap` 背压场景随可配面消失）；D83 收缩存活 = 落盘即 fsync + drain 排干（低频下分级不必要）。本章全文保留 = 扩展位「可配审计层」的预制方案，重开时按此落地。）
 
 ### J2.0 边界与前提
 
@@ -204,4 +199,71 @@
 | J3                              | 崩溃窗口叙事原料 = D83 崩溃窗口写实                                                                                                |
 | J4                              | 单条目字节上限 / blob 阈值 / 段文件 / 写入量实测（`window_summary` 与 full 档条目的物理组织）                                      |
 | 实现期清单                      | journal append 管线落地（writer + 有界通道 + 丢弃制 + 分级 sync = D82/D83 定案）；通道容量与 flush 阈值数值                        |
-| 扩展位                          | summary 档 payload 形状指纹（D80 备查变体）                                                                                        |
+| 扩展位                          | summary 档 payload 形状指纹（D80 备查变体——随 D84 转入「可配审计层」预制方案）                                                     |
+
+## J3 范围重定与崩溃恢复（2026-10-12 收官）
+
+### J3.0 边界与前提
+
+本题定 v1 范围收缩（D84）与崩溃恢复/跨重启连续性的全部剩余面（D85–D88）。前提（既定不议）：D75 fresh-start 与正本退位；ADR-0023 干净重启路径；D58 崩溃 = 进程级。D84 后不归本题的面：可配审计层（扩展位，D79–D83 留档）；插件面查询接口（J5 缓议转扩展位）。
+
+### J3.1 D84 v1 范围收缩 = 写死族骨架（2026-10-12 用户拍板）
+
+- **动因**（用户定调）：梳理 J3 时确认——崩溃恢复不需要 core 做任何事（fresh-start = 全量 load 重跑 setup，配置/声明全在文件里）；v1 阶段「逐调用能力审计」无紧迫消费者；骨架实现成本 ≈ 零（低频条目同步写即可）。
+- **收缩面**：journal v1 = 写死族骨架（生命周期 + 错误现场 + 控制 + 能力使用族仅 `process_*` 两条）。**撤销不立**：能力使用族其余十条 + 内部流量族四条 + `window_summary` + `audit_policy_changed` + `core.audit` 键面与三档（D79/D80/D81 撤销；config-format §C8.1 D50 格的 supersede 归 J6 批次——`core:` 节容器与封闭集/additive 机制原位）。
+- **写入模型塌缩**：骨架低频 → intercept 点同步构造 + 序列化 + append + **逐条 fsync** 一步完成；无通道、无 writer 任务、无背压（D82/D83 大部撤销；存活 = 写失败降级续跑政策 + drain 排干义务）。`journal_gap` 收窄 = 写失败恢复标记。错误风暴写实：同步 fsync 的节流落在写入路径上（肇事者首当其冲，同租户其他 fiber 的写同排队——骨架正常面低频可承受；实测刺痛再批量化，不预埋）。
+- **防线 2 结案改写**（取代 D80 结案）：v1 默认面 = 管理动作（boot/挂载/配置提交）+ 错误现场 + process spawn 可见；**能力调用细节（读哪些文件、联系哪些域名）v1 不立记录面**。不一致写实：`curl` 外泄可见（process）、`ctx.http` 外泄不可见。ADR-0024 §6「每次跨界调用进 journal」措辞 supersede 归 J6 批次。
+- **D23.3 审计写实死亡**：内部流量族不立 → 自由态事件流向/形状均无记录面；静态面存活（analyze #7 非正式共享词汇警告原位）。
+- **扩展位登记**：**可配审计层** = D79–D83 全文即预制方案（六键 + 三档 + `window_summary` + 背压管线）；触发器 = 首个真实审计需求或安全事件。
+- **淘汰**：C 全砍（mount/process 的「藏不住」记录一并死，ADR-0024 信任模型抽腿）；保留 http 域名记录单点（ad hoc 例外破族轴纯洁性，扩展位可回）。
+
+### J3.2 D85 崩溃自证：`shutdown_clean` + `previous_run`（2026-10-12 用户拍板）
+
+- 生命周期族 +1 kind = **`shutdown_clean`**（写死全录原位）：优雅关闭（[ADR-0023](../decisions/0023-core-restart-semantics.md) drain）末尾写入该租户最后一条 + 最终 fsync。
+- `boot` 条目 payload + **`previous_run: clean | unclean | first_boot`**：判定三分——无段文件/目录为空 = `first_boot`；段文件尾行 = `shutdown_clean` = `clean`；其余 = `unclean`（含撕裂尾行，处置 = D88）。unclean 时 host 日志 warn 一条（D25.1 节奏：当场一条，不周期重发）。
+- 插件侧无 core 信号（J5 缓议 + `journal/` 是 fs 豁免区）：需要崩溃信号的插件自建心跳文件（fs private + 原子写）。
+- **成本**：每次干净关闭一条；换来崩溃频率在 journal 内自证可查。**淘汰**：不立关闭条目（崩溃与干净关闭不可区分，元问题失明）；boot 不标记（查询侧每次回溯 tail）。
+
+### J3.3 D86 在飞丢失写实 + 崩溃孤儿进程（2026-10-12 用户拍板）
+
+**丢失清单**（崩溃 = 进程级、全租户同死同起 = D58 原位）：
+
+- **邮箱未投递消息 + 在飞 handler**：丢失诚实（被杀 handler 可能已发出过回复/副作用——at-most-once、拒绝重投 = D75/D11.4/D11.5 同族）；
+- **对外副作用不回滚**：崩溃时已发出的 http/已写文件不回滚（§A3.10「副作用出视野不可回滚」平移）；
+- **journal 自身**：至多丢正在写的那一条（同步写 + 逐条 fsync = D84，窗口 ≈ 零；撕裂尾行 = D88）；
+- **不丢**：部署文件（正本）；待审批提案（审批事务暂存文件原子写 = ADR-0008/D39）；插件已落盘私有状态（seam 原子写纪律）。
+
+**孤儿漏洞写实**：「drain 杀进程组无孤儿」（§A3.10）只在优雅路径成立——崩溃时 drain 不运行，spawn 的子进程可能孤儿残留。v1 **不承诺崩溃时无孤儿**；缓解 = OS 级随父死机制（Linux `pdeathsig` / Windows Job Object）登记实现期清单。诚实优先于好看。
+
+### J3.4 D87 插件持久化与实例复活结案（核心零新机制；2026-10-12 用户拍板）
+
+- **插件跨重启状态 = 插件自建 fs/sql**（private scope 目录 + 原子写 + sqlite 内建三件套）——核心机制已够，不立任何状态托管。「日志持真相、定时器为易失投影」四件套模式指导 = Creator/SDK 文档议题（登记）。
+- **实例复活写实**（补实例模型空档）：**实例不自动复活**——mount 声明 = 文件背书（D62 审批档住挂载方 `config.yml`），boot 全量 load 后挂载方插件 setup 重跑 = 重新 `ctx.mount`，天然幂等；D65 快照语义原位（复活的新挂载拿新快照）；运行时构造的自管档声明不复活（易失物，挂载方自行重建）。
+- **agent 连续性结案**：进行中的对话 = session 类插件 transcript 自建（fs/sql）；核心不提供任何连续性信号。
+
+### J3.5 D88 崩溃窗口叙事定稿 + 撕裂尾行政策（2026-10-12 用户拍板）
+
+- **存在性界定**：已 fsync = 存在；正在写 = 不曾存在（journal 无半成品概念）。骨架同步写下崩溃窗口 ≈ 正在写的那一条（D84），无需 `journal_gap` 类标记。
+- **撕裂尾行政策**：append 写一半崩溃 = 段文件尾可留不完整行 → 一切读取侧（审计工具 / sdk / 未来查询面）**静默丢弃不完整尾行**、视为隐式 gap——崩溃是常态不是腐败，不响亮报错；不搞双写/校验和自保（正本退位 = D75，诊断物承受得起尾行损失）。
+- 调研开放问题 5 至此**全结**（flush 政策 = D84 收缩版同步写 + 逐条 fsync；写失败 = D82 存活版降级续跑；窗口叙事 = 本条）。
+
+### J3.6 联动登记汇总（J3）
+
+| 去向                                   | 内容                                                                                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| luau-abi §A6.7                         | D7.1 结案注改写（D80 → D84）；容量账裁剪方向注（可配族撤销、实测需求消解）（本 change 已同步）                                                                |
+| luau-abi §A6.8                         | 任务 6 行 dispatch 更新（J3 ✅ / J4 缩小 / J5 缓议 + D84 撤销面）；实现期清单管线件塌缩注（本 change 已同步）                                                 |
+| luau-abi §A8.4                         | D23.3 审计写实死亡注（内部流量族不立 = D84；analyze #7 静态面原位）（本 change 已同步）                                                                       |
+| luau-abi §A2.7/§A3.6/§A3.9/§A4.1/§A6.5 | timer 两条 / sql 粒度论据 / fs append 归族 / stream 两条 撤销注（D84；本 change 已同步）                                                                      |
+| seam §5.3/§5.4/§6.2                    | kind 映射列骨架化注；fs/sql journal 面撤销注；写入量账动机消失注（本 change 已同步）                                                                          |
+| config-format §C8.0/§C8.1/§C8.3/§C4.1  | `core.audit` 键面不立注（supersede 归 J6 批次）；`core` 节换档动作消解注（本 change 已同步）                                                                  |
+| instance-model §S2.2/§S3.4/§S4.7       | J3 结案注；实例不自动复活写实（D87）；内部流量族撤销注（D84）（本 change 已同步）                                                                             |
+| fiber §10                              | 跨重启状态政策结案注 = D84–D88；drain 义务注收缩（同步写 + drain 末尾 `shutdown_clean` + 最终 fsync）（本 change 已同步）                                     |
+| ADR-0024 §6                            | 防线 2 收窄 supersede（「每次跨界调用进 journal」→ v1 = 管理动作 + 错误现场 + process 可见）——归 J6 冻结批次（拟 ADR-0029）                                   |
+| ADR-0027 §C8.1                         | `core.audit` 键面/三档不立（living doc D50 格）——归 J6 冻结批次（拟 ADR-0029；`core:` 节容器原位）                                                            |
+| ADR-0025 §5                            | seam Decision 的 journal kind 映射格失效——归 J6 冻结批次评估（拟 ADR-0029）                                                                                   |
+| ADR-0028 §S4                           | 「service_call 族 replay 政策不动」格失效（replay 不立 = D75 + 内部流量族撤销 = D84）——归 J6 冻结批次（拟 ADR-0029）                                          |
+| 调研开放问题 5                         | 全结注（D82 存活 + D84 + D88；本 change 已同步）                                                                                                              |
+| J4                                     | 缩小版范围 = 段文件轮转/保留/归档 + 骨架脱敏（process 参数/错误消息）+ journal 数据生命周期（§C7.0）                                                          |
+| 扩展位                                 | 可配审计层（D79–D83 预制方案；触发器 = 真实审计需求/安全事件）；插件面 journal 查询接口（J5 缓议转入）                                                        |
+| 实现期清单                             | 骨架写入 = 同步 append + 逐条 fsync + 每租户写锁；`shutdown_clean` 与 `previous_run` 判定；撕裂尾行丢弃（读取侧）；子进程随父死机制（pdeathsig / Job Object） |

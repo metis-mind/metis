@@ -228,11 +228,11 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 
 （kind 表全文 = `../research/journal-replay-research.md` §7.3；本表 = syscall 部分回填。2026-10-08 修订注：kind 表去 agent 化 + 录制分族政策（★ 全录 / audit 降档）已定案 = [luau-abi](luau-abi.md) §A6.7——调研 §7.3 的 `llm_*`/`session_*` 不属核心 kind。）（2026-10-11 修订注：fs 行与 §5.2 process 行「三 scope」复述收窄 = private/global 两档；§6.1 A2/A3 行同——[config-format](config-format.md) §C5.1 D44；正式 supersede 已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #9（2026-10-11）。）
 
-（2026-10-12 修订注：**journal kind 表 SSOT 移交 = [journal](journal.md) D78**（任务 6 J1 收官）；本表「replay」列与 ★ 标注**消解**——replay 引擎不立（journal.md D75）：`nondeterminism_read` 行、fs/sql 的「私有状态族」格、process 的「record/注入到头」格、http/timer 的「record/注入」「按史注入」格随之消解；fs `append` 归族与 process 流式粒度已落位 D78。journal kind 列名义有效，正式面以 journal.md 为准；正式 supersede 归任务 6 冻结批次（拟 ADR-0029）。）
+（2026-10-12 修订注：**journal kind 表 SSOT 移交 = [journal](journal.md) D78**（任务 6 J1 收官）；本表「replay」列与 ★ 标注**消解**——replay 引擎不立（journal.md D75）：`nondeterminism_read` 行、fs/sql 的「私有状态族」格、process 的「record/注入到头」格、http/timer 的「record/注入」「按史注入」格随之消解；fs `append` 归族与 process 流式粒度已落位 D78。journal kind 列名义有效，正式面以 journal.md 为准；正式 supersede 归任务 6 冻结批次（拟 ADR-0029）。）（2026-10-12 再修订注：**journal kind 列 v1 仅 process 两条存活**——能力族其余与内部流量面撤销 = [journal](journal.md) D84 v1 骨架化；本列名义留档，正式面 = journal.md D78 表（D84 收缩版）；ADR-0025 对应格 supersede 归 J6 批次评估。）
 
 ### 5.4 replay 分族原则
 
-**边界输入族**（http / timer / 非确定读取）= record/注入；**私有状态族**（fs / sqlite）= 与 journal 正式设计一并定——"插件把状态外置后，重放时的世界算什么"是任务 6 的头号输入，不在此硬答。（2026-10-12 修订注：**本节整体消解**——replay 不立 = [journal](journal.md) D75；「重放时的世界算什么」问题随 replay 消失；fs/sql 的 journal 面 = 可配 audit 档（D78；键面与默认档**已收官 = D79/D80**，默认 `summary`）。）
+**边界输入族**（http / timer / 非确定读取）= record/注入；**私有状态族**（fs / sqlite）= 与 journal 正式设计一并定——"插件把状态外置后，重放时的世界算什么"是任务 6 的头号输入，不在此硬答。（2026-10-12 修订注：**本节整体消解**——replay 不立 = [journal](journal.md) D75；「重放时的世界算什么」问题随 replay 消失；fs/sql 的 journal 面 = **不立**（可配审计面撤销 = [journal](journal.md) D84 v1 骨架化，2026-10-12）。）
 
 ### 5.5 时间调度四梯度
 
@@ -266,7 +266,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 - kind 表 syscall 部分 = §5.3；私有状态族 replay 政策 = 头号输入；`nondeterminism_read` 已覆盖时间/CSPRNG 读取
 - **写入量账**：§5.3 的 per-call 条目在忙插件下达日百万级（~0.2–0.5 GB/天/插件），单条大 body 可达 10⁷–10⁸B——需录制粒度政策（全量内联 vs blob 引用 vs chunk；http 大 body/SSE 与 LLM 流式同族，参 `../research/journal-replay-research.md` 开放问题 2）——**2026-10-08 已定案**：[luau-abi](luau-abi.md) §A6.7 D7.1（★ 全录 + audit 默认降档 + 阈值 blob 引用）
 - **生成型秘密的落盘政策**：`crypto.random`（record）生成的密钥/token/nonce 会明文进 `nondeterminism_read`——M6 脱敏管线的模式匹配抓不到生成型秘密，需 kind 感知政策（append 加密/擦除 + replay 注入侧解密）——**2026-10-08 已定案**：[luau-abi](luau-abi.md) §A6.7 D7.2（kind 感知加密，按 source 子类分流）
-- （2026-10-12 修订注：本节输入已消费——kind 表 syscall 部分 + 录制分族 = **已兑现**（[journal](journal.md) D78，SSOT 移交）；私有状态族 replay 政策（头号输入）+ `nondeterminism_read` 覆盖 + 生成型秘密落盘政策 = **消解**（replay 不立 = D75）；写入量账与频率整形 = **已兑现 = J2**（D80 结构有界原则：默认面成本 = O（窗口数）、full = O（调用数）开窗自负；D81 `window_summary` 聚合形态 + `dispatch_completed` 增强）；blob/段文件归 J4。）
+- （2026-10-12 修订注：本节输入已消费——kind 表 syscall 部分 + 录制分族 = **已兑现**（[journal](journal.md) D78，SSOT 移交）；私有状态族 replay 政策（头号输入）+ `nondeterminism_read` 覆盖 + 生成型秘密落盘政策 = **消解**（replay 不立 = D75）；写入量账与频率整形 = **已兑现 = J2**（D80 结构有界原则：默认面成本 = O（窗口数）、full = O（调用数）开窗自负；D81 `window_summary` 聚合形态 + `dispatch_completed` 增强）；blob/段文件归 J4。）（2026-10-12 再修订注：J2 兑现面**撤销 = [journal](journal.md) D84 v1 骨架化**——per-call 条目不立，**写入量账担忧整体消失**；blob 不立；段文件归 J4 缩小版。）
 
 ### 6.3 实现期登记
 

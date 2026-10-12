@@ -314,7 +314,7 @@ vcrpy 模型：首次运行把全部 HTTP 交互录制为扁平 cassette 文件�
 2. LLM **流式**响应的录制粒度：整段 buffered 录制最简单；chunk 序列录制可支撑断流恢复（OTel 的 streaming chunks 章节本身也还是 TODO，✅）。v1 倾向 buffered。
 3. fork 前缀的物理组织：共享只读前缀文件 + 分支文件，还是 copy-on-write 复制？（Temporal 复制进新 run；我们体量小，倾向逻辑引用。）
 4. 发散比对的强度：只比调用序列（种类/目标/次序），还是连 payload 内容 hash 一起比？后者更严但误报面大（插件合法地依赖注入时间戳时会误伤——需要 `nondeterminism_read` 条目先把这类读取变确定）。
-5. host 崩溃时 journal 的 fsync/写放大策略与邮箱水位的对账（崩溃窗口内已投递未落盘的条目如何界定——Akka "journal 失败即停、不可 resume" 的戒律适用，✅）。（2026-10-12 结案注：flush/fsync 政策**已定 = [journal](../design/journal.md) D83**（分级 sync：写死族落盘即 fsync、可配族周期 flush）；写失败政策 = D82（降级续跑 + 告警 + 恢复补 gap——「失败即停」戒律被明文推翻：其前提是 event-sourcing 正本，D75 正本退位已排除）；崩溃窗口叙事归 J3。）
+5. host 崩溃时 journal 的 fsync/写放大策略与邮箱水位的对账（崩溃窗口内已投递未落盘的条目如何界定——Akka "journal 失败即停、不可 resume" 的戒律适用，✅）。（2026-10-12 结案注：flush/fsync 政策**已定 = [journal](../design/journal.md) D83**（分级 sync：写死族落盘即 fsync、可配族周期 flush）；写失败政策 = D82（降级续跑 + 告警 + 恢复补 gap——「失败即停」戒律被明文推翻：其前提是 event-sourcing 正本，D75 正本退位已排除）；崩溃窗口叙事归 J3。）（2026-10-12 再修订：D83 分级 sync 收缩 = 同步写 + 逐条 fsync（D84 v1 骨架化）；崩溃窗口叙事定稿 = D88——**本条至此全结**。）
 6. 跨 session 服务调用（若 session 模型引入）是否算边界输入——当前按内部流量处理，待 [session-model](../design/session-model.md) 正式设计时复审。（2026-10-12 结案注：**结案 = 维持内部流量**——实例模型 D68 边界下跨实例服务调用结构性不存在（兄弟互不可见、向下无 inject），唯一跨边界流量 = 实例沿 parent 链上调租户服务 = 同租户内部流量；扩展位（跨租户共享实例 / handle 服务出口）开放时重开——[instance-model](../design/instance-model.md) §S4.7 D73。）
 
 ---
