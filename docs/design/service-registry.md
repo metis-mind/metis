@@ -14,7 +14,7 @@
 - **key 命名**：扁平字符串；框架级服务占短名（`llm`/`tools`；实现 = 插件，core 不提供领域服务实现，见 §6 注），插件服务建议 `plugin-name/service` 前缀（约定不强制，与事件命名纪律同构）；重复注册响亮失败 = 命名冲突加载期暴露
 - **服务没有"属性"**：跨 VM 只有方法调用（消息），无共享对象——服务状态是提供方 VM 私有，访问必经方法（actor 纯化，Cordis 的字段穿透是 Proxy 遗物）
 - **LLM 工具 = 服务方法的投影**：tool registry 插件把 inject 来的方法集翻译成模型 tool schema——插件写的服务自动成为模型可用的工具（schema 化后），无手工翻译层
-- **唯一性（附议）**：任何时刻全局唯一（重复注册响亮）；跨时间可替换（配置变更 + epoch+1）；同时多实现归 isolate（[ADR-0013](../decisions/0013-context-scope.md) 推迟项）
+- **唯一性（附议）**：任何时刻全局唯一（重复注册响亮）；跨时间可替换（配置变更 + epoch+1）；同时多实现归 isolate（[ADR-0013](../decisions/0013-context-scope.md) 推迟项——2026-10-12 结案：多实现 = 不同实例作用域各一份，isolate 不立字段、语义由实例作用域天然给出；同作用域内唯一性原样，[instance-model](instance-model.md) §S4.2/§S4.3 D68/D69）
 - 一个插件可提供多个服务：每 key 独立注册、独立 epoch
 
 注册表数据结构（host 侧，v1 全局单级）：
@@ -22,7 +22,7 @@
 ```
 HashMap<ServiceKey, ServiceEntry { provider: FiberId, epoch: u64, methods: Vec<MethodName> }>
 + 反向索引 HashMap<ServiceKey, Set<FiberId>>   // service → dependents
-+ ScopeTag 预留位（isolate 加回时用）
++ ScopeTag 预留位（2026-10-12 已兑现 = 实例作用域标识，[instance-model](instance-model.md) §S4.2 D68）
 ```
 
 ## 2. provide 与注册时机（S2 ✅）
@@ -82,7 +82,7 @@ v1 简化：inject 由 manifest 固定，entry 层不覆盖（Cordis 两处可�
 
 ### 并发四条款
 
-1. **同一提供方串行**：调用按到达顺序开始处理；吞吐上限 = 单实例处理能力；扩容归 isolate（推迟项）
+1. **同一提供方串行**：调用按到达顺序开始处理；吞吐上限 = 单实例处理能力；扩容归 isolate（推迟项——2026-10-12 结案：不立字段，多实现 = 实例作用域各一份，同作用域内串行原样，[instance-model](instance-model.md) §S4.3 D69）
 2. **deadline 即边界**：全局默认 + per-call 覆盖（语法归 ABI）；等待环不死锁只超时（[ADR-0011](../decisions/0011-actor-execution-model.md)）
 3. **超时不取消**：deadline 到 = 调用方不再等，提供方自然跑完、结果丢弃；跨 VM 取消登记扩展位（中断已产生部分副作用的执行，危险远大于省下的算力）
 4. **交错留缝**：handler 等待期间是否让出邮箱归 ABI/实现优化；**语义上插件不得依赖"一个调用没完下一个不开始"**（2026-10-08 兑现：让出 = 自由交错，[luau-abi](luau-abi.md) §A4.1——等待期间邮箱下一条先跑；"不得依赖"从告诫变为明文执行模型）

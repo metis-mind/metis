@@ -27,14 +27,14 @@
 
 Temporal 的 Event History 是 append-only 事件序列，事件由 Temporal Service 响应外部发生与 workflow 产出的 Command 而创建。全部条目类型（官方 events reference 枚举，约 50 种）可按用途分六族：
 
-| 族 | 条目类型（节选） | 对我们的意义 |
-| -- | --------------- | ------------ |
-| 生命周期 | `WorkflowExecutionStarted/Completed/Failed/TimedOut/Canceled/Signaled/Terminated/ContinuedAsNew/OptionsUpdated` | session/fiber 生命周期事件族 |
-| 任务机械 | `WorkflowTaskScheduled/Started/Completed/TimedOut/Failed` | replay 不消费、audit 消费——证明"journal 可以包含 replay 不用的条目" |
-| 边界副作用（Activity） | `ActivityTaskScheduled/Started/Completed/Failed/TimedOut/CancelRequested/Canceled` | **LLM 调用的对应物**：`ActivityTaskCompleted` 携带 `result`（录制点） |
-| 定时器 | `TimerStarted/Fired/Canceled` | 定时器是边界输入：`TimerFired` 入史，replay 按史注入而非按墙钟 |
-| 标记 | `MarkerRecorded`（对 server 透明，SDK 用于 local activity 与 side effect） | "内核哑存储 + SDK 策略"的直接证据——初步判断②的先例 |
-| 跨执行 | 子 workflow 6 种 / 外部 signal·cancel 4 种 / Update 2 种 / Nexus 7 种 | 跨 session 交互的条目形态 |
+| 族                     | 条目类型（节选）                                                                                                | 对我们的意义                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 生命周期               | `WorkflowExecutionStarted/Completed/Failed/TimedOut/Canceled/Signaled/Terminated/ContinuedAsNew/OptionsUpdated` | session/fiber 生命周期事件族                                          |
+| 任务机械               | `WorkflowTaskScheduled/Started/Completed/TimedOut/Failed`                                                       | replay 不消费、audit 消费——证明"journal 可以包含 replay 不用的条目"   |
+| 边界副作用（Activity） | `ActivityTaskScheduled/Started/Completed/Failed/TimedOut/CancelRequested/Canceled`                              | **LLM 调用的对应物**：`ActivityTaskCompleted` 携带 `result`（录制点） |
+| 定时器                 | `TimerStarted/Fired/Canceled`                                                                                   | 定时器是边界输入：`TimerFired` 入史，replay 按史注入而非按墙钟        |
+| 标记                   | `MarkerRecorded`（对 server 透明，SDK 用于 local activity 与 side effect）                                      | "内核哑存储 + SDK 策略"的直接证据——初步判断②的先例                    |
+| 跨执行                 | 子 workflow 6 种 / 外部 signal·cancel 4 种 / Update 2 种 / Nexus 7 种                                           | 跨 session 交互的条目形态                                             |
 
 两个结构性细节值得抄：
 
@@ -94,10 +94,10 @@ Temporal 的 workflow reset 在事件结构里留下直接证据：`WorkflowTask
 - `JournaledGrain<TGrainState, TEventBase>`：`State` 只读、`Version` == 已确认事件总数；`RaiseEvent` 不等待、`await ConfirmEvents()` 等落盘确认；`RaiseEvents(多个)` 原子写。
 - **Transition 方法约束**："no side effects other than modifying the state object and should be deterministic"——与 Temporal 的 workflow 约束同构。
 - **log-consistency provider 分野是本次调研对"版本 pinning"最有启发的对照**：
-  - `LogStorage`：每次加载**全量重放事件序列**重建状态——只要旧事件还能反序列化，"you can radically modify the GrainState class and the transition methods"。代码自由，代价是恢复成本与历史长度成正比。
-  - `StateStorage`：只持久化最新 `GrainState`——恢复 O(1)，但状态类必须永远可反序列化，schema 演化压力转移到状态本身。
-  
-  我们的 fiber 哲学（插件无持久状态、重启即重算）天然是 LogStorage 一派，且事件序列有界（session 级）（🧭）。
+    - `LogStorage`：每次加载**全量重放事件序列**重建状态——只要旧事件还能反序列化，"you can radically modify the GrainState class and the transition methods"。代码自由，代价是恢复成本与历史长度成正比。
+    - `StateStorage`：只持久化最新 `GrainState`——恢复 O(1)，但状态类必须永远可反序列化，schema 演化压力转移到状态本身。
+
+    我们的 fiber 哲学（插件无持久状态、重启即重算）天然是 LogStorage 一派，且事件序列有界（session 级）（🧭）。
 
 ---
 
@@ -108,12 +108,12 @@ Temporal 的 workflow reset 在事件结构里留下直接证据：`WorkflowTask
 - **两个 system of record 选择**：event log 为正本（状态全为派生）vs 当前状态为正本（log 只做审计）。我们的答案几乎是强制的：journal 为正本——因为需求 b/c 都要求从 journal 重建，audit-only 形态不够。
 - **快照的标准用法**：隔夜快照 + 日内内存态 + 崩溃后从快照重放增量事件。快照是**性能优化**，永远可以用"从头重放"替代——"reverting to a past snapshot and replaying the event stream"。
 - **外部系统的 gateway 纪律**（直接命中需求 c）：
-  - **外部更新**（对外发消息）：replay 期间 gateway 必须能静默——"the domain logic should never care about the context of the running of the events"，是否真发由 gateway 判断。映射：replay 模式下 host 的对外通道（LLM、网络、文件写入工具）由 host 统一掐断或接管，插件无感。
-  - **外部查询**（读外部数据影响处理结果）：`LoggedPricingGateway`——查询经 gateway，**请求与响应都作为事件落 log**，replay 时查旧记录直接返回。这是"LLM 原始响应必须录制"在 2005 年的原型。
+    - **外部更新**（对外发消息）：replay 期间 gateway 必须能静默——"the domain logic should never care about the context of the running of the events"，是否真发由 gateway 判断。映射：replay 模式下 host 的对外通道（LLM、网络、文件写入工具）由 host 统一掐断或接管，插件无感。
+    - **外部查询**（读外部数据影响处理结果）：`LoggedPricingGateway`——查询经 gateway，**请求与响应都作为事件落 log**，replay 时查旧记录直接返回。这是"LLM 原始响应必须录制"在 2005 年的原型。
 - **代码变更三分类**（与 Temporal 版本化对照看）：
-  1. **新功能**：随时加，重放旧事件得新结果（gateway 关闭状态下）；
-  2. **bug fix**：修好直接重放，状态被"修正"——event sourcing 的重放红利；
-  3. **temporal logic**（"11 月 18 日前收 $10 之后收 $15"这类规则本身随时间变）：必须进领域模型（`chargingRules.get(aDate)`），不能靠代码分支——**这是最接近我们"热更插件 replay 用哪版代码"问题的经典论述**：规则的时间维度数据化（策略对象按时间索引），而不是代码版本的时间旅行。
+    1. **新功能**：随时加，重放旧事件得新结果（gateway 关闭状态下）；
+    2. **bug fix**：修好直接重放，状态被"修正"——event sourcing 的重放红利；
+    3. **temporal logic**（"11 月 18 日前收 $10 之后收 $15"这类规则本身随时间变）：必须进领域模型（`chargingRules.get(aDate)`），不能靠代码分支——**这是最接近我们"热更插件 replay 用哪版代码"问题的经典论述**：规则的时间维度数据化（策略对象按时间索引），而不是代码版本的时间旅行。
 - **bi-temporal 警告**："按 8 月 1 日的规则反转、按 10 月 1 日的规则重放"这条路"clearly can get very messy, don't go down this path unless you really need to"。
 
 ### 2. Schema 演化：upcasting（🧭 综合 ✅ 事实推出）
@@ -128,11 +128,11 @@ Temporal 的 workflow reset 在事件结构里留下直接证据：`WorkflowTask
 
 ### 1. 一个光谱：录制派 — 混合派 — 仿真派（🧭 组织轴，成员均 ✅）
 
-| 位置 | 系统 | 非确定性的处置 |
-| ---- | ---- | -------------- |
-| 纯录制 | rr | 录制内核给进程的一切输入（syscall 返回值 + CPU 非确定指令），重放时逐字节注入 |
-| 混合（编排骨架重算 + 边界录制） | Temporal / Restate / DBOS | 编排代码确定性重跑，边界结果（activity/step/timer）录制注入 |
-| 纯仿真 | FoundationDB Simulation / TigerBeetle DST / Antithesis | 不录制——一切 IO/网络/时钟/随机都虚拟化并由仿真器驱动，同样的 seed 跑同样的世界 |
+| 位置                            | 系统                                                   | 非确定性的处置                                                                 |
+| ------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| 纯录制                          | rr                                                     | 录制内核给进程的一切输入（syscall 返回值 + CPU 非确定指令），重放时逐字节注入  |
+| 混合（编排骨架重算 + 边界录制） | Temporal / Restate / DBOS                              | 编排代码确定性重跑，边界结果（activity/step/timer）录制注入                    |
+| 纯仿真                          | FoundationDB Simulation / TigerBeetle DST / Antithesis | 不录制——一切 IO/网络/时钟/随机都虚拟化并由仿真器驱动，同样的 seed 跑同样的世界 |
 
 Metis 的 replay 是混合派（LLM 响应必须录制）；Metis 的测试策略（[testing-strategy](../design/testing-strategy.md) L2 故障注入）可以吸收仿真派思想。两派共享同一个前提：**所有非确定性必须从可替换的 seam 进入**——我们的构造注入纪律（AGENTS.md Style 节）被四个系统独立验证（🧭）。
 
@@ -178,13 +178,13 @@ Metis 的 replay 是混合派（LLM 响应必须录制）；Metis 的测试策�
 
 - **LangSmith threads**：trace 通过 `session_id`/`thread_id` metadata（建议 UUIDv7）聚成 thread；子 run 必须传播同一 metadata 否则聚合漏算；UI 分 Trajectory/Turns/Details 三视图。**会话历史由应用自己持久化，LangSmith 只做观测**——观测与重放分离的又一分工实例。
 - **OTel GenAI 语义约定**（已迁至独立仓库 `open-telemetry/semantic-conventions-genai`）——可直接抄的属性集：
-  - 调用标识：`gen_ai.operation.name`（`chat`/`execute_tool`/`invoke_agent`/`embeddings`/`retrieval`/`fetch_response`…）、`gen_ai.provider.name`、`gen_ai.request.model`、`gen_ai.request.seed`、`gen_ai.response.id`；
-  - 会话与上下文：`gen_ai.conversation.id`（明确禁止无中生有造 ID）、`gen_ai.conversation.compacted`（本次调用用的是压缩后上下文的标记）、`gen_ai.request.previous_response.id`；
-  - **prompt 版本化**：`gen_ai.prompt.name` + `gen_ai.prompt.version`（prompt 模板的版本是一等观测属性——我们的 preset/plugin revision 记录的对应物）；
-  - 用量：`gen_ai.usage.input_tokens`/`output_tokens`/`cache_read.input_tokens`/`reasoning.output_tokens` 等；
-  - 工具：`execute_tool` span（INTERNAL kind），`gen_ai.tool.call.arguments/result`（opt-in）。
-  - **内容捕获三档**（对我们脱敏设计直接可用）：① 默认不录消息内容（`SHOULD NOT capture by default`，`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` 类开关 opt-in）；② 录进属性（pre-prod 场景）；③ **内容传外部存储、span 上只留引用**（生产推荐）——且有 in-process hook 可在录制前改写内容（脱敏 seam 的官方形态）。
-  - `fetch_response` 操作的存在值得注意：OpenAI Responses / Google Interactions API 支持按 response ID 拉取已生成响应、**不重新推理**——provider 侧也在变成"半个 journal"（🧭）。
+    - 调用标识：`gen_ai.operation.name`（`chat`/`execute_tool`/`invoke_agent`/`embeddings`/`retrieval`/`fetch_response`…）、`gen_ai.provider.name`、`gen_ai.request.model`、`gen_ai.request.seed`、`gen_ai.response.id`；
+    - 会话与上下文：`gen_ai.conversation.id`（明确禁止无中生有造 ID）、`gen_ai.conversation.compacted`（本次调用用的是压缩后上下文的标记）、`gen_ai.request.previous_response.id`；
+    - **prompt 版本化**：`gen_ai.prompt.name` + `gen_ai.prompt.version`（prompt 模板的版本是一等观测属性——我们的 preset/plugin revision 记录的对应物）；
+    - 用量：`gen_ai.usage.input_tokens`/`output_tokens`/`cache_read.input_tokens`/`reasoning.output_tokens` 等；
+    - 工具：`execute_tool` span（INTERNAL kind），`gen_ai.tool.call.arguments/result`（opt-in）。
+    - **内容捕获三档**（对我们脱敏设计直接可用）：① 默认不录消息内容（`SHOULD NOT capture by default`，`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` 类开关 opt-in）；② 录进属性（pre-prod 场景）；③ **内容传外部存储、span 上只留引用**（生产推荐）——且有 in-process hook 可在录制前改写内容（脱敏 seam 的官方形态）。
+    - `fetch_response` 操作的存在值得注意：OpenAI Responses / Google Interactions API 支持按 response ID 拉取已生成响应、**不重新推理**——provider 侧也在变成"半个 journal"（🧭）。
 
 ### 4. VCR 系录制回放：脱敏与匹配的工程细节（✅）
 
@@ -248,18 +248,18 @@ vcrpy 模型：首次运行把全部 HTTP 交互录制为扁平 cassette 文件�
 
 ### 1. 该怎么做（按调研点落锤）
 
-| # | 动作 | 依据 |
-| - | ---- | ---- |
-| M1 | **一条 JSONL 流承载 audit + replay 双消费**，条目类型区分；replay 只消费边界子集（入邮箱外部消息、LLM 响应、定时器触发、随机/时间读取），audit 消费全量 | Temporal 六族条目同存一史（✅）；DBOS/Restate 写入量级对照（✅）；日志方向 JSONL 已定（[ADR-0007](../decisions/0007-yaml-config-subset.md) 边界） |
-| M2 | **LLM 调用录制原始请求与原始响应**，作为 replay 边界条目；模型永不因 replay 重调 | Fowler LoggedPricingGateway（✅）；Temporal 把 LLM 列进 Activity 首例（✅）；agent 领域无人重调（🧭） |
-| M3 | **确定性判定行为化**：replay 比对插件向 host 的调用序列，发散即响亮失败（Failed + 条目记录），不静默采信 | Temporal nondeterminism error（✅）；对初步判断①的修正 |
-| M4 | **版本 pinning 三件套进条目**：`plugin_revision`（内容 hash）、`preset_revision`、`config_hash`；replay 默认用录制期代码；"新代码重放旧史"产出强制落新分支 | Temporal Worker Versioning 推荐序（✅）；Claude Code system prompt 录制（✅）；OTel `prompt.version`（✅）；Fowler bi-temporal 警告（✅） |
-| M5 | **fork = 引用前缀 + 新 session 追加**：`fork_created {base_seq, new_session_id}`，前缀只读共享，分支独立追加 | Temporal reset（✅）；Claude Code `--fork-session`（✅） |
-| M6 | **落笔脱敏管线**：内核在 append 前执行脱敏钩子（凭证字段替换/删除/可调用），原始值永不落盘；LLM 请求中的凭证走 secret 引用而非值；内容级录制（消息全文）做成显式开关 | vcrpy filter/before_record 全家（✅）；OTel 内容 opt-in 三档（✅）；初步判断③成立 |
-| M7 | **内核哑捕获**：host 只负责定序、append、脱敏钩子、回放注入；采样/保留/压缩/导出策略做成上层可替换组件（插件层或独立服务） | `MarkerRecorded` 对 server 透明（✅）；初步判断②成立 |
-| M8 | **快照只做 host 侧、只做性能**：路由表/邮箱水位/fiber 树的快照条目；插件侧永远重放；快照永远可被"从头重放"替代 | Fowler 快照定位（✅）；Akka 快照语义（✅）；fiber 无状态哲学（[ADR-0010](../decisions/0010-fiber-core.md)） |
-| M9 | **replay 模式的对外网关纪律**：replay 中 host 掐断/接管一切对外通道（LLM、网络、文件写工具），插件无感知 | Fowler gateway 纪律（✅） |
-| M10 | **审计回看（需求 a）消费面**：journal 即查询源（`cause: seq` 链 + kind + fiber + session 过滤）；人读视图（markdown 导出）可作为派生物，不进正本 | Temporal 反向 ID 链（✅）；Aider 双载体分工（✅） |
+| #   | 动作                                                                                                                                                                 | 依据                                                                                                                                              |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1  | **一条 JSONL 流承载 audit + replay 双消费**，条目类型区分；replay 只消费边界子集（入邮箱外部消息、LLM 响应、定时器触发、随机/时间读取），audit 消费全量              | Temporal 六族条目同存一史（✅）；DBOS/Restate 写入量级对照（✅）；日志方向 JSONL 已定（[ADR-0007](../decisions/0007-yaml-config-subset.md) 边界） |
+| M2  | **LLM 调用录制原始请求与原始响应**，作为 replay 边界条目；模型永不因 replay 重调                                                                                     | Fowler LoggedPricingGateway（✅）；Temporal 把 LLM 列进 Activity 首例（✅）；agent 领域无人重调（🧭）                                             |
+| M3  | **确定性判定行为化**：replay 比对插件向 host 的调用序列，发散即响亮失败（Failed + 条目记录），不静默采信                                                             | Temporal nondeterminism error（✅）；对初步判断①的修正                                                                                            |
+| M4  | **版本 pinning 三件套进条目**：`plugin_revision`（内容 hash）、`preset_revision`、`config_hash`；replay 默认用录制期代码；"新代码重放旧史"产出强制落新分支           | Temporal Worker Versioning 推荐序（✅）；Claude Code system prompt 录制（✅）；OTel `prompt.version`（✅）；Fowler bi-temporal 警告（✅）         |
+| M5  | **fork = 引用前缀 + 新 session 追加**：`fork_created {base_seq, new_session_id}`，前缀只读共享，分支独立追加                                                         | Temporal reset（✅）；Claude Code `--fork-session`（✅）                                                                                          |
+| M6  | **落笔脱敏管线**：内核在 append 前执行脱敏钩子（凭证字段替换/删除/可调用），原始值永不落盘；LLM 请求中的凭证走 secret 引用而非值；内容级录制（消息全文）做成显式开关 | vcrpy filter/before_record 全家（✅）；OTel 内容 opt-in 三档（✅）；初步判断③成立                                                                 |
+| M7  | **内核哑捕获**：host 只负责定序、append、脱敏钩子、回放注入；采样/保留/压缩/导出策略做成上层可替换组件（插件层或独立服务）                                           | `MarkerRecorded` 对 server 透明（✅）；初步判断②成立                                                                                              |
+| M8  | **快照只做 host 侧、只做性能**：路由表/邮箱水位/fiber 树的快照条目；插件侧永远重放；快照永远可被"从头重放"替代                                                       | Fowler 快照定位（✅）；Akka 快照语义（✅）；fiber 无状态哲学（[ADR-0010](../decisions/0010-fiber-core.md)）                                       |
+| M9  | **replay 模式的对外网关纪律**：replay 中 host 掐断/接管一切对外通道（LLM、网络、文件写工具），插件无感知                                                             | Fowler gateway 纪律（✅）                                                                                                                         |
+| M10 | **审计回看（需求 a）消费面**：journal 即查询源（`cause: seq` 链 + kind + fiber + session 过滤）；人读视图（markdown 导出）可作为派生物，不进正本                     | Temporal 反向 ID 链（✅）；Aider 双载体分工（✅）                                                                                                 |
 
 ### 2. 该避免什么
 
@@ -274,37 +274,37 @@ vcrpy 模型：首次运行把全部 HTTP 交互录制为扁平 cassette 文件�
 
 **公共字段**（每条必备）：
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| `seq` | u64 | host 分配的全局单调序号（全系统 Lamport 时钟） |
-| `wall_ms` | i64 | 墙钟毫秒（展示用，不参与 replay 逻辑；[ADR-0015](../decisions/0015-payload-value-model.md) 时间戳纪律） |
-| `kind` | string | 条目类型（见下表） |
-| `session` | string | session id |
-| `fiber` | object \| null | `{slot, generation, plugin, plugin_revision}`；host 自身条目为 null |
-| `cause` | u64 \| null | 触发本条目的条目 seq（因果链） |
-| `payload` | Value | 脱敏后的条目体（[ADR-0015](../decisions/0015-payload-value-model.md) 统一数据模型） |
-| `code_ref` | object | `{plugin_revision, preset_revision, config_hash, host_version}`（M4；session 级条目携带一次即可，变更时再记） |
-| `redacted` | array \| null | 被脱敏的 payload 路径 + 策略版本（M6；审计可见"哪里被擦过"） |
+| 字段       | 类型           | 说明                                                                                                          |
+| ---------- | -------------- | ------------------------------------------------------------------------------------------------------------- |
+| `seq`      | u64            | host 分配的全局单调序号（全系统 Lamport 时钟）                                                                |
+| `wall_ms`  | i64            | 墙钟毫秒（展示用，不参与 replay 逻辑；[ADR-0015](../decisions/0015-payload-value-model.md) 时间戳纪律）       |
+| `kind`     | string         | 条目类型（见下表）                                                                                            |
+| `session`  | string         | session id                                                                                                    |
+| `fiber`    | object \| null | `{slot, generation, plugin, plugin_revision}`；host 自身条目为 null                                           |
+| `cause`    | u64 \| null    | 触发本条目的条目 seq（因果链）                                                                                |
+| `payload`  | Value          | 脱敏后的条目体（[ADR-0015](../decisions/0015-payload-value-model.md) 统一数据模型）                           |
+| `code_ref` | object         | `{plugin_revision, preset_revision, config_hash, host_version}`（M4；session 级条目携带一次即可，变更时再记） |
+| `redacted` | array \| null  | 被脱敏的 payload 路径 + 策略版本（M6；审计可见"哪里被擦过"）                                                  |
 
 **候选条目类型**（replay 消费标 ★）：
 
-| 族 | kind | 内容要点 |
-| -- | ---- | -------- |
-| 生命周期 | `session_started` ★ / `session_ended` | 启动 config 快照、code_ref |
-| 生命周期 | `fiber_state_changed` | fiber 状态机迁移（对应 `internal/plugin` 钩子，[ADR-0016](../decisions/0016-internal-hooks.md)） |
-| 生命周期 | `config_committed` | Creator 事务落盘（diff hash + 审批引用，[ADR-0008](../decisions/0008-creator-mode-self-modification.md)） |
-| 边界输入 | `external_input` ★ | 用户消息/外部系统进入 session 的第一落点（fork 与重放的事实起点） |
-| 边界输入 | `message_enqueued` ★ | host 向邮箱投递（事件派发四模式 / 服务调用 / dispose / timer tick；含派发模式与 payload） |
-| 边界输入 | `timer_scheduled` / `timer_fired` ★ | 定时器登记与触发（Temporal `TimerStarted/Fired` 对应物；replay 按史注入不按墙钟） |
-| 边界输入 | `nondeterminism_read` ★ | seam 注入的时间/随机读取结果（Temporal replay-safe API 录制对应物） |
-| LLM 边界 | `llm_request` ★ / `llm_response` ★ / `llm_error` ★ | 原始请求（model、参数、消息引用）与原始响应（含 `response.id`、usage、finish_reason——属性名可直接对齐 OTel GenAI semconv） |
-| 内部流量（audit） | `dispatch_completed` | 四模式派发结果（parallel 各项 Result / serial 终止值 / waterfall 链） |
-| 内部流量（audit） | `service_call` / `service_result` | 跨插件服务调用（replay 重算，不注入） |
-| 内部流量（audit） | `listener_error` / `vm_trap` | fail-open 记日志的落点（[ADR-0014](../decisions/0014-dispatch-semantics.md)） |
-| 控制 | `snapshot_written` | host 侧快照引用 + 覆盖到哪个 seq（M8） |
-| 控制 | `fork_created` ★ | `{base_seq, new_session_id}`（M5） |
-| 控制 | `replay_diverged` | 发散检测报告：期望 vs 实际的调用（M3） |
-| 控制 | `redaction_applied` | 脱敏策略版本与命中计数（M6） |
+| 族                | kind                                               | 内容要点                                                                                                                   |
+| ----------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 生命周期          | `session_started` ★ / `session_ended`              | 启动 config 快照、code_ref                                                                                                 |
+| 生命周期          | `fiber_state_changed`                              | fiber 状态机迁移（对应 `internal/plugin` 钩子，[ADR-0016](../decisions/0016-internal-hooks.md)）                           |
+| 生命周期          | `config_committed`                                 | Creator 事务落盘（diff hash + 审批引用，[ADR-0008](../decisions/0008-creator-mode-self-modification.md)）                  |
+| 边界输入          | `external_input` ★                                 | 用户消息/外部系统进入 session 的第一落点（fork 与重放的事实起点）                                                          |
+| 边界输入          | `message_enqueued` ★                               | host 向邮箱投递（事件派发四模式 / 服务调用 / dispose / timer tick；含派发模式与 payload）                                  |
+| 边界输入          | `timer_scheduled` / `timer_fired` ★                | 定时器登记与触发（Temporal `TimerStarted/Fired` 对应物；replay 按史注入不按墙钟）                                          |
+| 边界输入          | `nondeterminism_read` ★                            | seam 注入的时间/随机读取结果（Temporal replay-safe API 录制对应物）                                                        |
+| LLM 边界          | `llm_request` ★ / `llm_response` ★ / `llm_error` ★ | 原始请求（model、参数、消息引用）与原始响应（含 `response.id`、usage、finish_reason——属性名可直接对齐 OTel GenAI semconv） |
+| 内部流量（audit） | `dispatch_completed`                               | 四模式派发结果（parallel 各项 Result / serial 终止值 / waterfall 链）                                                      |
+| 内部流量（audit） | `service_call` / `service_result`                  | 跨插件服务调用（replay 重算，不注入）                                                                                      |
+| 内部流量（audit） | `listener_error` / `vm_trap`                       | fail-open 记日志的落点（[ADR-0014](../decisions/0014-dispatch-semantics.md)）                                              |
+| 控制              | `snapshot_written`                                 | host 侧快照引用 + 覆盖到哪个 seq（M8）                                                                                     |
+| 控制              | `fork_created` ★                                   | `{base_seq, new_session_id}`（M5）                                                                                         |
+| 控制              | `replay_diverged`                                  | 发散检测报告：期望 vs 实际的调用（M3）                                                                                     |
+| 控制              | `redaction_applied`                                | 脱敏策略版本与命中计数（M6）                                                                                               |
 
 **明确的非目标**：条目不含函数/协程/插件引用（payload 纯数据铁律的延伸）；不含纳秒时间戳；不含凭证值。
 
@@ -315,7 +315,7 @@ vcrpy 模型：首次运行把全部 HTTP 交互录制为扁平 cassette 文件�
 3. fork 前缀的物理组织：共享只读前缀文件 + 分支文件，还是 copy-on-write 复制？（Temporal 复制进新 run；我们体量小，倾向逻辑引用。）
 4. 发散比对的强度：只比调用序列（种类/目标/次序），还是连 payload 内容 hash 一起比？后者更严但误报面大（插件合法地依赖注入时间戳时会误伤——需要 `nondeterminism_read` 条目先把这类读取变确定）。
 5. host 崩溃时 journal 的 fsync/写放大策略与邮箱水位的对账（崩溃窗口内已投递未落盘的条目如何界定——Akka "journal 失败即停、不可 resume" 的戒律适用，✅）。
-6. 跨 session 服务调用（若 session 模型引入）是否算边界输入——当前按内部流量处理，待 [session-model](../design/session-model.md) 正式设计时复审。
+6. 跨 session 服务调用（若 session 模型引入）是否算边界输入——当前按内部流量处理，待 [session-model](../design/session-model.md) 正式设计时复审。（2026-10-12 结案注：**结案 = 维持内部流量**——实例模型 D68 边界下跨实例服务调用结构性不存在（兄弟互不可见、向下无 inject），唯一跨边界流量 = 实例沿 parent 链上调租户服务 = 同租户内部流量；扩展位（跨租户共享实例 / handle 服务出口）开放时重开——[instance-model](../design/instance-model.md) §S4.7 D73。）
 
 ---
 

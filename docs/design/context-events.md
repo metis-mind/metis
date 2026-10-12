@@ -132,13 +132,13 @@ serial 的"注册顺序 + 首认领"只是 host 内置的默认路由策略；**
 
 - **Context 不是大对象，是 fiber 视角的 runtime 句柄**：`Context { fiber: FiberId, runtime: RuntimeHandle }`，所有方法（`on/emit/provide/get/...`）都是对 runtime 的调用，权限与归属由 FiberId 天然携带
 - **作用域树 = fiber 树本身**（`parent` 已在 Fiber 数据结构上），不另造 context 树
-- Cordis `extend/isolate/intercept` 处置：`extend` 的意义被 per-fiber Context 天然覆盖；`isolate/intercept` 是声明式 entry 特性，与 inject 静态声明问题同族 → **推迟到配置格式设计一并定**；v1 服务解析 = 全局注册表单级查找，Context 预留 parent 链
+- Cordis `extend/isolate/intercept` 处置：`extend` 的意义被 per-fiber Context 天然覆盖；`isolate/intercept` 是声明式 entry 特性，与 inject 静态声明问题同族 → **推迟到配置格式设计一并定**；v1 服务解析 = 全局注册表单级查找，Context 预留 parent 链（2026-10-12 结案注：isolate/intercept 复审结案 = 不立——isolate 语义由实例作用域 + parent 链遮蔽天然给出，intercept 职能由声明 `config:` overlay 覆盖；parent 链预留**已消费** = 实例服务解析沿 parent 链先查自己作用域再向上——[instance-model](instance-model.md) §S4.2/§S4.3 D68/D69）
 
 ## 6. 编程式 spawn（D7 ✅ = [ADR-0017](../decisions/0017-programmatic-spawn-deferred.md)）
 
 v1 只走声明式 entry 树，`ctx:spawn` 推迟。理由：警惕第二条生命周期路径（Harness eval 退役教训的一般化）；插件要动态性，用自己的 fiber effect 挂内部任务（JoinHandle 入账）即可覆盖；机制已备（子 fiber = 父的 effect），真需要时开箱即用。
 
-**汇合点**：preset 的 session 子树挂载 = spawn + 子树作用域的交集 → session 模型设计时 D2/D7 一起回来（见 `docs/design/session-model.md`）。（2026-10-11 修订注：**D7 半已结案** = mount 通道唯一 + spawn 维持关闭——[instance-model](instance-model.md) §S3.6 D66；D2 半（isolate/intercept 复审）归其 S4。）
+**汇合点**：preset 的 session 子树挂载 = spawn + 子树作用域的交集 → session 模型设计时 D2/D7 一起回来（见 `docs/design/session-model.md`）。（2026-10-11 修订注：**D7 半已结案** = mount 通道唯一 + spawn 维持关闭——[instance-model](instance-model.md) §S3.6 D66；D2 半（isolate/intercept 复审）归其 S4——**已结案 = D69**（2026-10-12）。）
 
 ## 7. 监听器生命周期与派发安全细则（随 D3 确认，固化于 [ADR-0014](../decisions/0014-dispatch-semantics.md)）
 

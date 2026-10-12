@@ -160,7 +160,7 @@ v1 顶层字段（封闭集）：
 - **service 扁平名 = 可替换性的代价**：强制按提供方命名空间化会杀死 seam 三角（消费者写死提供方、实现不可换）。正确目标 = 概率趋零 + 撞语义可机械检测 + 真撞本地解：
   1. **概率趋零**：`plugin-name/service` 前缀约定（ADR-0018 S1"约定不强制"）——插件名本已唯一，作者只在自己名字空间起名则撞名结构性不可能；引导落在 `sdk new` 模板默认值里，不落规范权力（命名自由归作者，无中心注册）。
   2. **撞语义可机械检测**：正式契约住 `lib/` 契约包带 schema（A7）；同名不同 schema = 激活对账响亮失败——语义漂移从运营事故变成启用期一行报错（2026-10-09 修订注：原“安装期一行报错”，§A9.1 D24 平移）。
-  3. **真撞本地解**：时刻唯一 → 启用期响亮（2026-10-09 修订注：原“安装期响亮”——对账时机统一 = 启用期，§A9.1 D24；判定细则 = §A9.2 D25.3）；部署者二选一 / isolate 作用域共存 / 部署侧重命名（后两者细节归任务 4），全程不改源码。（2026-10-11 修订注：后两者**结案不立** = [config-format](config-format.md) §C2.2 D32——v1 无子树挂载点，本地解 = 部署者二选一；触发器 = 首个真实撞名需求或任务 5（实例模型）子树。）
+  3. **真撞本地解**：时刻唯一 → 启用期响亮（2026-10-09 修订注：原“安装期响亮”——对账时机统一 = 启用期，§A9.1 D24；判定细则 = §A9.2 D25.3）；部署者二选一 / isolate 作用域共存 / 部署侧重命名（后两者细节归任务 4），全程不改源码。（2026-10-11 修订注：后两者**结案不立** = [config-format](config-format.md) §C2.2 D32——v1 无子树挂载点，本地解 = 部署者二选一；触发器 = 首个真实撞名需求或任务 5（实例模型）子树。）（2026-10-12 结案注：任务 5 子树已落地，复审结案 = 维持不立——isolate 语义由实例作用域 + parent 链遮蔽天然给出，部署树内撞名仍 = 部署者二选一；[instance-model](instance-model.md) §S4.2/§S4.3 D68/D69。）
 - **发现性归任务 9**：marketplace 契约目录（"起名前查得到"）是服务不是审批；v1 无分发面，部署内名字空间小、撞名率低。
 - **故意同名 = 契约竞标（特性）**：两个实现同对一份契约 schema 对账、语义一致 → 可替换；意外同名 = 撞名 → 响亮。schema 对账 = 区分竞标与撞名的机械裁判。
 
@@ -182,7 +182,7 @@ v1 顶层字段（封闭集）：
 
 - **config**（ADR-0006 形状 + 秘密扩展）：
   - 三方分工：作者定义 schema（核心只定词汇表 type/required/default/volatile/secret，零领域键）→ 部署者填值（配置树）→ 核心加载前校验注入（缺 required/类型错/多给键 = 响亮失败，此时插件代码一行未跑）。（2026-10-11 修订注：「部署者填值（配置树）」修订 = 部署者填值（插件目录 `config.yml`）；校验前置与「代码一行未跑」不变——[config-format](config-format.md) §C2.6 D36；词汇表 `volatile` 退役（type/required/default/secret 四词保留）= D36/D37。）
-  - **引用式秘密**：schema 标 `secret: true` → 配置树该键只许写引用 `{ secret: "openai-prod" }`，**写明文 = 校验响亮拒绝**（防呆）；真值住部署根 secrets store（gitignored/权限锁/人类手写层机器永不写，ADR-0007 分层纪律延伸）；loader 解析引用（查不到 = 响亮失败），真值只进该插件 VM；秘密值按**身份**注册进脱敏管线（精确匹配，补 seam §6.2 模式匹配之不足）。store 细节——**已兑现** = [config-format](config-format.md) §C6 D46/D47（2026-10-11）；脱敏注册归任务 6；轮转 v1 走配置变更重挂路径。（2026-10-11 修订注：引用语法与机制原样，写处/解析源 = `config.yml`；轮转路径 = [config-format](config-format.md) D37。）
+  - **引用式秘密**：schema 标 `secret: true` → 配置树该键只许写引用 `{ secret: "openai-prod" }`，**写明文 = 校验响亮拒绝**（防呆）；真值住部署根 secrets store（gitignored/权限锁/人类手写层机器永不写，ADR-0007 分层纪律延伸）；loader 解析引用（查不到 = 响亮失败），真值只进该插件 VM；秘密值按**身份**注册进脱敏管线（精确匹配，补 seam §6.2 模式匹配之不足）。store 细节——**已兑现** = [config-format](config-format.md) §C6 D46/D47（2026-10-11）；脱敏注册归任务 6；轮转 v1 走配置变更重挂路径。（2026-10-11 修订注：引用语法与机制原样，写处/解析源 = `config.yml`；轮转路径 = [config-format](config-format.md) D37。）（2026-10-12 修订注：解析源扩展 = `config.yml` ∪ 子树声明 `config:` overlay——实例配置合成经同一管线，引用允许/写明文拒绝不变；[instance-model](instance-model.md) §S4.1 D67。归任务 5 冻结批次。）
 - **provides = 全形 map**：`memory: { methods: [remember, recall] }`。淘汰简形 `memory: [...]`（字段集封死，契约引用 `contract: memory` 无处落位；全形的 map 值为其预留兄弟字段——已收官 = §A7.3 D18.2，裸名规则 = §A8.2 D21.1）。多服务 = map 多键。
 - **inject = 双列表**：`required: [llm, memory]` / `optional: [cache]`。淘汰 map 带选项（v1 无第二维度，YAGNI；真出现时经 A10 ABI rev 演进）。
 - **capabilities = map 形**（淘汰 list 形——域名白名单必须是一等数据，审批面逐条展示）：
@@ -944,7 +944,7 @@ end
   - 联动：私有状态族（fs/sql）replay 政策 = 任务 6 头号问题——若定 record/注入，audit 族音量随政策回归，故降档 = v1 默认档非永久结构，任务 6 复审；`nondeterminism_read` 高频面（循环读时钟 = 每调用一条）的频率整形（合并/节流）归任务 6。
 - **D7.2 生成型秘密 = kind 感知加密，按 source 子类分流**（2026-10-08 用户拍板）：`nondeterminism_read` 条目的 payload 带 `source` 子类字段——**`crypto.random` 系加密落盘**（append 侧加密、replay 注入侧解密；审计可见“此条目已加密”不见值），**时钟读取明文**（无密可泄，省 crypto 税与审计失明）；擦除重生成不可行（replay 注入需原值，重生成破坏确定性）。分工：M6 脱敏管线（模式匹配）管 secrets store 登记的秘密，本决管运行期生成型秘密——互补两条。journal 密钥形态/生成登记路径（与 §A2.5 手写层纪律的衔接）+ 加密算法归任务 6。
 - **D7.3 payload 落盘 = JSONL + 格式版本字段 + Int 字符串惯例**（2026-10-08 用户拍板；**修正出示原推荐「复用盒 codec」**——对账 ADR-0007“日志/数据流用 JSONL”+ 调研 M1 + 规避项“二进制编码是负优化”，codec 复用候选撤回）：条目 = 一行一 JSON 对象；文件头/条目带格式版本字段（历史条目长期可读，版本纪律独立于 A10 ABI rev）；**Int 落盘 = 十进制字符串**（主流 JSON parser 默认把数读成 f64——按最坏假设立惯例，超 2⁵³ 静默丢精度，消息 ID/雪花 ID 正中；seq/wall_ms 在安全域内保 number）；**读侧 = kind/schema 感知还原**（kind 表 = payload schema SSOT，replay 注入侧按 kind 声明还原 Int/String；自由态 payload 的区分标记形态归任务 6——候选 = 包裹对象）；审计侧注意：jq 对字符串数字按词典序比较（数值比较先 `tonumber`）；人读视图（markdown 导出）= M10 派生物不进正本。
-- **登记**：audit 降档开关面 = 配置键归任务 4——**已兑现 = [config-format](config-format.md) §C8.1 D50**（2026-10-11，`metis.yml` `core.audit` 节三档枚举）；blob 存储与 GC、加密算法/密钥形态、单双流实测（开放问题 1，新论据 = 保留期分叉）、写入量实测、私有状态族 replay 政策联动复审——均归任务 6；`session` 字段随任务 5 复审；agent 层 transcript/fork/replay = 插件层议题。
+- **登记**：audit 降档开关面 = 配置键归任务 4——**已兑现 = [config-format](config-format.md) §C8.1 D50**（2026-10-11，`metis.yml` `core.audit` 节三档枚举）；blob 存储与 GC、加密算法/密钥形态、单双流实测（开放问题 1，新论据 = 保留期分叉）、写入量实测、私有状态族 replay 政策联动复审——均归任务 6；`session` 字段随任务 5 复审——**已结案 = 不押实例字段**（[instance-model](instance-model.md) §S4.6 D72，2026-10-12：条目只靠 fiber/plugin 标识 + 因果链，实例聚合归查询侧按子树根 fiber id 归组）；agent 层 transcript/fork/replay = 插件层议题。
 
 概念地基（2026-10-08 用户问答沉淀）：
 
@@ -952,8 +952,8 @@ end
 - **replay 四场景**（调研需求 a–d 原始陈述；**2026-10-08 二层修正：按层重分配见下——d fork 退出核心需求集**）：b 崩溃恢复（插件状态 = `(config, 输入序列)` 纯函数，重启 = 重放；快照只做 host 侧性能件，M8）；c 确定性重放/调试（LLM 不可重调：贵 + 每次结果不同）；d 从历史点 fork（引用前缀 + 新 session 续写，Claude Code `--fork-session`/Temporal reset 先例）；a 审计回看 = 读 journal 不是 replay，但是第一消费者。另：fiber §10 干净重启后的 agent 连续性（进行中的对话、待审批）恢复与 journal 强耦合。
 - **journal 定位（2026-10-08 二层修正，用户拍板框架）**：核心 journal = **核心自己的飞行记录仪**（append-only；两个工程化消费者 = replay 引擎 + audit 查询，不是调试输出）。“一切调用必经核心”（组合的物理接缝，seam §0）使核心天然处于什么都能记的位置，**记多少 = 服务对象决定**。服务对象三层：① **核心自己**——崩溃恢复（b）+ fiber §10 干净重启连续性 = 立身之本；② **插件/agent 层的平台能力**——journal 查询接口（A3 已登记），agent 层的 transcript/session fork/eval replay 以它为结构源之一 + 自己经 seam（fs/sql）持久化的领域记录；③ **部署者/人**——能力使用审计（哪个插件何时用了什么能力）与调试。
 - **四需求按层重分配**（2026-10-08 用户指出：调研需求陈述带 agent 眼镜——§7.3 候选 kind 的 `llm_*`/`session_*` 即证据；核心 agent-agnostic，LLM 调用在核心视野里只是 plugin 发出的一次 http）：a 审计 = 核心层记能力使用（部署者面）/ 对话轨迹审计归插件层；b 崩溃恢复 = 核心层立身之本；c 确定性重放 = 核心层 = 系统/插件调试（记录效应结果供注入）/ 对话重放与 eval = 插件层功能；**d fork 退出核心需求集**——session fork = agent 层功能；核心侧对应物 = “新代码重跑旧史”的 replay 调试运行，产出 = 发散报告/新 replay 制品，不是活分支。
-- **对 kind 表的影响**：调研 §7.3 候选 kind 去 agent 化——`llm_request`/`llm_response`/`session_started`/`session_ended` 退出核心 kind 表（seam §5.3 的 generic kind 表 = 正确形状）；`session` 字段随任务 5 复审（若 session 非核心一等概念，条目只靠 fiber/plugin 标识 + 因果链，session 聚合归查询侧/插件层）；agent 层 transcript/fork/replay 登记为插件层议题（同 Cadmus 结论纪律：产品面机器不进核心设计链）。
-- **session 归属与物理组织**（2026-10-08 用户问答沉淀）：核心是否有 session 概念 = 任务 5 待决 #1——**已结案 = 核心无 session 概念**（[instance-model](instance-model.md) D53，2026-10-11；journal 实例字段形态复审归其 S4）；种子稿 v1 最小集的现行倾向 = **session = 插件层实体**（session 服务插件持有会话状态，核心只见 fiber 子树 + preset 实例化，session-model §5/§6）。“找出某会话的日志” = **按 fiber 子树聚合**（会话 ≈ 一棵子树），聚合归查询侧/插件层，条目本体不押注 session 字段。**物理组织**：逻辑上必须单流——全局 `seq`/因果链的前提是 host 单点定序单写者，因果链跨插件是常态，拆流 = 全序红利尽失；物理形态 = 按 seq 分段/轮转的一组段文件（保留/归档的实现细节，归任务 6）。单流 vs 双流（replay/audit 分文件）= 调研开放问题 1 留任务 6，新框架下双流多一条论据（保留期分叉：replay 流长留、audit 流快轮转）。journal 属主 = host 进程（每个 host 实例一本）；（2026-10-11 修订注：多租户托管下 = host 托管 N 本、**每租户一本**，单流与定序论证按租户原样成立——[instance-model](instance-model.md) §S2.5 D60）；**journal ≠ 运行日志**（tracing/debug 输出 = 给人的诊断面，另一回事）。
+- **对 kind 表的影响**：调研 §7.3 候选 kind 去 agent 化——`llm_request`/`llm_response`/`session_started`/`session_ended` 退出核心 kind 表（seam §5.3 的 generic kind 表 = 正确形状）；`session` 字段随任务 5 复审（若 session 非核心一等概念，条目只靠 fiber/plugin 标识 + 因果链，session 聚合归查询侧/插件层）——**已结案 = 不押实例字段，括注读法落锤**（[instance-model](instance-model.md) §S4.6 D72，2026-10-12）；agent 层 transcript/fork/replay 登记为插件层议题（同 Cadmus 结论纪律：产品面机器不进核心设计链）。
+- **session 归属与物理组织**（2026-10-08 用户问答沉淀）：核心是否有 session 概念 = 任务 5 待决 #1——**已结案 = 核心无 session 概念**（[instance-model](instance-model.md) D53，2026-10-11；journal 实例字段形态复审——**已结案 = D72**（2026-10-12，不押实例字段））；种子稿 v1 最小集的现行倾向 = **session = 插件层实体**（session 服务插件持有会话状态，核心只见 fiber 子树 + preset 实例化，session-model §5/§6）。“找出某会话的日志” = **按 fiber 子树聚合**（会话 ≈ 一棵子树），聚合归查询侧/插件层，条目本体不押注 session 字段。**物理组织**：逻辑上必须单流——全局 `seq`/因果链的前提是 host 单点定序单写者，因果链跨插件是常态，拆流 = 全序红利尽失；物理形态 = 按 seq 分段/轮转的一组段文件（保留/归档的实现细节，归任务 6）。单流 vs 双流（replay/audit 分文件）= 调研开放问题 1 留任务 6，新框架下双流多一条论据（保留期分叉：replay 流长留、audit 流快轮转）。journal 属主 = host 进程（每个 host 实例一本）；（2026-10-11 修订注：多租户托管下 = host 托管 N 本、**每租户一本**，单流与定序论证按租户原样成立——[instance-model](instance-model.md) §S2.5 D60）；**journal ≠ 运行日志**（tracing/debug 输出 = 给人的诊断面，另一回事）。
 - **容量账拆解与裁剪方向**：seam §6.2 的 0.2–0.5 GB/天/插件最坏账，大头 = **audit 族 per-call 条目**（fs_read/sql_call 每调用一条），非 replay 必需。各家对账（2026-10-08 用户要求）：**cordis/DSH 无 journal 概念**，最近似物 = DSH session 日志（纪律 = “Model-visible ⟺ logged”，cordis-research §5，只录对话面）；**Claude Code** transcript = 对话面（消息 + tool call/result + system prompt 版本 pinning），不录 syscall 级；**OTel GenAI** 内容默认不录、三档（不录/录属性/外部存储+引用）；**Aider** 启示 = 审计与重放可用不同载体；Temporal 三家 = 记边界、重算内部。裁剪方向：**replay 必需族（★）全录；audit 族 v1 默认降档**（可配开/聚合摘要；M7 内核哑捕获、采样/保留/导出 = 上层可替换组件）；大 body blob 引用；保留归档 = 上层策略（不删改正文，走“快照+前段归档且不可重放”显式降级）。**联动**：私有状态族（fs/sql）replay 政策 = 任务 6 头号问题（seam §5.4）——若彼处定 record/注入，audit 族音量随政策回归，故降档 = v1 默认档非永久结构，任务 6 复审。实际写入量以任务 6 实测为准（调研开放问题 1 同此纪律）。
 
 ### A6.8 联动登记汇总（章末）
@@ -965,7 +965,7 @@ end
 | A7（schema DSL）                                                              | int64 标注必须可表达（§A6.1 严格制配套）；`buffer` 类型词预留、限 ctx 面（§A6.4 D4.2）；盒 WIT 琐碎签名形态已定（§A6.6 D6.1，WIT 形式化归 A7——**已收官 = §A7（2026-10-09）**：int64 = `integer` 词 D17.1；`buffer` 限 ctx 面原位 D17.1；WIT 机械生成 D19.2）                                                                                                                                                                                           |
 | A10（工具/ABI rev）                                                           | 边界转换违规写码期/生成期检查进四层防线（§A6.2 登记）；验证项 = Luau 类型检查器区分 integer/number 否（§A6.2）、WIT 递归 variant 支持度（§A6.6）；ABI rev 演进通道兑现例 = §A6.1 严格制摩擦、§A6.4 Bytes 提正、§A6.6 TLV 位布局冻结后再演进——**已收官 = §A10（2026-10-10）**（#11 定级 = D28.3；验证项 = V1/V2 §A10.0；演进通道 = D27.2）                                                                                                              |
 | 任务 4（配置格式）                                                            | audit 族降档开关面 = 配置键（§A6.7 D7.1）——**已兑现** = [config-format](config-format.md) §C8.1 D50（2026-10-11）                                                                                                                                                                                                                                                                                                                                      |
-| 任务 5（实例模型 = [instance-model](instance-model.md)，原 session 模型重构） | journal `session` 字段复审——session = 插件层实体**已结案**（instance-model D53，2026-10-11）；实例字段形态复审归其 S4（§A6.7）；journal 属主「host 进程一本」的多租户细化——**已兑现 = 每租户一本**（instance-model D60，2026-10-11，§A6.7 修订注已同步）                                                                                                                                                                                               |
+| 任务 5（实例模型 = [instance-model](instance-model.md)，原 session 模型重构） | journal `session` 字段复审——session = 插件层实体**已结案**（instance-model D53，2026-10-11）；实例字段形态复审——**已结案 = D72**（2026-10-12，不押实例字段，§A6.7 修订注已同步）；journal 属主「host 进程一本」的多租户细化——**已兑现 = 每租户一本**（instance-model D60，2026-10-11，§A6.7 修订注已同步）                                                                                                                                             |
 | 任务 6（journal）                                                             | **§A6.7 草案全文 = 头号输入**（服务对象三层、D7.1–D7.3、物理组织逻辑单流）；私有状态族 replay 政策联动（降档 = v1 默认档，彼处复审）；blob 存储/GC、加密算法与密钥形态、`nondeterminism_read` 高频面频率整形、自由态 payload Int 标记形态、单双流实测（开放问题 1 + 保留期分叉新论据）、写入量实测、journal 查询接口（A3 登记原条）；流式族政策（开流/关流元数据 + chunk 默认不进，§A6.5 登记原条）；多租户物理组织 = 每租户一本（instance-model D60） |
 | 扩展位                                                                        | `Value::Bytes` 提正（触发器 = 首个跨插件二进制消费者，§A6.4 D4.1）；http 流式上传 + SSE/行迭代内建件（§A6.5）；盒流式（触发器 = 首个流式盒消费者，形态 = host imports 回调流，§A6.6 D6.3）                                                                                                                                                                                                                                                             |
 | 结案                                                                          | userdata 流式句柄 = 淘汰（§A6.5 D5.2，§A3.1 留题闭环）                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -1126,8 +1126,8 @@ provides:
 ```yaml
 # manifest.yml
 events:
-    publish: [schedule/due, report/generated]   # 我会发的事件
-    listen: [user/login, internal/plugin]       # 我会听的事件
+    publish: [schedule/due, report/generated] # 我会发的事件
+    listen: [user/login, internal/plugin] # 我会听的事件
 ```
 
 名单 = 扁平事件名（命名纪律 = §A3.4 既定，不立"契约只能定义自己名字下事件"的机械规则——撞名对账 = D21.3 已覆盖分歧面）。形状**不写在这里**——形状的定义住处唯一 = 契约命名空间（D21.1），名单里的名字自动绑定其中的定义（D21.5 名字即绑定）。
@@ -1158,9 +1158,9 @@ events:
 ```yaml
 # 插件 scheduler 的随包 contract.yml
 name: scheduler
-types:                                  # 命名形状：跨事件/方法复用
+types: # 命名形状：跨事件/方法复用
     Job: "{ id: string, cron: string }"
-events:                                 # 事件形状 = 本契约定义的事件词汇
+events: # 事件形状 = 本契约定义的事件词汇
     schedule/due: "{ job: Job, at: integer }"
 ```
 
@@ -1272,16 +1272,16 @@ events:                                 # 事件形状 = 本契约定义的事�
 
 （2026-10-11 修订注：行三「已安装未启用」收窄 = **休眠件**（树里有 entry、`enabled: false`）；「目录在、树无 entry」的未装配件走行四同族——启用期响亮，与「查无」区分、指路「目录存在但树无 entry」——[config-format](config-format.md) §C2.4 D34；索引覆盖 = 目录扫描全量，§A9.1 D24.1 注原位。）
 
-**warn 提醒机制（2026-10-09 用户拍板）**：触发面 = "等一个**可能没有期限的人为动作**"的两族——**已安装未启用**（等部署者启用）与**已启用但 Failed**（等配置修复/回滚）；"已启用未就绪"（Loading/Pending）= 启动波次秒级自愈的正常中间态，不打。触发点 = 进 Pending 当场一条 + 等待中途对象转入 Failed 当场补一条；每条写明：谁缺哪个 key、提供方是谁、指路两条 = 启用/修复提供方或修正依赖声明。**每进入 Pending 一条，不周期重发**（日志噪音；重启/重启用后再次进入 = 新发一条——每 boot 提醒一次恰是意图）；`internal/plugin`/`internal/status` 事件照常携带 Pending 状态（既有面）；journal 条目政策归任务 6。可选依赖不适用——S3 既定"缺席不阻塞激活"，本就不进 Pending。**事件面同族情形**（契约引用住未启用插件 = §A8.3 D22.3）适用同一 warn 政策。
+**warn 提醒机制（2026-10-09 用户拍板）**：触发面 = "等一个**可能没有期限的人为动作**"的两族——**已安装未启用**（等部署者启用）与**已启用但 Failed**（等配置修复/回滚）；"已启用未就绪"（Loading/Pending）= 启动波次秒级自愈的正常中间态，不打。触发点 = 进 Pending 当场一条 + 等待中途对象转入 Failed 当场补一条；每条写明：谁缺哪个 key、提供方是谁、指路两条 = 启用/修复提供方或修正依赖声明。**每进入 Pending 一条，不周期重发**（日志噪音；重启/重启用后再次进入 = 新发一条——每 boot 提醒一次恰是意图）；`internal/plugin`/`internal/status` 事件照常携带 Pending 状态（既有面）；journal 条目政策归任务 6。可选依赖不适用——S3 既定"缺席不阻塞激活"，本就不进 Pending。**事件面同族情形**（契约引用住未启用插件 = §A8.3 D22.3）适用同一 warn 政策。（2026-10-12 修订注：实例模型下提供方**可见集 = 沿 fiber parent 链可达集**——实例内插件 inject 只看自己作用域与祖先链；兄弟/子实例提供方不可见 = 行四同族启用期响亮——[instance-model](instance-model.md) §S4.2 D68。同归任务 5 冻结批次。）
 
 **D25.2 provides 的 contract 对账 = 启用期（缺失两分 = D22.3 平移服务面，2026-10-09 用户拍板）**：
 
 - **引用解析**：`contract: foo` 的 foo 住在未启用插件的随包契约里 → **Pending 等启用**（反向索引唤醒同一机制；warn 政策同 D25.1）；部署索引查无 → **启用期响亮**，指路两条（用现成契约 / 自己随包定义——D21.5 同款）。
 - **版本与签名**：`@N` 与契约包 `version:` 不符、注册方法集超出契约、规范化后结构不同（D18.3 四条）→ **启用期响亮**（原"安装期"措辞平移 = D24.2）。
 
-**D25.3 provides key 撞名 = 启用期响亮（2026-10-09 用户拍板）**：启用 X 时其 provides key 已被占用 → X 启用失败，报错指名冲突对手方（D22.1 同款）。**判定作用面 = 已启用 ∪ Pending（含本次启用者）**，与 D25.4 判环图同一节点集——同批卡 Pending 的两个同 key 提供方必须在启用入口互相可见（否则环判定图的边指向歧义，且败者要跑完 setup 才撞运行时复查，响亮变晚还白付 setup 副作用）。休眠件之间撞名不判定——都不跑，撞了无害。运行时 host 复查保留（S2 双保险的防御层不动）；契约竞标与意外撞名的区分不变（schema 对账 = 机械裁判，D18.3 原位）。
+**D25.3 provides key 撞名 = 启用期响亮（2026-10-09 用户拍板）**：启用 X 时其 provides key 已被占用 → X 启用失败，报错指名冲突对手方（D22.1 同款）。**判定作用面 = 已启用 ∪ Pending（含本次启用者）**，与 D25.4 判环图同一节点集——同批卡 Pending 的两个同 key 提供方必须在启用入口互相可见（否则环判定图的边指向歧义，且败者要跑完 setup 才撞运行时复查，响亮变晚还白付 setup 副作用）。休眠件之间撞名不判定——都不跑，撞了无害。运行时 host 复查保留（S2 双保险的防御层不动）；契约竞标与意外撞名的区分不变（schema 对账 = 机械裁判，D18.3 原位）。（2026-10-12 修订注：实例模型下判定作用面精确化 = **同作用域内**已启用 ∪ Pending——跨作用域同 key = 遮蔽不是撞名（实例内 provide 住实例作用域，不进租户级注册表）；[instance-model](instance-model.md) §S4.2 D68。冻结面语义扩展，正式吸收归任务 5 冻结批次。）
 
-**D25.4 依赖禁环 = 启用期（2026-10-09 用户拍板）**——D1.7 层一兑现：插件进入启用流程（含转入 Pending）时，host 在 **required inject 图**上判环——图的节点 = 已启用 ∪ Pending ∪ 本次启用者（Pending 必须在内：A⇄B 同批启用时两者都先卡 Pending，不含 Pending 的判定图永远抓不住环）；成环 = 本次启用者响亮失败（Failed），报错列出环上全部插件（Cargo 禁 crate 循环同款，D1.7 原注）；环上已 Pending 者继续 Pending——等待对象已 Failed = warn 触发族（D25.1 行二），warn 机制接管其可见性。只算 required 边：optional 不阻塞激活，造不出激活死锁；运行期 wait-for 圈 = D1.7 层三即时检测原位不动。**环不给 Pending**——环 = 结构性配置错误，不存在"等它自己好"的路径（对照 D25.1：未启用提供方 = 部署者一个动作可解），响亮是唯一诚实选项。analyze 可对部署级 required 图写码期预检环（manifest 双声明使图纯数据可算，归 A10）。
+**D25.4 依赖禁环 = 启用期（2026-10-09 用户拍板）**——D1.7 层一兑现：插件进入启用流程（含转入 Pending）时，host 在 **required inject 图**上判环——图的节点 = 已启用 ∪ Pending ∪ 本次启用者（Pending 必须在内：A⇄B 同批启用时两者都先卡 Pending，不含 Pending 的判定图永远抓不住环）；成环 = 本次启用者响亮失败（Failed），报错列出环上全部插件（Cargo 禁 crate 循环同款，D1.7 原注）；环上已 Pending 者继续 Pending——等待对象已 Failed = warn 触发族（D25.1 行二），warn 机制接管其可见性。只算 required 边：optional 不阻塞激活，造不出激活死锁；运行期 wait-for 圈 = D1.7 层三即时检测原位不动。**环不给 Pending**——环 = 结构性配置错误，不存在"等它自己好"的路径（对照 D25.1：未启用提供方 = 部署者一个动作可解），响亮是唯一诚实选项。analyze 可对部署级 required 图写码期预检环（manifest 双声明使图纯数据可算，归 A10）。（2026-10-12 修订注：实例模型下判环图 = 同作用域内——跨层 inject 边恒向上（实例 → parent 链），向下/兄弟无边，跨层结构性无环；[instance-model](instance-model.md) §S4.2 D68。同归任务 5 冻结批次。）
 
 **D25.5 盒对账 = 启用期（2026-10-09 用户拍板）**——§A2.5 双向对账与进口对账的时机平移：启用事务内——① **双向对账**：声明了没文件 / 有文件未声明 = 响亮（包不完整 / 防残留盒无意加载，原理由不变）；② **进口对账**：盒自描述进口清单 ⊆ manifest 能力声明，超集响亮（能力笼落位，ADR-0024 §6 不变）。安装期只把盒清单与进口清单解析进部署索引（D24.1）。运行期防御层不变：host imports 授予范围 = 属主能力包络，超界进口在实例化时本就拿不到（§A2.5 既定）。
 
