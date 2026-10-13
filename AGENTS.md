@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Freshness: Commands tracks the justfile; NEVER tracks the generated-file list; Skills tracks .agents/skills/; Reporting is unenforced style discipline. Last reviewed: 2026-10 -->
+<!-- Freshness: Commands tracks the justfile; NEVER tracks the generated-file list; Skills tracks .agents/skills/; Style and Reporting are unenforced discipline (commit-messages excepted — commit-msg hook). Last reviewed: 2026-10 -->
 
 ## Commands (just is the only entry point; never bypass the quality gates)
 
@@ -51,6 +51,7 @@ Done = `just ci` green + self-review of the working diff.
 - Commit messages: modified Conventional Commits — `type(scope): subject`, lowercase type/scope, pure-ASCII English subject, header ≤ 100 chars, blank line before body/footer (`fix`→PATCH, `feat`→MINOR, `!`→MAJOR). Enforced at the commit-msg hook (SSOT: the `check-commit` subcommand of `crates/xtask`); no PR flow — commits push directly to `main`, so every message must be landable as-is.
 - Language (ADR-0012): code, rustdoc, AGENTS.md, skills, README/CONTRIBUTING are English; `docs/` (decisions / design / research) is Chinese-canonical.
 - Docs co-evolve in the same change as the behavior change. A rule you needed but couldn't find is a missing rule: add it via the `rule-maintenance` skill in that change, instead of re-deriving it next session.
+- Spark capture: a dense forward-looking passage from the maintainer (meta-observation / structural analogy / future requirement / self-noted forgetting risk), or an explicit 记录/拎起来, must be captured verbatim-first into HANDOFF.md's spark register (created on first capture) — key sentences quoted, context anchored, dated, consumption point named. Spark quotes migrate verbatim across HANDOFF rewrites (compression is decay), promote into committed docs when long-lived, and never vanish unconsumed (unenforced — the feedback loop is the maintainer reporting a miss).
 
 ## Reporting (agent → maintainer replies; ste-zh core, unenforced style discipline)
 
