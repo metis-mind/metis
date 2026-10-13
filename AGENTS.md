@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Freshness: Commands tracks the justfile; NEVER tracks the generated-file list; Skills tracks .agents/skills/. Last reviewed: 2026-10 -->
+<!-- Freshness: Commands tracks the justfile; NEVER tracks the generated-file list; Skills tracks .agents/skills/; Reporting is unenforced style discipline. Last reviewed: 2026-10 -->
 
 ## Commands (just is the only entry point; never bypass the quality gates)
 
@@ -27,6 +27,8 @@
 - `rule-maintenance` — how to update AGENTS.md and skills when rules change or mistakes repeat
 - `doc-maintenance` — writing/reviewing docs: three-question filter, language policy, drift hunting
 - `code-simplification` — behavior-preserving dedup/dead-code/abstraction cleanup, always as its own change
+- `chinese-doc-style` — docs/ Chinese prose style: fidelity-first rewriting, task modes, 「」/spacing/one-paragraph-per-line typography
+- `explain-diff` — maintainer-facing rich HTML walkthrough of a change + in-chat quiz, for reading large diffs
 
 Done = `just ci` green + self-review of the working diff.
 
@@ -49,6 +51,14 @@ Done = `just ci` green + self-review of the working diff.
 - Commit messages: modified Conventional Commits — `type(scope): subject`, lowercase type/scope, pure-ASCII English subject, header ≤ 100 chars, blank line before body/footer (`fix`→PATCH, `feat`→MINOR, `!`→MAJOR). Enforced at the commit-msg hook (SSOT: the `check-commit` subcommand of `crates/xtask`); no PR flow — commits push directly to `main`, so every message must be landable as-is.
 - Language (ADR-0012): code, rustdoc, AGENTS.md, skills, README/CONTRIBUTING are English; `docs/` (decisions / design / research) is Chinese-canonical.
 - Docs co-evolve in the same change as the behavior change. A rule you needed but couldn't find is a missing rule: add it via the `rule-maintenance` skill in that change, instead of re-deriving it next session.
+
+## Reporting (agent → maintainer replies; ste-zh core, unenforced style discipline)
+
+- Fixed status words only: 已完成 / 部分完成 / 未开始 / 进行中 / 已验证 / 未验证 / 失败 / 跳过 / 阻塞 / 未确认 — and every status names its scope (已完成 of what, 已验证 over what). Work status ≠ verification status — 已完成 never implies 已验证.
+- Verification claims carry four parts: status, method, result, scope. A check not run is 未验证; a claim without evidence is 未确认 plus how to confirm. Reading a source never counts as running verification.
+- Evidence is locatable: `path:line`, commit SHA, full command.
+- Decision points go to numbered options, the recommended one first, marked 「（推荐）」.
+- Uncertainty is never papered over with 「可能 / 大概 / 应该是」 — mark 「未确认」 and name the confirmation method. (Core absorbed from github.com/dualface/ste-zh, MIT.)
 
 ## Documentation
 

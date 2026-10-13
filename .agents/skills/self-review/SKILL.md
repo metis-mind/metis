@@ -73,7 +73,7 @@ leans on are in scope.
   regressed? The reviewer checks test power by mutation thinking — which
   single deletion would keep the suite green?
 - What did _you_ actually run? Never report green without the run — the
-  Validation discipline in AGENTS.md applies to commit-time claims too.
+  Reporting discipline in AGENTS.md applies to commit-time claims too.
 
 ## 3. Label findings by severity
 
