@@ -266,7 +266,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 - kind 表 syscall 部分 = §5.3；私有状态族 replay 政策 = 头号输入；`nondeterminism_read` 已覆盖时间/CSPRNG 读取
 - **写入量账**：§5.3 的 per-call 条目在忙插件下达日百万级（~0.2–0.5 GB/天/插件），单条大 body 可达 10⁷–10⁸B——需录制粒度政策（全量内联 vs blob 引用 vs chunk；http 大 body/SSE 与 LLM 流式同族，参 `../research/journal-replay-research.md` 开放问题 2）——**2026-10-08 已定案**：[luau-abi](luau-abi.md) §A6.7 D7.1（★ 全录 + audit 默认降档 + 阈值 blob 引用）
 - **生成型秘密的落盘政策**：`crypto.random`（record）生成的密钥/token/nonce 会明文进 `nondeterminism_read`——M6 脱敏管线的模式匹配抓不到生成型秘密，需 kind 感知政策（append 加密/擦除 + replay 注入侧解密）——**2026-10-08 已定案**：[luau-abi](luau-abi.md) §A6.7 D7.2（kind 感知加密，按 source 子类分流）
-- （2026-10-12 修订注：本节输入已消费——kind 表 syscall 部分 + 录制分族 = **已兑现**（[journal](journal.md) D78，SSOT 移交）；私有状态族 replay 政策（头号输入）+ `nondeterminism_read` 覆盖 + 生成型秘密落盘政策 = **消解**（replay 不立 = D75）；写入量账与频率整形 = **已兑现 = J2**（D80 结构有界原则：默认面成本 = O（窗口数）、full = O（调用数）开窗自负；D81 `window_summary` 聚合形态 + `dispatch_completed` 增强）；blob/段文件归 J4。）（2026-10-12 再修订注：J2 兑现面**撤销 = [journal](journal.md) D84 v1 骨架化**——per-call 条目不立，**写入量账担忧整体消失**；blob 不立；段文件归 J4 缩小版。）
+- （2026-10-12 修订注：本节输入已消费——kind 表 syscall 部分 + 录制分族 = **已兑现**（[journal](journal.md) D78，SSOT 移交）；私有状态族 replay 政策（头号输入）+ `nondeterminism_read` 覆盖 + 生成型秘密落盘政策 = **消解**（replay 不立 = D75）；写入量账与频率整形 = **已兑现 = J2**（D80 结构有界原则：默认面成本 = O（窗口数）、full = O（调用数）开窗自负；D81 `window_summary` 聚合形态 + `dispatch_completed` 增强）；blob/段文件归 J4。）（2026-10-12 再修订注：J2 兑现面**撤销 = [journal](journal.md) D84 v1 骨架化**——per-call 条目不立，**写入量账担忧整体消失**；blob 不立；段文件归 J4 缩小版——**已收官 = [journal](journal.md) D89–D91**（2026-10-13）。）
 
 ### 6.3 实现期登记
 
