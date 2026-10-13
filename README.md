@@ -1,5 +1,8 @@
 # metis
 
+[![license](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](./LICENSE-MIT)
+[![CI](https://github.com/metis-mind/metis/actions/workflows/ci.yml/badge.svg)](https://github.com/metis-mind/metis/actions/workflows/ci.yml)
+
 A self-evolving agent runtime: a long-lived Rust core (fiber lifecycle containers, context & event system, service registry, hot-reloading loader) extended by Luau plugins. The model may propose new plugins, but never gets runtime eval — installation goes through an approval-gated transaction.
 
 Status: pre-alpha. The architecture is designed in `docs/` ahead of the first line of runtime code.

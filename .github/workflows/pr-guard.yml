@@ -1,0 +1,47 @@
+# Secret scan for PRs: added diff lines are matched against token /
+# private-key / .env-assignment shapes; a hit hard-fails the check and
+# annotates the offending line on the PR's Files tab. The same scan runs
+# locally as a pre-commit hook over the staged diff (`pr-guard --staged`).
+# Logic lives in xtask (just pr-guard); a separate workflow (like commits.yml)
+# keeps this cheap check out of ci.yml's test matrix.
+name: pr-guard
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pr-guard:
+    name: pr guard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # gh pr diff
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
+        with:
+          use-flakehub: false # see the quality-gate job in ci.yml
+      # target/ cache for the xtask compile; actions/cache over rust-cache for
+      # the same reason as ci.yml (no `nix develop -c` key detection tax)
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: v0-rust-${{ github.job }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: v0-rust-${{ github.job }}-${{ runner.os }}-
+      # the PR number travels via env var, never interpolated into shell
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: nix develop -c just pr-guard "$PR_NUMBER"

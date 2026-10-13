@@ -1,6 +1,6 @@
 # 0009. 工程化基线：模板继承 + Forgejo + 1+N
 
-- Status: accepted（托管 / 发布 / PR 三条款自 2026-10-02 起由 [ADR-0020](0020-open-source-hosting.md) 局部 supersede，其余条款不变）
+- Status: accepted（托管 / 发布 / PR 三条款自 2026-10-02 起由 [ADR-0020](0020-open-source-hosting.md) 局部 supersede；「测试全部本地跑」与「删除 dependabot」两条款 2026-10-13 由 [ADR-0030](0030-engineering-phase-2.md) 条款 2 / 条款 1 局部 supersede；遗留① 用户 review 方案同批结案；其余条款不变）
 - Date: 2026-09-29
 
 ## Context

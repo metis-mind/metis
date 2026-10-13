@@ -1,0 +1,41 @@
+# Catch newly disclosed advisories even when no dependency PR is open: a yank
+# or a fresh RUSTSEC entry can break `just deny` at any time, and the next
+# local run should not be the first to hear about it. This scheduled check
+# runs only the dependency policy, not the full test suite.
+name: dependency audit
+
+on:
+  schedule:
+    - cron: "23 4 * * 3" # Wednesdays
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: dependency audit
+    # runs only in this repository (skipped in forks)
+    if: github.repository_owner == 'metis-mind'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
+        with:
+          use-flakehub: false # see the quality-gate job in ci.yml
+      # cargo registry + target/ cache; actions/cache over rust-cache for the
+      # same reason as ci.yml (no `nix develop -c` key detection tax)
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: v0-rust-${{ github.job }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: v0-rust-${{ github.job }}-${{ runner.os }}-
+      - run: nix develop -c just deny

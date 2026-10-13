@@ -10,7 +10,7 @@
 
 - agent 是主要开发者 → **每个门禁必须机器可判定**（验收不需要人类判断力介入）
 - **可自动修复优先**：门禁报错 → `just fix` → 再过，构成 agent 自修复闭环
-- **本地门禁是唯一测试门禁**（无远程测试 CI）；远程只跑固定/定期例程（tag/release、依赖检查、toolchain 更新）
+- **本地门禁是第一道**（commit 前必跑 `just ci`）；远程 CI 跑同一套门禁（push/PR，ubuntu + macOS 矩阵）作独立复核与 dependabot / 未来外部 PR 的门禁，远程定期例程 = 依赖审计 / flake / toolchain 更新（2026-10-13 修订，[ADR-0030](../decisions/0030-engineering-phase-2.md)）
 - 门禁必须快——慢到被绕开的门禁等于没有
 
 ## 2. 测试分层框架（L0–L4）
@@ -38,13 +38,13 @@
 
 ### B. 依赖与供应链
 
-| 工具           | 抓什么                                  | 跑在哪              |
-| -------------- | --------------------------------------- | ------------------- |
-| cargo-deny     | RUSTSEC 漏洞、许可证、重复版本、来源    | 本地门禁 + 远程定期 |
-| cargo-machete  | 声明了但没用的依赖                      | 本地门禁            |
-| cargo-outdated | 依赖落后报告                            | 远程定期            |
-| cargo-vet 💤   | 依赖审计记录（1+N 下治理 agent 选依赖） | 推迟，见 §5         |
-| cargo-geiger   | 依赖树 unsafe 占比                      | 信息性，可选        |
+| 工具           | 抓什么                                  | 跑在哪                                |
+| -------------- | --------------------------------------- | ------------------------------------- |
+| cargo-deny     | RUSTSEC 漏洞、许可证、重复版本、来源    | 本地门禁 + 远程定期                   |
+| cargo-machete  | 声明了但没用的依赖                      | 本地门禁（未落地——回归随任务 8 定稿） |
+| cargo-outdated | 依赖落后报告                            | 远程定期（未落地——回归随任务 8 定稿） |
+| cargo-vet 💤   | 依赖审计记录（1+N 下治理 agent 选依赖） | 推迟，见 §5                           |
+| cargo-geiger   | 依赖树 unsafe 占比                      | 信息性，可选                          |
 
 ### C. 覆盖率与测试质量
 
@@ -89,16 +89,18 @@
 
 ## 5. 推迟登记（含触发条件，防丢）
 
-| 项                 | 何时捡回                                                                              |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| loom / shuttle     | 第一个手写无锁/原子结构出现时                                                         |
-| criterion          | MVP 后出现公认热路径时                                                                |
-| cargo-vet          | 依赖数量或 agent 自选依赖频率失控时                                                   |
-| fuzz（L3）全面铺开 | 配置格式 / Luau ABI 稳定后                                                            |
-| Lean4 试点         | 结构设计收官 + 工程化落地后；先 spike 比较 hax/Aeneas 直译 vs model-first             |
-| 覆盖率地板线       | 测试策略大讨论定夺                                                                    |
-| workflow lint      | 随 workflows 恢复回归（GitHub 迁移后续，见 §6 第 8 条）                               |
-| 轻 PR 评审面       | 用户 review 方案讨论时（[ADR-0009](../decisions/0009-engineering-baseline.md) 遗留①） |
+| 项                    | 何时捡回                                                                                                                         |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| loom / shuttle        | 第一个手写无锁/原子结构出现时                                                                                                    |
+| criterion             | MVP 后出现公认热路径时                                                                                                           |
+| cargo-vet             | 依赖数量或 agent 自选依赖频率失控时                                                                                              |
+| fuzz（L3）全面铺开    | 配置格式 / Luau ABI 稳定后                                                                                                       |
+| Lean4 试点            | 结构设计收官 + 工程化落地后；先 spike 比较 hax/Aeneas 直译 vs model-first                                                        |
+| 覆盖率地板线          | 测试策略大讨论定夺                                                                                                               |
+| ~~workflow lint~~     | ✅ 已随 workflows 恢复回归（2026-10-13，[ADR-0030](../decisions/0030-engineering-phase-2.md)）：actionlint 进 `just lint`        |
+| ~~轻 PR 评审面~~      | ✅ 结案 = 不立（2026-10-13，[ADR-0030](../decisions/0030-engineering-phase-2.md) 条款 4；触发器 = 外部贡献放开或维护者主动要求） |
+| Windows native CI     | 首个真实 Windows 用户需求（从模板原件恢复 test-windows job；ADR-0030 条款 2）                                                    |
+| require status checks | 外部 PR 放开时（ADR-0030 条款 2）                                                                                                |
 
 ## 6. 大讨论待决清单
 
@@ -108,6 +110,6 @@
 4. Kani 与 Lean 的分工（跳板值不值，还是直接 Lean 试点）
 5. Lean 试点内核确认（建议 fiber 状态机）+ 路线选择 spike
 6. F 类恢复测试的具体场景清单（随安装事务设计展开）
-7. 与用户 review 方案的联动（agent 产出的人类评审面如何与机器门禁互补）
-8. 远程 CI 重议：开源后 GitHub public repo CI 免费，"本地门禁是唯一测试门禁"的前提（自托管算力成本）已消失——远程跑测试从浪费变为外部 PR 的免费门禁（[ADR-0020](../decisions/0020-open-source-hosting.md)）；与 workflows 恢复同议题
-9. release 流水线与 crates.io 发布形态：crates.io opt-in 已随 [ADR-0020](../decisions/0020-open-source-hosting.md) 激活；`metis` crate 名被占（图分区库），二进制 crate 改名 / cargo-dist 分发的取舍；与第 8 条同批
+7. ~~与用户 review 方案的联动~~ → ✅ 结案（2026-10-13，[ADR-0030](../decisions/0030-engineering-phase-2.md) 条款 4）：评审面 = 议题拍板 + self-review 子代理判断 pass（已吸收 pr-preflight 流程门禁）+ HANDOFF；机器门禁 = `just ci` 本地 + 远程
+8. ~~远程 CI 重议~~ → ✅ 结案（2026-10-13，[ADR-0030](../decisions/0030-engineering-phase-2.md) 条款 2）：远程与本地同一套门禁，矩阵 ubuntu + macOS，Windows = WSL2
+9. ~~release 流水线与 crates.io 发布形态~~ → ✅ 结案（2026-10-13，[ADR-0030](../decisions/0030-engineering-phase-2.md) 条款 3）：release-plz + cargo-dist + OIDC 形态定夺、管线推迟到首个可发布里程碑；crates.io 仅发二进制 crate，命名 `metis-mind`（已 0.0.0 占位）

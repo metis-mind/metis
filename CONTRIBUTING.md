@@ -58,7 +58,9 @@ This creates an **internal crate** (`version = "0.0.0"`, `publish = false`) with
 
 ## Releasing and remote CI
 
-Deferred. Release engineering and the remote periodic workflows return as a follow-up to the GitHub migration — see [ADR-0020](docs/decisions/0020-open-source-hosting.md). Until then every gate runs locally through `just`.
+Remote CI runs the same recipes as local `just` (`.github/workflows/`): a prek quality gate plus an ubuntu/macOS test matrix on pushes to `main` and on PRs, weekly flake.lock / toolchain bump PRs, and a scheduled dependency audit. Native Windows is not a CI target — Windows hosts are supported via WSL2 (ADR-0030).
+
+Releasing stays deferred: no tags, no releases, and internal crates keep `publish = false`. The form is decided ([ADR-0030](docs/decisions/0030-engineering-phase-2.md)): release-plz Release PRs as the human gate, cargo-dist for cross-platform binaries, crates.io publishing scoped to the binary crate as `metis-mind` (the name is already reserved). The machinery returns at the first releasable milestone.
 
 ## Agent-assisted development
 

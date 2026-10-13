@@ -1,9 +1,9 @@
 # The task layer: the single implementation site for every repeatable piece of
-# automation in this repository. Local development and git hooks
-# (.pre-commit-config.yaml) are just callers; CI joins when workflows return
-# (GitHub migration, ADR-0020). Rules: no version numbers here (reference the
-# SSOT of the layer below); no bashisms or duplicated arguments in recipes —
-# each tool's parameters live in that tool's own config file.
+# automation in this repository. Local development, git hooks
+# (.pre-commit-config.yaml) and CI (.github/workflows/) are all just callers.
+# Rules: no version numbers here (reference the SSOT of the layer below); no
+# bashisms or duplicated arguments in recipes — each tool's parameters live in
+# that tool's own config file.
 
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
@@ -26,11 +26,14 @@ fmt:
     cargo fmt --all
     dprint fmt
 
-# Static checks: rustfmt --check, dprint check (markdown), clippy (-D warnings)
+# Static checks: rustfmt --check, dprint check (markdown), clippy (-D warnings), actionlint on workflow YAML.
+# No path argument for actionlint: it discovers .github/workflows/ itself, because
+# the Windows shell (PowerShell) does not expand globs for native commands.
 lint:
     cargo fmt --all -- --check
     dprint check
     cargo clippy --workspace --all-targets -- -D warnings
+    actionlint
 
 # Tests: nextest (process isolation) + doctests (README/rustdoc examples are compiled too)
 test:
@@ -58,17 +61,18 @@ agent-check:
     cargo run -q -p xtask -- agent-check
 
 # Bump rust-toolchain.toml's channel to the latest stable release; requires
-# curl. The wrapping weekly workflow returns with the GitHub migration.
+# curl. Wrapped by the weekly toolchain-update workflow (.github/workflows/).
 toolchain-bump:
     cargo run -q -p xtask -- bump-toolchain
 
 # Secret scan of a diff (added lines): token / private-key / .env shapes, hard
-# fail. `pr-guard --staged` is the local pre-commit half; a CI caller returns
-# with the GitHub migration.
+# fail. `pr-guard --staged` is the local pre-commit half; the CI caller is
+# .github/workflows/pr-guard.yml.
 pr-guard pr="":
     cargo run -q -p xtask -- pr-guard {{pr}}
 
-# The local full quality gate ≡ CI (modulo matrix dimensions); run before committing
+# The local full quality gate ≡ CI (.github/workflows/ci.yml runs the same
+# recipes); run before committing
 ci: lint test doc deny agent-check
     @echo "just ci: all green ✅"
 

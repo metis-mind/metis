@@ -1,0 +1,6 @@
+# Structured reports only — open-ended questions belong in Discussions.
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & open-ended discussion
+    url: https://github.com/metis-mind/metis/discussions
+    about: Open-ended questions and ideas belong in Discussions, not Issues.

@@ -10,8 +10,8 @@ they cannot, while the fix is still cheap — but the author cannot run the
 judgment part alone: the assumptions that wrote the code would also review
 it. The split of labor:
 
-- **You (the author)**: the mechanical sweep (§0), size sanity (§4), then
-  triage of the reviewer's findings.
+- **You (the author)**: the mechanical sweep (§0), size sanity and process
+  gates (§4), then triage of the reviewer's findings.
 - **A fresh subagent**: the judgment pass (§1–§3). It gets the diff and the
   design context, not your reasoning — never pre-argue the change in the
   prompt beyond neutral pointers, or you export your own blind spots.
@@ -23,7 +23,11 @@ _this_ change. Remove drive-by edits, debug leftovers, commented-out code.
 One clause that pays for itself: no tokens, keys or `.env` contents — catching
 a secret here beats rotating it later.
 
-## 1. Spawn the reviewer — the five axes are its checklist
+Machine gates first: `just ci` green is a precondition, and this pass never
+substitutes for it. Never suppress, skip, or "fix later" a gate failure — if
+the gate is wrong, fix the gate in its own change.
+
+## 1. Spawn the reviewer — the axes are its checklist
 
 Delegate to a subagent. Its prompt carries: the diff (or commit range), the
 task/ADR context to ground in, and this checklist. It returns findings
@@ -53,6 +57,10 @@ which is how author blindness survives delegation:
 8. **Premise attack** — do not just verify the diff conforms to the ADR/spec;
    attack the design itself: if you owned this code, what would you delete or
    simplify?
+9. **Docs co-evolution** — behavior, commands, flags or config changed →
+   README / CONTRIBUTING / AGENTS.md / skills updated in the _same_ change,
+   not a follow-up. New prose must answer _why_ or be an entry point — facts
+   code can state itself are drift sources.
 
 Also out of the author's tunnel: the reviewer looks at the _resulting state_
 of touched files, not only the diff hunks — pre-existing patterns the change
@@ -80,11 +88,28 @@ structure next, cosmetics last. A few high-conviction findings beat a long
 list — one structural problem outweighs ten nits. Pushing back on a finding
 is legitimate; record the reasoning in the PR.
 
-## 4. Size sanity (author, mechanical)
+## 4. Size sanity and process gates (author, mechanical)
 
 One logical change per commit: ~100 lines is ideal, ~300 is acceptable when
 single-purpose, ~1000 means split (stacked, by layer, or by file group).
 Refactor and feature are two commits — cleanup always rides separately.
+
+Process gates (absorbed from the template's retired `pr-preflight` skill,
+ADR-0030 §4):
+
+- **Snapshot intent** — read every `.snap` diff: each change an intended
+  consequence, with nondeterministic fields (timestamps, paths, UUIDs)
+  filtered before snapshotting. Snapshots are approved by the human via
+  `just snapshot-review`; the agent prepares and explains, never accepts.
+- **Commit type = version intent** — `fix` → PATCH, `feat` → MINOR, `!` →
+  MAJOR. Release tooling will derive versions and changelogs from these
+  messages: a wrong type is a wrong release.
+- **ADR necessity** — a new layer or boundary, a new external contract, a
+  replaced core dependency, or a reversed previous decision lands an ADR in
+  the same change.
+- **ASK-rule surfaces** — `.github/`, CI workflow files, hosting settings, new
+  third-party dependencies: the explicit human approval must already exist.
+  If it does not, stop and ask.
 
 ## Rationalizations that fail this review
 

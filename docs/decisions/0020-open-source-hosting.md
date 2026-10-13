@@ -1,6 +1,6 @@
 # 0020. 开源托管：GitHub org metis-mind + 双 license + 外部贡献政策
 
-- Status: accepted
+- Status: accepted（Consequences 登记的三项重议——远程 CI / release 形态 / 用户 review 联动——2026-10-13 由 [ADR-0030](0030-engineering-phase-2.md) 结案，其余条款不变）
 - Date: 2026-10-02
 
 ## Context

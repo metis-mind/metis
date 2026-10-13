@@ -33,6 +33,7 @@
             cargo-nextest # test runner (process isolation / sharding)
             cargo-insta # snapshot review
             cargo-deny # dependency policy: advisories/licenses/bans/sources
+            actionlint # static analysis for GitHub Actions workflows (.github/workflows)
             nixd # Nix language server
             nil # Nix language server (alternative — an editor uses one of the two)
           ]);
