@@ -1,6 +1,6 @@
 # 0027. 配置格式冻结（C1–C9）与既有 ADR 局部 supersede 批次
 
-- Status: accepted（任务 5（实例模型）批次已吸收 = [ADR-0028](0028-instance-model.md) 批次 #6/#7（2026-10-12：`--config` 扩展 = `--fleet-dir` 多租户 + 解析失败 fleet 细化 + secrets 同族传播；D31/D32 触发器句兑现记录 = 复审维持不立））
+- Status: accepted（任务 5（实例模型）批次已吸收 = [ADR-0028](0028-instance-model.md) 批次 #6/#7（2026-10-12：`--config` 扩展 = `--fleet-dir` 多租户 + 解析失败 fleet 细化 + secrets 同族传播；D31/D32 触发器句兑现记录 = 复审维持不立）；任务 6（journal）批次已吸收 = [ADR-0029](0029-journal.md) 批次 #4（2026-10-13：C8 节 `core.audit` 键面/三档 supersede = 不立——可配审计面撤销，`core:` 节容器与封闭集/additive 机制原位；Consequences 任务 6 行结案））
 - Date: 2026-10-11
 
 ## Context

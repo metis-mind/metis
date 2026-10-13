@@ -228,7 +228,7 @@ native 闭包不受 interrupt 时间盒保护 → "native 函数不许无限阻�
 
 （kind 表全文 = `../research/journal-replay-research.md` §7.3；本表 = syscall 部分回填。2026-10-08 修订注：kind 表去 agent 化 + 录制分族政策（★ 全录 / audit 降档）已定案 = [luau-abi](luau-abi.md) §A6.7——调研 §7.3 的 `llm_*`/`session_*` 不属核心 kind。）（2026-10-11 修订注：fs 行与 §5.2 process 行「三 scope」复述收窄 = private/global 两档；§6.1 A2/A3 行同——[config-format](config-format.md) §C5.1 D44；正式 supersede 已吸收 = [ADR-0027](../decisions/0027-config-format.md) 批次 #9（2026-10-11）。）
 
-（2026-10-12 修订注：**journal kind 表 SSOT 移交 = [journal](journal.md) D78**（任务 6 J1 收官）；本表「replay」列与 ★ 标注**消解**——replay 引擎不立（journal.md D75）：`nondeterminism_read` 行、fs/sql 的「私有状态族」格、process 的「record/注入到头」格、http/timer 的「record/注入」「按史注入」格随之消解；fs `append` 归族与 process 流式粒度已落位 D78。journal kind 列名义有效，正式面以 journal.md 为准；正式 supersede 归任务 6 冻结批次（拟 ADR-0029）。）（2026-10-12 再修订注：**journal kind 列 v1 仅 process 两条存活**——能力族其余与内部流量面撤销 = [journal](journal.md) D84 v1 骨架化；本列名义留档，正式面 = journal.md D78 表（D84 收缩版）；ADR-0025 对应格 supersede 归 J6 批次评估。）
+（2026-10-12 修订注：**journal kind 表 SSOT 移交 = [journal](journal.md) D78**（任务 6 J1 收官）；本表「replay」列与 ★ 标注**消解**——replay 引擎不立（journal.md D75）：`nondeterminism_read` 行、fs/sql 的「私有状态族」格、process 的「record/注入到头」格、http/timer 的「record/注入」「按史注入」格随之消解；fs `append` 归族与 process 流式粒度已落位 D78。journal kind 列名义有效，正式面以 journal.md 为准；正式 supersede——**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #3**（2026-10-13）。）（2026-10-12 再修订注：**journal kind 列 v1 仅 process 两条存活**——能力族其余与内部流量面撤销 = [journal](journal.md) D84 v1 骨架化；本列名义留档，正式面 = journal.md D78 表（D84 收缩版）；ADR-0025 对应格 supersede——同已吸收 = 批次 #3。）
 
 ### 5.4 replay 分族原则
 

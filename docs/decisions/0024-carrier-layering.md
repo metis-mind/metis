@@ -1,6 +1,6 @@
 # 0024. 载体分层：盒管模型（Luau 管 + wasm 盒 + 核心内建件）
 
-- Status: accepted（Consequences 议题地图回填行中「能力政策声明对账 = 盒能力笼的安装面」的「安装面」由 [ADR-0026](0026-luau-abi.md) 局部取代（2026-10-10，supersede 批次 #7）= 启用期；Consequences 风险登记表 C4「ABI 版本化第一天设计归 A10」已兑现 = 同 ADR 的 `abi_rev` 机制；`metis sdk` 包装 wasm32-wasip2 管线接口位已登记 = 同 ADR `sdk box *` 族；§5「在途调用排空细节归插件热更新设计」意向登记 = [config-format](../design/config-format.md) D42（重挂载复用 §A4.5 卸载排空路径，盒与属主同生共死原样），正式批次已吸收 = [ADR-0027](0027-config-format.md) 批次 #11（2026-10-11））
+- Status: accepted（Consequences 议题地图回填行中「能力政策声明对账 = 盒能力笼的安装面」的「安装面」由 [ADR-0026](0026-luau-abi.md) 局部取代（2026-10-10，supersede 批次 #7）= 启用期；Consequences 风险登记表 C4「ABI 版本化第一天设计归 A10」已兑现 = 同 ADR 的 `abi_rev` 机制；`metis sdk` 包装 wasm32-wasip2 管线接口位已登记 = 同 ADR `sdk box *` 族；§5「在途调用排空细节归插件热更新设计」意向登记 = [config-format](../design/config-format.md) D42（重挂载复用 §A4.5 卸载排空路径，盒与属主同生共死原样），正式批次已吸收 = [ADR-0027](0027-config-format.md) 批次 #11（2026-10-11）；§6 防线 2「每次跨界调用进 journal，可回放、可归因」收窄 supersede + Consequences 回填行「journal/replay 设计」结案——**已吸收 = [ADR-0029](0029-journal.md) 批次 #6**（2026-10-13：v1 = 管理动作 + 错误现场 + process 可见，能力调用细节不立记录面））
 - Date: 2026-10-05
 
 ## Context

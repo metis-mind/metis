@@ -1,6 +1,6 @@
 # 0023. 核心重启语义：复用卸载/加载路径，无重启专有钩子
 
-- Status: accepted
+- Status: accepted（Consequences 派生登记条「跨重启状态政策……与 journal/replay 设计强耦合」**已结案** = [ADR-0029](0029-journal.md) 批次 #7（2026-10-13：fresh-start 面收官 = D84–D88，journal 不参与状态重建））
 - Date: 2026-10-03
 
 ## Context
