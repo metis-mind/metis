@@ -54,9 +54,10 @@ deny:
 snapshot-review:
     cargo insta review
 
-# Smoke check for agent-facing docs: SKILL.md frontmatter, size budgets, and
-# pointer integrity (AGENTS.md / CLAUDE.md / .claude/skills). Std-only Rust in
-# crates/xtask; runs on every platform `just ci` runs on.
+# Smoke check for agent-facing docs plus the structural docs/ integrity gates
+# of the doc lifecycle (ADR-0033): doc map, internal links, freshness, archive
+# consistency. Check semantics SSOT = the crates/xtask agent_docs module doc.
+# Std-only Rust; runs on every platform `just ci` runs on.
 agent-check:
     cargo run -q -p xtask -- agent-check
 
