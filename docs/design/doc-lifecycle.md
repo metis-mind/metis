@@ -19,7 +19,7 @@
 
 ## 2. 生命周期状态机：现役 ↔ 归档 + 删除闸
 
-适用范围：归档态横切 `docs/design/` 与 `docs/research/`。`docs/decisions/` 的归档等价物 = 既有 `superseded by` 标记；`docs/backlog.md` 每会话收尾自刷新，豁免。
+适用范围：归档态横切 `docs/design/` 与 `docs/research/`。`docs/decisions/` 的归档等价物 = 既有 `superseded by` 标记；`docs/backlog.md` 每会话收尾自刷新、收官行到期离库走压缩仪式微缩版（纪律 SSOT = 其[读写纪律](../backlog.md)；2026-10-15 修订注），豁免。
 
 - **现役**：文档在 AGENTS.md 地图持正常条目，默认可读。
 - **归档**：状态头标 `📦 已归档（YYYY-MM-DD）` + 归档原因 + 去向指针（存活内容在哪承接）；AGENTS.md 地图条目同步加 `archived` 标注，注明默认不读。**原地归档，物理不移动**——冻结 ADR 正文不可改，正文里的相对链接无法重指，移动文件 = 制造永久断链（`session-model.md` 被五处冻结 ADR 正文引用 = 该约束的实证）；且本仓 agent 的默认上下文 = AGENTS.md 地图而非目录浏览（[operating-protocol](operating-protocol.md) §2 启动序列），地图标注即达成「退出默认检索」。内部链接完整性检查（§4）反向机械执行该纪律：任何文件移动制造断链即 CI 失败。

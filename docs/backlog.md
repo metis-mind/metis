@@ -1,6 +1,6 @@
 # Metis 台账（backlog）
 
-> 状态：🔵 活跃（living；2026-10-14 立 = [ADR-0032](decisions/0032-operating-protocol.md)）。本文件 = 任务队列 + 遗留登记 + 火花区 + 依赖图四位一体的**运行状态 SSOT**（git 追踪）。**临时方案**——长期需要一个工具承担任务状态管理，而非并发 agent 直接读写本文件（火-4；扩展位登记 = [operating-protocol](design/operating-protocol.md) §6）。
+> 状态：🔵 活跃（living；2026-10-14 立 = [ADR-0032](decisions/0032-operating-protocol.md)）。本文件 = 任务队列 + 遗留登记 + 火花区 + 全景图四位一体的**运行状态 SSOT**（git 追踪）。**临时方案**——长期需要一个工具承担任务状态管理，而非并发 agent 直接读写本文件（火-4；扩展位登记 = [operating-protocol](design/operating-protocol.md) §6）。
 
 ## 读写纪律
 
@@ -8,17 +8,19 @@
 - 维护者聊天驱动：任务开立、拍板、方向变更由维护者对话触发；agent 不自立任务。
 - 任务块状态行 = 状态词（AGENTS.md Reporting 十词）+ 已完成范围 + 下一步 + 未拍板项 + 评审面三数（拍板决策点数 / self-review findings 数 / 评审耗时量级——诊断位，不设门禁）。
 - 任务生命周期状态 = 未开始 / 进行中 / 阻塞 / 已完成 + **延后（deferred）**：无限期延后，重开 = 维护者明示——延后是队列处置态，不进 Reporting 十词。
-- 收官压单行：任务收官后块压成单行（状态词 + 日期 + 产出指针 ADR+SHA），过程叙事溯源 = ADR 正文 + git 史。
+- 收官压单行与离库：任务收官后块压成单行（状态词 + 日期 + 产出指针 ADR+SHA），过程叙事溯源 = ADR 正文 + git 史；收官行 = 衔接过渡态，默认存活约一个任务周期——旧行清理走压缩仪式微缩版（下次收官或巡检时出示 → 维护者批准；[doc-lifecycle](design/doc-lifecycle.md) §7），deferred 行例外（队列处置态，留至重开或维护者明示丢弃）。
 - 并发窗口一任务一写者：同一时刻一个任务块只有一个写者；并行窗口内每 agent 只写自己的任务块（[operating-protocol](design/operating-protocol.md) §3）——写冲突结构性规避，不靠锁。
 - 文档结构性改动视同共享契约串行：本文件的节结构与任务块格式改动不走并行窗口。
 - git 追踪原则（维护者原话）：「我们不能依赖任何非 git 追踪的文件。不然会非常容易出现悬垂指针，导致文档腐烂。」——运行状态一律 git 追踪；外部服务只作对外接口（GitHub Issues 不迁队列、不建 label；外部事项被采纳时才以链接条目进本台账，单写者、无双向同步）。
 
-## 依赖图（任务变更时重生成）
+## 全景图（活跃任务 + 未消费火花；任务或火花变更时重生成）
+
+图 = 派生视图（内容 SSOT = 任务块与火花登记区）：只画活跃面（未开始 / 进行中 / 阻塞）+ 未消费火花节点（label = 火-N + 短语 + 消费点）；已完成 / 延后节点离图，已满足依赖不画边（满足态住任务块「依赖」行）。
 
 ```mermaid
 graph TD
-    T11["T11 1+N 运行协议（✅ 2026-10-14）"] --> T10["T10 实现（未开始，门槛全备）"]
-    T12["T12 文档防膨胀机制（✅ 2026-10-14）"] --> T10
+    T10["T10 实现（未开始，门槛全备）"]
+    S4["火-4 台账工具化（未消费；消费点 = 任务系统工具化立项）"]
 ```
 
 ## 内部任务
@@ -34,19 +36,8 @@ graph TD
 - 各实现期清单 SSOT = ADR-0027 / ADR-0028 / ADR-0031 Consequences（另 ADR-0032 登记：worktree bootstrap 自动化）
 - 评审面三数：（开工后逐站记录）
 
-### T12 文档防膨胀机制
-
-- 状态：**未开始**
-- 依赖：无（输入 = RQ8 已入库 = [review-economics-research](research/review-economics-research.md) RQ8 章）
-- 范围：入口闸门已有 + 存量生命周期 + 机器膨胀信号 + 压缩仪式；症状三分类 = 火-2
-- 候选增补（2026-10-14 self-review 提出）：文档地图反向悬挂检查（AGENTS.md 条目指向已删文档）——机器膨胀信号方向
-- 评审面三数：（开工后记录）
-
 ### 收官与延后记录（单行）
 
-- T12 ✅ 已完成（2026-10-14）：文档防膨胀机制 = [ADR-0033](decisions/0033-doc-lifecycle.md) + [doc-lifecycle](design/doc-lifecycle.md)（living 教义面）；产物 = agent-check 四项结构检查（地图反向悬挂 / 内部链接 / freshness / 归档一致性）+ session-model 首个正式归档 + 现役 design docs `Last reviewed` 基线 + doc-maintenance skill 生命周期节；评审面三数 = 拍板决策点 7 / self-review findings 5（Nit/Optional 5——已修 1 = freshness 破折号测试钉；push back 3 = check 接线测试（既有模式，活仓注入实证）/ CONTRIBUTING 枚举（句域正确，全量枚举违反 SSOT）/ 头部窗口魔数（失败信息自足）；留决上报 1 = justfile 注释行）/ 维护者评审耗时未确认；火-2 随收官消费（引文与症状映射固化 = doc-lifecycle §1 + ADR-0033 Context，登记区条目删除）；收官 SHA = 本行随收官 commit 入库（`git log --oneline -- docs/backlog.md` 末条即得）。
-
-- T11 ✅ 已完成（2026-10-14）：1+N 运行协议 + HANDOFF 退役 = [ADR-0032](decisions/0032-operating-protocol.md)；产物 = [operating-protocol](design/operating-protocol.md) + 本台账 + [handoff-era-archive](research/handoff-era-archive.md)；评审面三数 = 拍板决策点 12（执行包定案十二条）/ self-review findings 7（Required 1 = 计划内收官检查点；Nit 6——已修 4、留档上报 2）/ 维护者评审耗时未确认；收官 SHA = 本行随收官 commit 入库（`git log --oneline -- docs/backlog.md` 末条即得）。
 - T9 marketplace 格式设计 — **deferred**（2026-10-14 维护者裁定：无限期延后；重开条件 = 维护者明示）。
 
 ## 外部事项

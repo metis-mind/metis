@@ -65,7 +65,7 @@ Done = `just ci` green + self-review of the working diff.
 ## Documentation
 
 - `docs/decisions/` — ADRs, one decision per file `NNNN-title.md`; numbers never reused; the four-digit number sequence is the index (individual ADRs are not listed here). Once accepted the body is frozen — overturning means a new ADR superseding (mark the old one `superseded by ADR-NNNN`, never delete). Partial supersede (one clause/cell, not the whole ADR) follows the same rule: the new ADR names the exact clause it replaces, the old ADR's Status line records the partial supersede, body stays frozen. Reference by number, never restate rationale.
-- `docs/backlog.md` — the run-state ledger (Chinese, agent-maintained): task queue + open-issue register + spark register + dependency graph. Session start reads it right after this file; session close updates the task-block status line in the same commit (protocol: `docs/design/operating-protocol.md` §2).
+- `docs/backlog.md` — the run-state ledger (Chinese, agent-maintained): task queue + open-issue register + spark register + todo panorama graph. Session start reads it right after this file; session close updates the task-block status line in the same commit (protocol: `docs/design/operating-protocol.md` §2).
 - `docs/design/` — living design docs with a status header; confirmed decision points get promoted to ADRs; `archived` entries are retired from default reading (lifecycle doctrine: `docs/design/doc-lifecycle.md`):
   - `docs/design/fiber.md` — fiber runtime model (frozen, ADR-0010/0019/0023)
   - `docs/design/context-events.md` — context surface and event system (frozen, ADR-0011/0013–0017/0022)
