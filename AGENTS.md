@@ -8,7 +8,7 @@
 - Format / static checks: `just fmt` / `just lint` (rustfmt + dprint for markdown + actionlint for workflow YAML)
 - All tests: `just test`; single test: `cargo nextest run -p metis <name>`
 - Iterate with the narrowest loop first (`cargo check -p <crate>`, scoped nextest); finish with `just ci`
-- Snapshot updates: `just snapshot-review` (approve each diff by hand; never bulk-accept)
+- Snapshot updates: `just snapshot-review` (two-stage: state the expected change first, then approve each diff against it by hand; never bulk-accept — ADR-0031 doctrine 5)
 - New crate: `just new-crate <name>`
 - Dependency policy: `just deny`; docs build: `just doc`; agent-doc smoke check: `just agent-check`
 - Toolchain bump: `just toolchain-bump` (wrapped by the weekly toolchain-update workflow; bot PRs don't trigger CI — the in-job `just ci` is the gate)
@@ -41,7 +41,7 @@ Done = `just ci` green + self-review of the working diff.
 - NEVER add agent-attribution footers (`Co-Authored-By`, "Generated with …") to commits.
 - NEVER force-push or rewrite shared history unless the human explicitly asks.
 - NEVER commit `HANDOFF.md` — transient session-handoff artifact (gitignored).
-- ASK before touching: new third-party dependencies (see the `adding-dependencies` skill), any CI workflow files, hosting/branch-protection settings.
+- ASK before touching: new third-party dependencies (see the `adding-dependencies` skill), any file on the gate-surface list (`docs/design/testing-strategy.md` §4.2 — CI workflows, justfile, hook configs, `crates/xtask`, deny/dprint config, test-exemption surfaces), hosting/branch-protection settings.
 
 ## Style (the part lints can't enforce)
 
