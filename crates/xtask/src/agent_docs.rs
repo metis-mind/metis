@@ -7,6 +7,11 @@
 //!   tolerates git's text-file fallback on platforms without symlink support);
 //! - `AGENTS.md` exists, stays within the always-on line budget, and carries
 //!   its freshness note;
+//! - every `docs/design/*.md` and `docs/research/*.md` file plus
+//!   `docs/backlog.md` appears in AGENTS.md — the Documentation section is
+//!   the map an agent reads first, and a doc absent from it is an orphan no
+//!   session will find (docs/decisions is exempt: the number sequence is
+//!   the index);
 //! - `CLAUDE.md` is only a reference to AGENTS.md, never a second copy.
 
 use std::collections::HashMap;
@@ -61,6 +66,9 @@ pub fn run(args: &[String]) -> ExitCode {
     check_claude_skills_link(root, &mut failures);
     check_agents_md(root, &mut failures);
     check_claude_md(root, &mut failures);
+    if let Ok(agents_text) = std::fs::read_to_string(root.join("AGENTS.md")) {
+        check_doc_map_orphans(root, &agents_text, &mut failures);
+    }
 
     if failures.is_empty() {
         println!(
@@ -247,6 +255,42 @@ fn check_agents_md(root: &Path, failures: &mut Vec<String>) {
     }
 }
 
+/// Doc-map orphan check: the AGENTS.md Documentation section is the map an
+/// agent reads first; a committed doc absent from it is invisible in
+/// practice. Every `docs/design/*.md` and `docs/research/*.md` file plus
+/// `docs/backlog.md` must therefore appear as a relative path in AGENTS.md.
+/// (docs/decisions is exempt: the four-digit number sequence is the index.)
+fn check_doc_map_orphans(root: &Path, agents_text: &str, failures: &mut Vec<String>) {
+    let mut docs: Vec<String> = Vec::new();
+    for dir in ["docs/design", "docs/research"] {
+        let Ok(entries) = std::fs::read_dir(root.join(dir)) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "md") {
+                docs.push(format!("{dir}/{}", entry.file_name().to_string_lossy()));
+            }
+        }
+    }
+    if root.join("docs/backlog.md").is_file() {
+        docs.push("docs/backlog.md".to_string());
+    }
+    docs.sort();
+    for rel in find_doc_map_orphans(&docs, agents_text) {
+        failures.push(format!(
+            "{rel}: absent from AGENTS.md (doc-map orphan — every committed doc needs a map entry)"
+        ));
+    }
+}
+
+fn find_doc_map_orphans(docs: &[String], agents_text: &str) -> Vec<String> {
+    docs.iter()
+        .filter(|rel| !agents_text.contains(rel.as_str()))
+        .cloned()
+        .collect()
+}
+
 fn check_claude_md(root: &Path, failures: &mut Vec<String>) {
     let path = root.join("CLAUDE.md");
     let Ok(text) = std::fs::read_to_string(&path) else {
@@ -296,6 +340,22 @@ mod tests {
             split_frontmatter("---\nname: x\n").unwrap_err(),
             "frontmatter is not closed with ---"
         );
+    }
+
+    #[test]
+    fn doc_map_orphans_flags_only_unreferenced_docs() {
+        let docs = vec![
+            "docs/design/fiber.md".to_string(),
+            "docs/research/cordis-research.md".to_string(),
+            "docs/backlog.md".to_string(),
+        ];
+        let agents = "- `docs/design/fiber.md` — fiber model\n- `docs/backlog.md` — ledger\n";
+        assert_eq!(
+            find_doc_map_orphans(&docs, agents),
+            vec!["docs/research/cordis-research.md".to_string()]
+        );
+        let fully_mapped = "docs/design/fiber.md docs/research/cordis-research.md docs/backlog.md";
+        assert!(find_doc_map_orphans(&docs, fully_mapped).is_empty());
     }
 
     #[test]

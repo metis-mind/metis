@@ -16,8 +16,5 @@
 .vscode/
 *.swp
 
-# transient session-handoff artifact (see AGENTS.md "Documentation") — never commit
-/HANDOFF.md
-
 # throwaway spike crates (technical probes; results land in docs, code is discarded)
 /scratch/

@@ -1,6 +1,6 @@
 # 0030. 工程化阶段 2：workflows 恢复、远程 CI 定位、发布形态与评审方案
 
-- Status: accepted
+- Status: accepted（条款 4 常态面三件套之「HANDOFF 收工记录」件由 [ADR-0032](0032-operating-protocol.md) 局部取代（2026-10-14，supersede 批次 #3）= 「backlog 任务块状态行收尾」；议题拍板制与 `self-review` skill 两件原位）
 - Date: 2026-10-13
 
 ## Context

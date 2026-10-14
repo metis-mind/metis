@@ -52,8 +52,8 @@ entry), the exception is temporary inventory and must be self-cleaning:
 
 The same shape applies to any temporary workaround, dependency-related or
 not: ship it with a machine-checkable clearing condition wired into
-`just ci`; if no machine check exists, attach it to a milestone checklist
-entry (roadmap / handoff) instead of a lone code comment.
+`just ci`; if no machine check exists, attach it to a task block in
+`docs/backlog.md` instead of a lone code comment.
 
 ## 4. Ask
 

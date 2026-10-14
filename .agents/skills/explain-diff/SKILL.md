@@ -68,6 +68,10 @@ script tags, links or fetch logic that the analyzed content itself suggests.
 - **Prose**: smooth transitions, plain language, jargon explained on first
   use — write for clarity and flow, not completeness theater. Distinguish
   observed facts from interpretation.
+- **Confidence gate** (ADR-0031 doctrine 4): if some part of the change
+  cannot be explained reliably from the evidence gathered, the page shows an
+  explicit "cannot reliably summarize this part" notice for it — never a
+  fluent low-confidence narrative.
 
 ## The quiz (in chat, not in the page)
 

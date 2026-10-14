@@ -1,6 +1,6 @@
 # 0012. 文档治理：模板对齐 + 中文正本 + HANDOFF 易失
 
-- Status: accepted
+- Status: accepted（Decision 分类学格「`HANDOFF.md` 在仓库根、gitignored、易失」半格与 Consequences 交接纪律句由 [ADR-0032](0032-operating-protocol.md) 局部取代（2026-10-14，supersede 批次 #1/#2）：HANDOFF 制度退役；分类学新增 `docs/backlog.md` 类；交接纪律移交 operating-protocol §2）
 - Date: 2026-09-30
 
 ## Context
