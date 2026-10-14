@@ -3,6 +3,7 @@
 > 状态：✅ 已冻结 = [ADR-0031](../decisions/0031-testing-strategy.md)（2026-10-14）；本文档为 living doc。演进纪律（承接 ADR-0026/0027）：additive 增补（新层件、新触发器、参数实测钉入）落本文档修订注；破坏式变更走新 ADR supersede。
 > 定夺的紧凑重述与依据回溯见 ADR-0031。调研输入（均 point-in-time）：[评审经济学调研报告](../research/review-economics-research.md)（含入库补遗 A）+ [RQ6 仓内盘点](../research/review-economics-rq6-inventory.md) + 测试实践三简报（[oracle](../research/testing-practice-oracle.md) / [形式化与 DST](../research/testing-practice-formal-verification.md) / [并行测试工程](../research/testing-practice-parallel-engineering.md)）；入库验证 = [独立抽查记录](../research/review-economics-admission-check.md)（19/19），调研方自检存档 = [交叉验证](../research/review-economics-cross-verification.md)。
 > ADR-0030 正文引用的「testing-strategy §5 / §6」即本文档 §5 与 §6（章节号保持不动）。
+> Last reviewed: 2026-10
 
 ---
 

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-<!-- Freshness: Commands tracks the justfile; NEVER tracks the generated-file list; Skills tracks .agents/skills/; Documentation tracks the docs/ file inventory (orphan check in `just agent-check`); Style and Reporting are unenforced discipline (commit-messages excepted — commit-msg hook). Last reviewed: 2026-10 -->
+<!-- Freshness: Commands tracks the justfile; NEVER tracks the generated-file list; Skills tracks .agents/skills/; Documentation tracks the docs/ file inventory (map/link/freshness/archive checks in `just agent-check`); Style and Reporting are unenforced discipline (commit-messages excepted — commit-msg hook). Last reviewed: 2026-10 -->
 
 ## Commands (just is the only entry point; never bypass the quality gates)
 
@@ -10,7 +10,7 @@
 - Iterate with the narrowest loop first (`cargo check -p <crate>`, scoped nextest); finish with `just ci`
 - Snapshot updates: `just snapshot-review` (two-stage: state the expected change first, then approve each diff against it by hand; never bulk-accept — ADR-0031 doctrine 5)
 - New crate: `just new-crate <name>`
-- Dependency policy: `just deny`; docs build: `just doc`; agent-doc smoke check + doc-map orphan check: `just agent-check`
+- Dependency policy: `just deny`; docs build: `just doc`; agent-doc smoke check + docs/ integrity (map orphans/dangling, internal links, freshness, archive): `just agent-check`
 - Toolchain bump: `just toolchain-bump` (wrapped by the weekly toolchain-update workflow; bot PRs don't trigger CI — the in-job `just ci` is the gate)
 
 ## Environment
@@ -25,7 +25,7 @@
 - `self-review` — the pre-commit pass over your working diff: mechanical sweep yourself, judgment pass delegated to a fresh subagent (author blindness is structural)
 - `adding-dependencies` — required procedure before touching any third-party dependency
 - `rule-maintenance` — how to update AGENTS.md and skills when rules change or mistakes repeat
-- `doc-maintenance` — writing/reviewing docs: three-question filter, language policy, drift hunting
+- `doc-maintenance` — writing/reviewing docs: three-question filter, language policy, drift hunting, lifecycle patrol
 - `code-simplification` — behavior-preserving dedup/dead-code/abstraction cleanup, always as its own change
 - `chinese-doc-style` — docs/ Chinese prose style: fidelity-first rewriting, task modes, 「」/spacing/one-paragraph-per-line typography
 - `explain-diff` — maintainer-facing rich HTML walkthrough of a change + in-chat quiz, for reading large diffs
@@ -66,7 +66,7 @@ Done = `just ci` green + self-review of the working diff.
 
 - `docs/decisions/` — ADRs, one decision per file `NNNN-title.md`; numbers never reused; the four-digit number sequence is the index (individual ADRs are not listed here). Once accepted the body is frozen — overturning means a new ADR superseding (mark the old one `superseded by ADR-NNNN`, never delete). Partial supersede (one clause/cell, not the whole ADR) follows the same rule: the new ADR names the exact clause it replaces, the old ADR's Status line records the partial supersede, body stays frozen. Reference by number, never restate rationale.
 - `docs/backlog.md` — the run-state ledger (Chinese, agent-maintained): task queue + open-issue register + spark register + dependency graph. Session start reads it right after this file; session close updates the task-block status line in the same commit (protocol: `docs/design/operating-protocol.md` §2).
-- `docs/design/` — living design docs with a status header; confirmed decision points get promoted to ADRs:
+- `docs/design/` — living design docs with a status header; confirmed decision points get promoted to ADRs; `archived` entries are retired from default reading (lifecycle doctrine: `docs/design/doc-lifecycle.md`):
   - `docs/design/fiber.md` — fiber runtime model (frozen, ADR-0010/0019/0023)
   - `docs/design/context-events.md` — context surface and event system (frozen, ADR-0011/0013–0017/0022)
   - `docs/design/service-registry.md` — service registry and inject (frozen, ADR-0018)
@@ -77,7 +77,8 @@ Done = `just ci` green + self-review of the working diff.
   - `docs/design/journal.md` — journal: core operation/audit log (frozen, ADR-0029)
   - `docs/design/testing-strategy.md` — testing and quality strategy (frozen, ADR-0031)
   - `docs/design/operating-protocol.md` — 1+N operating protocol (frozen, ADR-0032)
-  - `docs/design/session-model.md` — session model (absorbed historical SSOT; kept for archaeology)
+  - `docs/design/doc-lifecycle.md` — doc lifecycle and anti-bloat (frozen, ADR-0033)
+  - `docs/design/session-model.md` — session model (archived 2026-10-14: absorbed into instance-model; skip unless archaeology)
 - `docs/research/` — point-in-time reports; corrections land as addenda, never rewrite conclusions:
   - `docs/research/cordis-research.md` — Cordis/Harness survey (project-direction input)
   - `docs/research/journal-replay-research.md` — journal/replay research (ADR-0029 input)

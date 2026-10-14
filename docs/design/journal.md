@@ -6,6 +6,7 @@
 > 调研依据：[journal-replay-research](../research/journal-replay-research.md)（point-in-time 报告；其 §7 映射的 replay 面经本任务方向重定后不再采用——见 D75）。
 > **方向重定（2026-10-12 用户拍板）**：核心**不立 replay 引擎**——崩溃恢复 = fresh-start（[ADR-0023](../decisions/0023-core-restart-semantics.md) 同路径），journal = 核心操作/审计日志，replay = 延期扩展位（重开触发器 = D92，2026-10-13 J6 收官）。§A6.7 草案的 replay 面（★ 族轴 / D7.2 生成型秘密加密 / 概念地基「重启 = 重放」「b = 立身之本」）随之推翻或消解，正式 supersede——**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #1/#2**（2026-10-13）；D7.3 格式纪律（JSONL + 格式版本字段 + Int 字符串惯例）不受影响，继续有效。
 > **范围重定（2026-10-12 用户拍板，D84）**：journal v1 = **写死族骨架**——能力使用族其余（http/fs/sql/timer/stream）、内部流量族、聚合摘要族与 `core.audit` 档位面整体不立；写死骨架（生命周期 + 错误现场 + 控制 + `process_*`）不动。动因：崩溃恢复不需要 journal（fresh-start 既定），v1 无逐调用审计的紧迫消费者，骨架实现成本 ≈ 零。被撤面全文留档 = 扩展位「可配审计层」预制方案（触发器 = 首个真实审计需求或安全事件）。
+> Last reviewed: 2026-10
 
 ## 0. 术语锚点
 

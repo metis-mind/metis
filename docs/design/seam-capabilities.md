@@ -3,6 +3,7 @@
 > 状态：living design doc——六块已冻结 = [ADR-0025](../decisions/0025-seam-capabilities.md)（2026-10-10）。本文档保持 living：细则澄清继续沉淀于此；语义变更走 ADR-0025 演进纪律（新增/毕业 = [ADR-0024](../decisions/0024-carrier-layering.md) §4 四判据；能力词汇 additive 增补同步 bump `abi_rev`，[ADR-0026](../decisions/0026-luau-abi.md)）。
 > 来源：ABI 议题地图 B1+B2 合并议题（"接缝能力集"）。前提：产品模型（core = 插件管理与组合机器 + syscall 层 VM 基底，不提供 agent 领域服务）；载体分层 = [ADR-0024](../decisions/0024-carrier-layering.md)（盒管模型）。实测依据：`../research/wasm-research.md` 补遗 1（mlua/wasmtime 双 spike）。
 > 相关 ADR：[0003](../decisions/0003-module-require-discipline.md) / [0007](../decisions/0007-yaml-config-subset.md) / [0008](../decisions/0008-creator-mode-self-modification.md) / [0011](../decisions/0011-actor-execution-model.md) / [0013](../decisions/0013-context-scope.md) / [0015](../decisions/0015-payload-value-model.md) / [0017](../decisions/0017-programmatic-spawn-deferred.md) / [0021](../decisions/0021-extension-language-runtime.md) / [0022](../decisions/0022-value-int64.md) / [0023](../decisions/0023-core-restart-semantics.md) / [0024](../decisions/0024-carrier-layering.md)
+> Last reviewed: 2026-10
 
 ---
 

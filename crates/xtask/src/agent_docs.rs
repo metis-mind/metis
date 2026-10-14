@@ -1,4 +1,6 @@
-//! Smoke check for agent-facing docs ("can the host even load it?"):
+//! Smoke check for agent-facing docs ("can the host even load it?") plus the
+//! structural anti-bloat gates of the doc lifecycle (ADR-0033; doctrine:
+//! docs/design/doc-lifecycle.md):
 //!
 //! - every `.agents/skills/<name>/SKILL.md` has frontmatter whose `name` equals
 //!   the directory name, whose `description` is 1..=1024 chars, whose keys stay
@@ -7,12 +9,22 @@
 //!   tolerates git's text-file fallback on platforms without symlink support);
 //! - `AGENTS.md` exists, stays within the always-on line budget, and carries
 //!   its freshness note;
-//! - every `docs/design/*.md` and `docs/research/*.md` file plus
-//!   `docs/backlog.md` appears in AGENTS.md — the Documentation section is
-//!   the map an agent reads first, and a doc absent from it is an orphan no
-//!   session will find (docs/decisions is exempt: the number sequence is
-//!   the index);
+//! - the AGENTS.md doc map has no orphans (every `docs/design/*.md` and
+//!   `docs/research/*.md` file plus `docs/backlog.md` appears in it —
+//!   docs/decisions is exempt: the number sequence is the index) and no reverse
+//!   danglers (every `docs/...` path the map mentions exists);
+//! - internal `.md` link targets in `docs/**` and `AGENTS.md` resolve (file
+//!   part only; anchors stay unchecked) — a file move that breaks an inbound
+//!   link fails here, which is the mechanical backbone of the in-place archive
+//!   model (frozen ADR bodies can never be re-pointed);
+//! - every active `docs/design/*.md` carries `Last reviewed: YYYY-MM` in its
+//!   header; archived docs (`📦 已归档`) are exempt, and the archive marker and
+//!   the map entry's `archived` annotation must agree in both directions;
 //! - `CLAUDE.md` is only a reference to AGENTS.md, never a second copy.
+//!
+//! All checks are structural. Whether a date was honestly bumped or a summary
+//! stayed faithful is a semantic judgment, and the machine makes no such
+//! promise — that residue belongs to the gardener patrol and human spot-checks.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -68,11 +80,15 @@ pub fn run(args: &[String]) -> ExitCode {
     check_claude_md(root, &mut failures);
     if let Ok(agents_text) = std::fs::read_to_string(root.join("AGENTS.md")) {
         check_doc_map_orphans(root, &agents_text, &mut failures);
+        check_doc_map_dangling(root, &agents_text, &mut failures);
+        check_archive_consistency(root, &agents_text, &mut failures);
     }
+    check_internal_links(root, &mut failures);
+    check_design_freshness(root, &mut failures);
 
     if failures.is_empty() {
         println!(
-            "agent-doc smoke check ok: {} skill(s), AGENTS.md, CLAUDE.md, .claude/skills",
+            "agent-doc smoke check ok: {} skill(s), AGENTS.md, CLAUDE.md, .claude/skills, docs/ integrity",
             skill_files.len()
         );
         return ExitCode::SUCCESS;
@@ -291,6 +307,252 @@ fn find_doc_map_orphans(docs: &[String], agents_text: &str) -> Vec<String> {
         .collect()
 }
 
+/// Reverse dangling check: a map entry pointing at a deleted doc is the same
+/// rot as an orphan, one direction over. Every `docs/...` path token mentioned
+/// in AGENTS.md must exist (file or directory).
+fn check_doc_map_dangling(root: &Path, agents_text: &str, failures: &mut Vec<String>) {
+    for token in extract_doc_paths(agents_text) {
+        if !root.join(&token).exists() {
+            failures.push(format!(
+                "AGENTS.md: {token} does not exist (reverse dangling — map entry points at a deleted doc)"
+            ));
+        }
+    }
+}
+
+/// Extract `docs/...` path tokens from prose: start at each `docs/` occurrence
+/// and extend over path characters only (CJK punctuation, backticks and ASCII
+/// delimiters all terminate the token).
+fn extract_doc_paths(text: &str) -> Vec<String> {
+    let mut tokens: Vec<String> = Vec::new();
+    let mut rest = text;
+    while let Some(idx) = rest.find("docs/") {
+        let after = &rest[idx..];
+        // The matched prefix "docs/" is itself five path characters, so the
+        // scan always advances and cannot loop.
+        let end = after
+            .find(|c: char| !(c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '/' | '-')))
+            .unwrap_or(after.len());
+        let token = after[..end].trim_end_matches(['/', '.']).to_string();
+        if token != "docs" && !tokens.contains(&token) {
+            tokens.push(token);
+        }
+        rest = &after[end..];
+    }
+    tokens.sort();
+    tokens
+}
+
+/// Internal link integrity: relative `.md` link targets in `docs/**.md` and
+/// AGENTS.md must resolve. Only the file part is checked — anchors are
+/// prose-level and stay unchecked (the machine promises structure, not
+/// semantics). External URLs, `mailto:` and pure anchors are out of scope.
+fn check_internal_links(root: &Path, failures: &mut Vec<String>) {
+    let mut files: Vec<PathBuf> = Vec::new();
+    collect_md_files(&root.join("docs"), &mut files);
+    files.push(root.join("AGENTS.md"));
+    files.sort();
+    for file in files {
+        let Ok(text) = std::fs::read_to_string(&file) else {
+            continue;
+        };
+        let rel = file
+            .strip_prefix(root)
+            .unwrap_or(&file)
+            .to_string_lossy()
+            .into_owned();
+        let parent = file.parent().unwrap_or(root);
+        for target in find_md_link_targets(&text) {
+            if !parent.join(&target).exists() {
+                failures.push(format!("{rel}: broken internal link -> {target}"));
+            }
+        }
+    }
+}
+
+fn collect_md_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_md_files(&path, out);
+        } else if path.extension().is_some_and(|ext| ext == "md") {
+            out.push(path);
+        }
+    }
+}
+
+/// Pull the file parts of relative markdown link targets: `](target)` where
+/// the target is not external (`scheme://`, `mailto:`), not a pure anchor
+/// (`#...`), and names a `.md` file. `#anchor` suffixes are stripped. Fenced
+/// code blocks are excluded — literal markup examples are not links. Targets
+/// carrying a title (`](path "title")`) are skipped rather than misparsed.
+fn find_md_link_targets(text: &str) -> Vec<String> {
+    let mut targets = Vec::new();
+    let mut in_fence = false;
+    for line in text.lines() {
+        if line.trim_start().starts_with("```") {
+            in_fence = !in_fence;
+            continue;
+        }
+        if in_fence {
+            continue;
+        }
+        let mut rest = line;
+        while let Some(idx) = rest.find("](") {
+            let after = &rest[idx + 2..];
+            let Some(close) = after.find(')') else {
+                break;
+            };
+            let raw = after[..close].trim();
+            rest = &after[close + 1..];
+            let raw = raw
+                .strip_prefix('<')
+                .and_then(|r| r.strip_suffix('>'))
+                .unwrap_or(raw);
+            if raw.starts_with('#') || raw.contains("://") || raw.starts_with("mailto:") {
+                continue;
+            }
+            // An empty file part (pure anchor) has no extension and is
+            // skipped by the same predicate.
+            let file_part = raw.split('#').next().unwrap_or("").trim();
+            let is_md_file = Path::new(file_part)
+                .extension()
+                .is_some_and(|ext| ext == "md");
+            if !is_md_file {
+                continue;
+            }
+            targets.push(file_part.to_string());
+        }
+    }
+    targets
+}
+
+/// Freshness metadata: every active `docs/design/*.md` carries
+/// `Last reviewed: YYYY-MM` in its header. Archived docs are exempt —
+/// archiving freezes the content. CI promises presence and format only;
+/// whether the date was honestly bumped on content changes is reconciled by
+/// the gardener patrol against git history.
+fn check_design_freshness(root: &Path, failures: &mut Vec<String>) {
+    let Ok(entries) = std::fs::read_dir(root.join("docs/design")) else {
+        return;
+    };
+    let mut files: Vec<PathBuf> = entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file() && path.extension().is_some_and(|ext| ext == "md"))
+        .collect();
+    files.sort();
+    for file in files {
+        let Ok(text) = std::fs::read_to_string(&file) else {
+            continue;
+        };
+        let header = header_of(&text);
+        if is_archived(header) {
+            continue;
+        }
+        let rel = file
+            .strip_prefix(root)
+            .unwrap_or(&file)
+            .to_string_lossy()
+            .into_owned();
+        if !has_freshness(header) {
+            failures.push(format!(
+                "{rel}: missing `Last reviewed: YYYY-MM` in the header (active design docs carry freshness metadata; bump on every content change)"
+            ));
+        }
+    }
+}
+
+/// Archive consistency, both directions: a doc whose header carries the
+/// archive marker must have an `archived` annotation on its AGENTS.md map
+/// line, and an `archived` map annotation must correspond to a marked doc.
+/// Applies to design/research; decisions use `superseded by` markers instead.
+/// A doc absent from the map is the orphan check's job, not this one's.
+fn check_archive_consistency(root: &Path, agents_text: &str, failures: &mut Vec<String>) {
+    for dir in ["docs/design", "docs/research"] {
+        let Ok(entries) = std::fs::read_dir(root.join(dir)) else {
+            continue;
+        };
+        let mut names: Vec<String> = entries
+            .flatten()
+            .filter_map(|entry| {
+                let path = entry.path();
+                (path.is_file() && path.extension().is_some_and(|ext| ext == "md"))
+                    .then(|| entry.file_name().to_string_lossy().into_owned())
+            })
+            .collect();
+        names.sort();
+        for name in names {
+            let rel = format!("{dir}/{name}");
+            let Ok(text) = std::fs::read_to_string(root.join(&rel)) else {
+                continue;
+            };
+            let doc_archived = is_archived(header_of(&text));
+            let Some(map_line) = find_map_entry(agents_text, &rel) else {
+                continue;
+            };
+            let map_archived = map_line.contains("archived");
+            match (doc_archived, map_archived) {
+                (true, false) => failures.push(format!(
+                    "{rel}: archived doc without an `archived` annotation on its AGENTS.md map line"
+                )),
+                (false, true) => failures.push(format!(
+                    "{rel}: AGENTS.md map line says `archived` but the doc header lacks the archive marker (📦 已归档)"
+                )),
+                _ => {}
+            }
+        }
+    }
+}
+
+/// The header is where status lines live: the first handful of lines.
+fn header_of(text: &str) -> &str {
+    let mut end = text.len();
+    for (count, (idx, _)) in text.match_indices('\n').enumerate() {
+        if count == 9 {
+            end = idx;
+            break;
+        }
+    }
+    &text[..end]
+}
+
+fn is_archived(header: &str) -> bool {
+    header.contains("📦 已归档")
+}
+
+/// `Last reviewed: ` followed by a plausible `YYYY-MM`.
+fn has_freshness(text: &str) -> bool {
+    const MARKER: &str = "Last reviewed: ";
+    let Some(idx) = text.find(MARKER) else {
+        return false;
+    };
+    let date: String = text[idx + MARKER.len()..].chars().take(7).collect();
+    let bytes = date.as_bytes();
+    bytes.len() == 7
+        && bytes[..4].iter().all(u8::is_ascii_digit)
+        && bytes[4] == b'-'
+        && (1..=12).contains(&date[5..7].parse::<u32>().unwrap_or(0))
+}
+
+/// The map entry for a doc is the line whose first backtick-quoted token is
+/// exactly the doc's path — prose mentions of the path elsewhere (e.g. in the
+/// section intro line) are not the entry.
+fn find_map_entry<'a>(agents_text: &'a str, rel: &str) -> Option<&'a str> {
+    agents_text.lines().find(|line| {
+        let Some(start) = line.find('`') else {
+            return false;
+        };
+        let Some(end) = line[start + 1..].find('`') else {
+            return false;
+        };
+        &line[start + 1..start + 1 + end] == rel
+    })
+}
+
 fn check_claude_md(root: &Path, failures: &mut Vec<String>) {
     let path = root.join("CLAUDE.md");
     let Ok(text) = std::fs::read_to_string(&path) else {
@@ -356,6 +618,61 @@ mod tests {
         );
         let fully_mapped = "docs/design/fiber.md docs/research/cordis-research.md docs/backlog.md";
         assert!(find_doc_map_orphans(&docs, fully_mapped).is_empty());
+    }
+
+    #[test]
+    fn doc_paths_extract_files_and_dirs_only() {
+        let text = "- `docs/design/fiber.md` — x\n- `docs/decisions/` — ADRs\n地图见 docs/backlog.md。重复 docs/design/fiber.md";
+        assert_eq!(
+            extract_doc_paths(text),
+            vec![
+                "docs/backlog.md".to_string(),
+                "docs/decisions".to_string(),
+                "docs/design/fiber.md".to_string(),
+            ]
+        );
+        // A bare `docs/` prefix never yields a token.
+        assert!(extract_doc_paths("住 docs/ 之下").is_empty());
+    }
+
+    #[test]
+    fn md_link_targets_skip_external_anchors_and_fences() {
+        let text = "见 [ADR](0012-docs-governance.md) 与 [节](fiber.md#s1) 与\n\
+                    [外链](https://example.com/x.md) 与 [纯锚](#s1) 与 [图](../assets/x.png)。\n\
+                    ```\n[示例](fake.md)\n```\n\
+                    [带标题](title.md \"题注\") 跳过";
+        assert_eq!(
+            find_md_link_targets(text),
+            vec![
+                "0012-docs-governance.md".to_string(),
+                "fiber.md".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn freshness_accepts_plausible_months_only() {
+        assert!(has_freshness("> 状态：living\n> Last reviewed: 2026-10\n"));
+        assert!(!has_freshness("> Last reviewed: 2026/10\n"));
+        assert!(!has_freshness("> Last reviewed: 2026-13\n"));
+        assert!(!has_freshness("> Last reviewed: 2026-1\n"));
+        assert!(!has_freshness("> 状态：living，无日期\n"));
+    }
+
+    #[test]
+    fn archived_marker_detected_in_header() {
+        assert!(is_archived("> 状态：📦 已归档（2026-10-14）\n"));
+        assert!(!is_archived("> 状态：living design doc\n"));
+    }
+
+    #[test]
+    fn map_entry_is_the_line_whose_first_backtick_token_is_the_path() {
+        let agents = "- `docs/design/` — intro mentioning `docs/design/fiber.md` in prose\n  - `docs/design/fiber.md` — fiber model (archived 2026-10-14)\n";
+        assert_eq!(
+            find_map_entry(agents, "docs/design/fiber.md"),
+            Some("  - `docs/design/fiber.md` — fiber model (archived 2026-10-14)")
+        );
+        assert_eq!(find_map_entry(agents, "docs/design/absent.md"), None);
     }
 
     #[test]

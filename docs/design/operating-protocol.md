@@ -2,6 +2,7 @@
 
 > 状态：✅ 冻结面 = [ADR-0032](../decisions/0032-operating-protocol.md)（2026-10-14）；本文档为 living doc（教义面，read-mostly）。演进纪律：additive 增补（实践澄清、检查单细化、新扩展位登记）落本文档修订注；破坏式变更（原则改写、流程废除、台账制度替换）走新 ADR supersede。
 > 运行状态不住本文档——活跃任务、阻塞链、火花一律住 [docs/backlog.md](../backlog.md)（状态面 SSOT，git 追踪）。
+> Last reviewed: 2026-10
 
 ## 1. 定位与原则
 

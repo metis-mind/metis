@@ -17,8 +17,8 @@
 
 ```mermaid
 graph TD
-    T11["T11 1+N 运行协议（✅ 2026-10-14）"] --> T10["T10 实现（阻塞：待 T12 收官）"]
-    T12["T12 文档防膨胀机制（未开始）"] --> T10
+    T11["T11 1+N 运行协议（✅ 2026-10-14）"] --> T10["T10 实现（未开始，门槛全备）"]
+    T12["T12 文档防膨胀机制（✅ 2026-10-14）"] --> T10
 ```
 
 ## 内部任务
@@ -27,9 +27,9 @@ graph TD
 
 ### T10 实现
 
-- 状态：**阻塞**（未开始；待 T12 收官）
-- 依赖：T11（✅ 2026-10-14 收官）、T12
-- 开工门槛：审计流程完备（✅ ADR-0031）+ 开发流程完备（✅ T11 收官 = ADR-0032 + operating-protocol）+ HANDOFF 迁移完毕（✅ 同 T11 收官 commit）+ T12 收官
+- 状态：**未开始**（阻塞解除 = T12 ✅ 2026-10-14 收官）
+- 依赖：T11（✅ 2026-10-14 收官）、T12（✅ 2026-10-14 收官 = [ADR-0033](decisions/0033-doc-lifecycle.md)）
+- 开工门槛：审计流程完备（✅ ADR-0031）+ 开发流程完备（✅ T11 收官 = ADR-0032 + operating-protocol）+ HANDOFF 迁移完毕（✅ 同 T11 收官 commit）+ T12 收官（✅ 2026-10-14）——**门槛全备，可开工**
 - 实现序：metis-value → metis-fiber-core → 事件系统（含 journal 拦截点）→ 服务注册表/inject → loader+配置 → Luau 绑定 → 安装事务
 - 各实现期清单 SSOT = ADR-0027 / ADR-0028 / ADR-0031 Consequences（另 ADR-0032 登记：worktree bootstrap 自动化）
 - 评审面三数：（开工后逐站记录）
@@ -43,6 +43,8 @@ graph TD
 - 评审面三数：（开工后记录）
 
 ### 收官与延后记录（单行）
+
+- T12 ✅ 已完成（2026-10-14）：文档防膨胀机制 = [ADR-0033](decisions/0033-doc-lifecycle.md) + [doc-lifecycle](design/doc-lifecycle.md)（living 教义面）；产物 = agent-check 四项结构检查（地图反向悬挂 / 内部链接 / freshness / 归档一致性）+ session-model 首个正式归档 + 现役 design docs `Last reviewed` 基线 + doc-maintenance skill 生命周期节；评审面三数 = 拍板决策点 7 / self-review findings 5（Nit/Optional 5——已修 1 = freshness 破折号测试钉；push back 3 = check 接线测试（既有模式，活仓注入实证）/ CONTRIBUTING 枚举（句域正确，全量枚举违反 SSOT）/ 头部窗口魔数（失败信息自足）；留决上报 1 = justfile 注释行）/ 维护者评审耗时未确认；火-2 随收官消费（引文与症状映射固化 = doc-lifecycle §1 + ADR-0033 Context，登记区条目删除）；收官 SHA = 本行随收官 commit 入库（`git log --oneline -- docs/backlog.md` 末条即得）。
 
 - T11 ✅ 已完成（2026-10-14）：1+N 运行协议 + HANDOFF 退役 = [ADR-0032](decisions/0032-operating-protocol.md)；产物 = [operating-protocol](design/operating-protocol.md) + 本台账 + [handoff-era-archive](research/handoff-era-archive.md)；评审面三数 = 拍板决策点 12（执行包定案十二条）/ self-review findings 7（Required 1 = 计划内收官检查点；Nit 6——已修 4、留档上报 2）/ 维护者评审耗时未确认；收官 SHA = 本行随收官 commit 入库（`git log --oneline -- docs/backlog.md` 末条即得）。
 - T9 marketplace 格式设计 — **deferred**（2026-10-14 维护者裁定：无限期延后；重开条件 = 维护者明示）。
@@ -65,5 +67,4 @@ graph TD
 
 机制 = AGENTS.md Style 节 spark-capture 规则：引文逐字登记不压缩；消费 = 内容升格固化进对应 docs/ 或代码，条目即从本区删除（去向处即 SSOT 不留痕，本台账 git 史保底）；未消费不静默消失；议题出示前回读本区。
 
-- 火-2（2026-10-14；已消费 = 调研 prompt v2；**未消费 = 任务 12**）：「我们的整个结构，落到文档的地方，不管是否是用户看的地方，我们都需要有一个机制来防止其膨胀。目前HANDOFF的膨胀就很严重，以及docs里面的文档的膨胀也很严重，里面有一些是重复逻辑的出现，有一些是没有记录价值信息的堆叠，以及一些我没有想到的问题。这里是文档维护的责任，也是我们在架构设计之初就应该考虑的问题，这应该也是调研的一部分」
 - 火-4（2026-10-14；消费点 = 任务系统工具化立项，未消费）：「先做临时方案吧，后面我们应该需要一个工具去做这个事情，而不是让并发的agent去读写这个内容。」；上下文锚 = 任务 11 改稿拍板回复（本台账定调）

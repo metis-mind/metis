@@ -3,6 +3,7 @@
 > 状态：✅ 五站全收官（S1–S5，D53–D74，2026-10-11～12），**已冻结 = [ADR-0028](../decisions/0028-instance-model.md)**（2026-10-12）。本文档保持 living：细则澄清、教学条与实现期登记继续沉淀于此；**语义变更走 ADR-0028 演进纪律**（ABI 面随 ADR-0026 additive → `abi_rev`；机制面破坏式 → 新 ADR supersede），不只走本文档修订注。
 > 来源：任务 5。前身 = [session-model](session-model.md)（种子稿，2026-10-11 标记已吸收）：本议题原立项为「session 模型与 preset 机制」，用户重构定调——session/persona 是 agent 领域概念，核心不该管理，应从上一层维度提供抽象机制。种子稿存活条款的逐条映射见 §S1.4。
 > 相关 ADR：[0027](../decisions/0027-config-format.md)（配置格式冻结）/ [0010](../decisions/0010-fiber-core.md)（fiber）/ [0013](../decisions/0013-context-scope.md)（Context 作用域）/ [0017](../decisions/0017-programmatic-spawn-deferred.md)（编程式 spawn 推迟）/ [0008](../decisions/0008-creator-mode-self-modification.md)（审批事务管线）/ [0023](../decisions/0023-core-restart-semantics.md)（核心重启语义）。
+> Last reviewed: 2026-10
 
 ---
 

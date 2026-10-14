@@ -3,6 +3,7 @@
 > 状态：living design doc——任务 4（配置格式设计）工作站。**已冻结 = [ADR-0027](../decisions/0027-config-format.md)**（2026-10-11：C1–C9 九章冻结 + 既有 ADR supersede 批次 14 条同批吸收）；保持 living：细则澄清与教学条继续沉淀，语义修订走 ADR-0027 演进纪律。
 > 来源：任务 4。前提文档：[luau-abi](luau-abi.md)（已冻结 = ADR-0026）、[seam-capabilities](seam-capabilities.md)（已冻结 = ADR-0025）、[session-model](session-model.md)（种子稿；2026-10-11 已吸收 → [instance-model](instance-model.md)，任务 5 = 实例模型）。
 > 相关 ADR：[0027](../decisions/0027-config-format.md)（冻结）/ [0002](../decisions/0002-config-as-pure-data.md) / [0004](../decisions/0004-plugin-forms.md) / [0006](../decisions/0006-config-schema-ssot.md) / [0007](../decisions/0007-yaml-config-subset.md) / [0008](../decisions/0008-creator-mode-self-modification.md) / [0023](../decisions/0023-core-restart-semantics.md)。
+> Last reviewed: 2026-10
 
 ---
 

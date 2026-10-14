@@ -2,6 +2,7 @@
 
 > 状态：核心已定（§8 四点 ✅ + §9 ✅ = [ADR-0019](../decisions/0019-crate-layout.md) + §10 ✅ = [ADR-0023](../decisions/0023-core-restart-semantics.md)）。
 > 2026-09-29 定稿；2026-10-02 §9 闭环（ADR-0019）；2026-10-03 §10 核心重启语义（ADR-0023）。机制调研依据：`docs/research/cordis-research.md`；决策登记：[ADR-0010](../decisions/0010-fiber-core.md)。
+> Last reviewed: 2026-10
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: doc-maintenance
-description: Use when writing, updating, or reviewing documentation — README, CONTRIBUTING, docs/, AGENTS.md prose. Encodes this repo's documentation discipline — the three-question filter for what prose is allowed to exist, the language policy (docs/ is Chinese-canonical per ADR-0012), same-change co-evolution with code, and drift hunting.
+description: Use when writing, updating, or reviewing documentation — README, CONTRIBUTING, docs/, AGENTS.md prose. Encodes this repo's documentation discipline — the three-question filter for what prose is allowed to exist, the language policy (docs/ is Chinese-canonical per ADR-0012), same-change co-evolution with code, drift hunting, and the doc lifecycle (archive-in-place, freshness dates, gardener patrol, compression ritual).
 ---
 
 # Documentation maintenance
@@ -44,6 +44,26 @@ translation drift is a bug — flag or fix it when noticed.
 Behavior, commands, flags, or config changed → the affected docs change in the
 **same change** (no internal PR flow — ADR-0020). A doc-only change is for rot fixes.
 Never promise documentation "in a follow-up".
+
+## Lifecycle (doctrine SSOT: `docs/design/doc-lifecycle.md`)
+
+- **Active ↔ archived, in place.** Archive = a status-header marker
+  `📦 已归档 (YYYY-MM-DD)` + reason + successor pointer, and the doc's
+  AGENTS.md map entry gains an `archived` annotation (default-skip). Never
+  move the file — frozen ADR bodies link to it and cannot be re-pointed, so
+  a move is a permanently broken link. Deletion needs maintainer approval
+  plus a no-inbound-links precheck (the link checker enforces it).
+- **Freshness**: active `docs/design/*.md` carry `Last reviewed: YYYY-MM` in
+  the status header; bump it on every content change. CI checks presence and
+  format only; the patrol reconciles dates against git history.
+- **Gardener patrol** runs at every task closeout (five-item checklist in the
+  design doc): freshness vs git, redundancy candidate pairs, zero-maintenance
+  list, `just agent-check` green, lingering TODOs. The only two human
+  decision points are deletion approval and compression spot-checks.
+- **Compression ritual**: preserve-original-first (delete > move > merge >
+  rewrite), the compressor never self-certifies (fresh-eyes pass + maintainer
+  spot-check), originals stay recoverable via git history. Compression is
+  always its own change — never mixed with feature work.
 
 ## Drift hunting (run when asked to "check the docs")
 

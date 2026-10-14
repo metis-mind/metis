@@ -2,6 +2,7 @@
 
 > 状态：S1–S6 ✅ 全部确认（2026-10-02），固化为 [ADR-0018](../decisions/0018-service-registry.md)。
 > 2026-10-02 讨论。依据：[ADR-0001](../decisions/0001-inject-runtime-checks.md)（inject 运行时检查）/ [0003](../decisions/0003-module-require-discipline.md)（require 纪律）/ [0010](../decisions/0010-fiber-core.md)（fiber 核心）/ [0011](../decisions/0011-actor-execution-model.md)（actor 模型）/ [0013](../decisions/0013-context-scope.md) / [0014](../decisions/0014-dispatch-semantics.md) / [0015](../decisions/0015-payload-value-model.md)；调研：`../research/cordis-research.md`（Capability Seam 三角、Service 实现细节）。
+> Last reviewed: 2026-10
 
 ---
 
