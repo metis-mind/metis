@@ -63,7 +63,7 @@ graph TD
 
 ### T10 实现
 
-- 状态：**进行中**（T10.0a 开工 = 2026-10-15；已完成 = 站表立 + 全景图重生成 + T10.0 预检 + Q1–Q9 拍板固化（全按推荐案，2026-10-15）；下一步 = T10.0a 实现批（序：gate-guard 机器闸 → machete → llvm-cov → cov-floor → testing-ledger/遥测 → insta 语料孤儿闸）；未拍板项 = Q10 duplicate 警告处置 / Q11 警告上报纪律（锚点见本块末临时行））
+- 状态：**进行中**（T10.0a 开工 = 2026-10-15；已完成 = 站表立 + 全景图重生成 + T10.0 预检 + Q1–Q9 拍板固化（全按推荐案，2026-10-15）；下一步 = T10.0a 实现批（序：gate-guard 机器闸 → machete → llvm-cov → cov-floor → testing-ledger/遥测 → insta 语料孤儿闸）；未拍板项 = Q10 duplicate 警告处置（锚点见本块末临时行））
 - 依赖：T11（✅ 2026-10-14）/ T12（✅ 2026-10-14 = [ADR-0033](decisions/0033-doc-lifecycle.md)）——开工门槛全备
 - 站表（依赖列 = 硬依赖，即不可提前的并行面边界；清单锚点指向各 doc 登记原位不转抄；除 T10.0a/b 外每站自带 F 类写实清单（D8）；内核 crate 站自带 D11 测试来源声明 + llvm-cov 地板线（首钉 = T10.1））：
   - T10.0a 质量基建·快轨与机器闸——门禁面（justfile / `.pre-commit-config.yaml` / rust-toolchain.toml / crates/xtask）；依赖：无（非硬阻塞，后续站消费其门禁件故推荐最先）；清单 = [ADR-0031](decisions/0031-testing-strategy.md) Consequences 实现期清单（指针不转抄）；拍板形态（2026-10-15，Q2–Q5/Q7/Q8）= xtask `gate-guard`（commit trailer 机器闸；§4.2 清单 xtask 硬编码 + 注释指回散文 SSOT）+ AGENTS.md NEVER 增补 / cargo-machete 进 `just lint` / cargo-llvm-cov + rust-toolchain `llvm-tools-preview` 组件 / xtask `cov-floor` + `.config` 空地板文件（登记进 §4.2 修订注）/ `docs/testing-ledger.md` + xtask `test-telemetry`（增长率历史不做）/ `insta --unreferenced=auto` 进 `just ci`；HARD 人审门，依赖件逐项走 adding-dependencies。
@@ -83,7 +83,7 @@ graph TD
 - 范围外（触发器未满足）：metis-codec TLV 位分配（luau-abi §A6.6 D6.2）与盒 trap 句柄处置（§A5.3 D14.4）——首盒发布前冻结即可；registry 扩展位 5 处 / context-events §0.5 优化位与 §3 Bytes 扩展位 / WIT 生成器（盒面）/ `metis install` 工具化与分发机制（长回）。
 - 开窗前置：worktree bootstrap 自动化（[ADR-0032](decisions/0032-operating-protocol.md) Consequences 登记，届时再建）。
 - 评审面三数：拍板 15（2026-10-15 拆分批 Q1–Q6 + T10.0 批 Q1–Q9 全按推荐案）/ self-review findings 7（站表判断 pass：2 Critical + 5 Required，随本块修复）/ 耗时 —（开工后逐站记录）
-- 未拍板锚点（临时行：拍板后固化进对应位置、本行即删）：Q10 cargo-deny duplicate 警告处置（荐 = deny.toml `[bans].skip` 逐条带理由注释 + 失效 fuse 实测钉入，达成绿即静音基线；deny.toml 属 §4.2 门禁面，本项即其 ASK）/ Q11 Reporting 增补「绿但带警告必上报」（荐 = AGENTS.md Reporting 节增补一条）
+- 未拍板锚点（临时行：拍板后固化进对应位置、本行即删）：Q10 cargo-deny duplicate 警告处置（荐 = deny.toml `[bans].skip` 逐条带理由注释 + 失效 fuse 实测钉入，达成绿即静音基线；deny.toml 属 §4.2 门禁面，本项即其 ASK）
 
 ### 收官与延后记录（单行）
 

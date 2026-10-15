@@ -59,6 +59,7 @@ Done = `just ci` green + self-review of the working diff.
 
 - Fixed status words only: 已完成 / 部分完成 / 未开始 / 进行中 / 已验证 / 未验证 / 失败 / 跳过 / 阻塞 / 未确认 — and every status names its scope (已完成 of what, 已验证 over what). Work status ≠ verification status — 已完成 never implies 已验证.
 - Verification claims carry four parts: status, method, result, scope. A check not run is 未验证; a claim without evidence is 未确认 plus how to confirm. Reading a source never counts as running verification.
+- Green-with-warnings is reportable: a gate run (`just ci` & co.) that passes with warning lines on stderr is reported with the warning list attached — an unmentioned standing warning is the noise floor the next real warning drowns in.
 - Evidence is locatable: `path:line`, commit SHA, full command.
 - Decision points go to numbered options, the recommended one first, marked 「（推荐）」.
 - Verification claims prefer agent-unforgeable anchors (CI run URL, commit SHA) over self-reported results.
