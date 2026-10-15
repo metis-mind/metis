@@ -91,9 +91,9 @@ graph TD
 
 ### T13 wasm-first 转向
 
-- 状态：**进行中**（已完成 = 方向拍板消化 + ADR-0034 批次（0021/0026 整篇 supersede、0024 局部、luau-abi 归档、wit-abi 开章、AGENTS.md 清单）+ S1 spike **PASS**（证据 = wasm-research 补遗 6）——W1 风险解除为可绕行摩擦项；**本批变更提交中**（授权 = 2026-10-15）；下一步 = 见下方剩余工作注册清单；未拍板项 = 站级重规划细节 / SDK 形态 / 构建管线方案）
+- 状态：**进行中**（已完成 = 方向拍板消化 + ADR-0034 批次（0021/0026 整篇 supersede、0024 局部、luau-abi 归档、wit-abi 开章、AGENTS.md 清单）+ S1 spike **PASS**（证据 = wasm-research 补遗 6）——W1 风险解除为可绕行摩擦项；**本批变更已提交**（2026-10-15 = `f5bdc7c`）；下一步 = 见下方剩余工作注册清单；未拍板项 = 站级重规划细节 / SDK 形态 / 构建管线方案）
 - 剩余工作注册（每项 = 新 session 仅凭本台账即可续作的最小单元；开工输入列 = 续作锚点）：
-  - T13-a 提交转向批：内容 = 本批 docs 变更（ADR-0034 + 三个 supersede 状态行 + luau-abi 归档 + wit-abi 开章 + wasm-research 补遗 5/6 + 本台账）；前置 = `just ci`（已绿 2026-10-15）+ self-review（判断 pass = 4 Required，已随批修复）；提交授权已批（2026-10-15），本行随提交收官。
+  - T13-a 提交转向批 — **已完成**（2026-10-15 = `f5bdc7c`；just ci 绿 + self-review 判断 pass 4 Required 修复后提交；钩子全过 = fmt/lint/secret scan/commit-msg/gate-guard）。
   - T13-b T10 站表修订批：T10.3/9/10/11 修订 + 新增 SDK/构建管线站 + 空壳 crate `crates/metis-luau` 处置（删除或改向 metis-component）；依赖 = T13-a；开工输入 = [ADR-0034](decisions/0034-wasm-first-carrier.md) §8 + 补遗 6。
   - T13-c wit-abi W4 章（async 与交错语义）：依赖 = T13-a；开工输入 = 补遗 6（S1 矩阵 + papercuts）+ [luau-abi](design/luau-abi.md) §A4（语义平移源，已归档仅考古读）。
   - T13-d SDK 形态议题（metis-plugin crate 宏形状 / 作者面）：依赖 = 无硬依赖（可与 b/c 并行）；开工输入 = ADR-0034 §4 + 先例清单（proxy-wasm SDK / zed_extension_api / Spin / Extism PDK 宏藏 ABI 模式）。
