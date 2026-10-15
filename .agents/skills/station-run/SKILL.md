@@ -13,7 +13,9 @@ and never restates them: station content = the anchored design docs; test
 mechanisms = `docs/design/testing-strategy.md`; process = operating-protocol.
 
 One station at a time in the default 1+1 mode; parallel stations require a
-concurrency window (operating-protocol §3 + appendix A).
+concurrency window (operating-protocol §3 + appendix A). Closeout ends the
+station — it never starts the next one: the maintainer paces station
+starts, and a ✅ row is a state, not a launch signal.
 
 ## 1. Pre-flight (before writing code)
 
