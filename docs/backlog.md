@@ -60,7 +60,7 @@ graph TD
 
 ### T10 实现
 
-- 状态：**进行中**（拆分议题批拍板 = 2026-10-15，Q1–Q6 全按推荐；已完成 = 站表立 + 全景图重生成；下一步 = T10.0 门禁面 ASK 批出示；未拍板项 = T10.10 拆分出 T10.11 能力面，待追认）
+- 状态：**进行中**（拆分议题批拍板 = 2026-10-15，Q1–Q6 全按推荐 + T10.11 拆分追认 ✅；已完成 = 站表立 + 全景图重生成；下一步 = T10.0 门禁面 ASK 批出示；未拍板项 = 无）
 - 依赖：T11（✅ 2026-10-14）/ T12（✅ 2026-10-14 = [ADR-0033](decisions/0033-doc-lifecycle.md)）——开工门槛全备
 - 站表（依赖列 = 硬依赖，即不可提前的并行面边界；清单锚点指向各 doc 登记原位不转抄；除 T10.0 外每站自带 F 类写实清单 + D11 测试来源声明 + llvm-cov 地板线（T10.1 首站钉数值））：
   - T10.0 质量基建前置批——门禁面（justfile / `.pre-commit-config.yaml` / `.github/workflows/`）；依赖：无（非硬阻塞，后续站消费其门禁件故推荐最先）；清单 = [ADR-0031](decisions/0031-testing-strategy.md) Consequences 实现期清单（指针不转抄）；HARD 人审门，依赖件逐项走 adding-dependencies。
@@ -74,7 +74,7 @@ graph TD
   - T10.8 配置读写管线——`crates/metis-loader` + runtime 胶水；依赖：T10.3；锚 = config-format.md C1–C3/C5/C6/C8 各章联动登记（D29 脚手架两件 / D36 读管线 / D39 原子写与串行队列 / D40 行块补丁器 / D47 secrets 内存 map 与两分 / C8 core 节容器校验）+ instance-model.md D67（实例配置合成器）。
   - T10.9 diff/reload + 部署索引——`crates/metis-loader`；依赖：T10.8；锚 = config-format.md C4/C7/C9 联动登记（D41 diff 器 / D42 重入与结构相等 / D43 检测半 / D34 部署索引扫描含残迹 / D52 analyze 判环 / 显式 reload 命令形态）+ luau-abi §A8.5（部署契约索引）/ §A9.1 D24（部署索引）/ §A10 登记表（AST 选型 D28.2 / luau-lsp 钉版 / 四生成器减 WIT / abi_rev 比较 D27.2）+ instance-model.md S2.6（fleet 校验 D56/D60）；**收窄 = 静态/纯算法面，生效动作执行（重挂载 / 级联重启用 / 卸载生效）划出 = T10.7 启用管线与 T10.12 汇合**。
   - T10.10 metis-luau 转换层——`crates/metis-luau`；依赖：T10.1；锚 = luau-abi §A3.11（mlua 无条件安装件处置）/ §A4.6 表（coroutine shim 的 mlua resume/yield 链 spike + 开销实测 D9.2 / shim + SENTINEL 环境准备）/ §A6.1（push_int64_exact）/ §A6.8 表 + seam-capabilities.md §1.4（环境准备同批）/ §1.6（数字格式化与 table 遍历序断言）/ §3.3（内存限额数值 + 单 VM 基线实测）/ §6.3；spike 先行。
-  - T10.11 能力面（**拆分处置，待追认**）——`crates/metis-runtime` 能力实现 + metis-luau ctx 暴露；依赖：T10.4 / T10.5 / T10.10；锚 = seam-capabilities.md（ADR-0025 机制本体：fs/http/sqlite/timer/process）+ §2.1（有界微基准）+ luau-abi §A3.6–§A3.10（能力预算数值 + TOCTOU 硬化）/ §A6.4 D4.3（UTF-8 校验）/ §A6.5 D5.4/D5.5（流式句柄族 + 宿主缓冲预算）+ journal 能力使用族 / VM 族拦截（自 T10.6 划入，挂载位 = ctx 方法）。
+  - T10.11 能力面——`crates/metis-runtime` 能力实现 + metis-luau ctx 暴露；依赖：T10.4 / T10.5 / T10.10；锚 = seam-capabilities.md（ADR-0025 机制本体：fs/http/sqlite/timer/process）+ §2.1（有界微基准）+ luau-abi §A3.6–§A3.10（能力预算数值 + TOCTOU 硬化）/ §A6.4 D4.3（UTF-8 校验）/ §A6.5 D5.4/D5.5（流式句柄族 + 宿主缓冲预算）+ journal 能力使用族 / VM 族拦截（自 T10.6 划入，挂载位 = ctx 方法）。
   - T10.12 安装事务——`crates/metis-loader` + runtime 协调；依赖：T10.7 / T10.8 / T10.9 / T10.10；锚 = ADR-0008（审批门 v1 接口预留不实现）+ luau-abi §A4.5 D11.5（cordis 事务式重载纪律）+ config-format.md C7（D48/D49 卸载两档）+ testing-strategy.md §3.F（F 类基建落地，failpoint 选型走 adding-dependencies）+ D6 热更件。
 - 范围外（触发器未满足）：metis-codec TLV 位分配（luau-abi §A6.6 D6.2）与盒 trap 句柄处置（§A5.3 D14.4）——首盒发布前冻结即可；registry 扩展位 5 处 / context-events §0.5 优化位与 §3 Bytes 扩展位 / WIT 生成器（盒面）/ `metis install` 工具化与分发机制（长回）。
 - 开窗前置：worktree bootstrap 自动化（[ADR-0032](decisions/0032-operating-protocol.md) Consequences 登记，届时再建）。
