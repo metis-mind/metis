@@ -34,6 +34,7 @@ graph TD
     T10_10["T10.10 luau 转换层（未开始）"]
     T10_11["T10.11 能力面（未开始）"]
     T10_12["T10.12 安装事务（未开始）"]
+    T13["T13 wasm-first 转向（未开始）"]
     S4["火-4 台账工具化（未消费；消费点 = 任务系统工具化立项）"]
     S5["火-5 命令输出瘦身（未消费；消费点 = 命令输出瘦身方案立项）"]
     T10_0a --> T10_0b
@@ -55,6 +56,10 @@ graph TD
     T10_7 --> T10_12
     T10_9 --> T10_12
     T10_10 --> T10_12
+    T13 --> T10_3
+    T13 --> T10_9
+    T13 --> T10_10
+    T13 --> T10_11
 ```
 
 ## 内部任务
@@ -63,7 +68,7 @@ graph TD
 
 ### T10 实现
 
-- 状态：**进行中**（T10.0a 开工 = 2026-10-15；已完成 = 站表立 + 全景图重生成 + T10.0 预检 + Q1–Q9 拍板固化 + Q10/Q11 拍板并落地（全按推荐案，2026-10-15）；下一步 = T10.0a 实现批（序：gate-guard 机器闸 → machete → llvm-cov → cov-floor → testing-ledger/遥测 → insta 语料孤儿闸）；未拍板项 = 无）
+- 状态：**进行中**（T10.0a 实现批落地完成 = 2026-10-15，待验收；已完成 = Q1–Q11 全部拍板固化 + 0a 六件（gate-guard 机器闸 / machete 进 lint / llvm-cov 工具链 / cov-floor 空地板闸 / testing-ledger + test-telemetry / insta 语料孤儿闸）+ Q10 静音基线 + Q11 警告上报纪律；下一步 = 维护者验收 0a 后开工 T10.0b（`just deep` recipe 实装）；未拍板项 = T10.0a 验收包（含 1 个决策点：flake.nix 是否入 §4.2））
 - 依赖：T11（✅ 2026-10-14）/ T12（✅ 2026-10-14 = [ADR-0033](decisions/0033-doc-lifecycle.md)）——开工门槛全备
 - 站表（依赖列 = 硬依赖，即不可提前的并行面边界；清单锚点指向各 doc 登记原位不转抄；除 T10.0a/b 外每站自带 F 类写实清单（D8）；内核 crate 站自带 D11 测试来源声明 + llvm-cov 地板线（首钉 = T10.1））：
   - T10.0a 质量基建·快轨与机器闸——门禁面（justfile / `.pre-commit-config.yaml` / rust-toolchain.toml / crates/xtask）；依赖：无（非硬阻塞，后续站消费其门禁件故推荐最先）；清单 = [ADR-0031](decisions/0031-testing-strategy.md) Consequences 实现期清单（指针不转抄）；拍板形态（2026-10-15，Q2–Q5/Q7/Q8）= xtask `gate-guard`（commit trailer 机器闸；§4.2 清单 xtask 硬编码 + 注释指回散文 SSOT）+ AGENTS.md NEVER 增补 / cargo-machete 进 `just lint` / cargo-llvm-cov + rust-toolchain `llvm-tools-preview` 组件 / xtask `cov-floor` + `.config` 空地板文件（登记进 §4.2 修订注）/ `docs/testing-ledger.md` + xtask `test-telemetry`（增长率历史不做）/ `insta --unreferenced=auto` 进 `just ci`；追加（2026-10-15 Q10 拍板）= deny.toml duplicate skip 静音基线 + `-D unmatched-skip` fuse（随批落地，非 ADR-0031 原清单项）；HARD 人审门，依赖件逐项走 adding-dependencies。
@@ -82,7 +87,15 @@ graph TD
   - T10.12 安装事务——`crates/metis-loader` + runtime 协调；依赖：T10.7 / T10.8 / T10.9 / T10.10；锚 = ADR-0008（审批门 v1 接口预留不实现）+ luau-abi §A4.5 D11.5（cordis 事务式重载纪律）+ config-format.md C7（D48/D49 卸载两档）+ testing-strategy.md §3.F（F 类基建落地，failpoint 选型走 adding-dependencies）+ D6 热更件。
 - 范围外（触发器未满足）：metis-codec TLV 位分配（luau-abi §A6.6 D6.2）与盒 trap 句柄处置（§A5.3 D14.4）——首盒发布前冻结即可；registry 扩展位 5 处 / context-events §0.5 优化位与 §3 Bytes 扩展位 / WIT 生成器（盒面）/ `metis install` 工具化与分发机制（长回）。
 - 开窗前置：worktree bootstrap 自动化（[ADR-0032](decisions/0032-operating-protocol.md) Consequences 登记，届时再建）。
-- 评审面三数：拍板 17（2026-10-15 拆分批 Q1–Q6 + T10.0 批 Q1–Q9 + Q10/Q11，全按推荐案）/ self-review findings 11（站表 pass 7 = 2 Critical + 5 Required 已随块修复；本会话 4 笔 commit 各 1 Required 随笔修复）/ 耗时 —（开工后逐站记录）
+- 评审面三数：拍板 17（2026-10-15 拆分批 Q1–Q6 + T10.0 批 Q1–Q9 + Q10/Q11，全按推荐案）/ self-review findings 21（站表 pass 7 已随块修复；0a 批 8 笔 commit 判断 pass 共产出 14 Required 随笔修复；llvm-cov / insta 两笔判断 pass 漏跑、事后追认 pass = clean，流程漏记一条在案）/ 耗时 —（收官验收后记录）
+- **2026-10-15 方向变更注**：wasm-first 转向拍板（= T13，维护者对话）——T10.3 / T10.9 / T10.10 / T10.11 的 Luau 锚点失效，待 T13 重规划后修订；T10.0a/b 与 T10.1/2/4/5/6/7/8/12 的语言无关面继续有效，T10.0a 实现批不受阻塞。
+
+### T13 wasm-first 转向
+
+- 状态：**未开始**（方向拍板 = 2026-10-15 维护者对话；下一步 = 转向 ADR 批次起草 + 开工预检；未拍板项 = 站级重规划细节 / SDK 形态 / 构建管线方案）
+- 维护者拍板约束（2026-10-15 原话，verbatim 留存至 ADR 批次消费）：「我们应该全面转向使用 wasm，不再考虑使用lua的任何形式了」；「wasi+wit，这个是非常恶心的地方，我们开发的时候需要将其包起来，做成sdk提供给用户，让用户完全不知道wasi和wit，使用对应语言的软件包开发即可」；「目前似乎只在rust上有完美体验……我们可以优先支持rust，其他语言可以后续再陆续支持」；「使用其他语言之后，就无法实现即写即用了，我们需要想一个优雅的工程方案来让这个过程不用太麻烦，更优雅」
+- 范围：ADR-0021 整篇 supersede + ADR-0024 局部（盒管模型收敛为单层组件 + 内建件 + 外部服务 + T2 例外）+ ADR-0026 整篇 supersede（luau-abi.md 归档 archived，doc-lifecycle 纪律）+ WIT ABI 重设计（A 系列语义平移，A4 挂起/交错重做 = 最高风险章）+ T10 站表重规划（T10.3/9/10/11 修订 + 新增 SDK/构建管线站）+ S1 spike（guest async 工效学，按补遗 5 §5.3 修订为「工效学验证」）
+- 证据基线：[wasm-research 补遗 5](research/wasm-research.md)（wit-bindgen 0.63 async 正式特性 / wasip3 0.9.0+wasi-0.3.0 / wasip3 target Tier 3 入树 / 零拷贝语义四层修正 / Extism 判决 = 参照非选项）；ADR-0008（Creator 模式）前提削弱，审批门 v1 接口预留（T10.12 在案）不受影响，Creator 直写通道关闭须在新 ADR 明示
 
 ### 收官与延后记录（单行）
 
