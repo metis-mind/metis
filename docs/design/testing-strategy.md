@@ -59,7 +59,7 @@ crate 级显式声明两种测试来源：**人写/审测试**（规格属性强
 - **快轨 `just ci`**（per-commit 本地必跑 + 远程矩阵同一套，现状不动）：L0 全量（含任务 10 起伴随实现站的 arch-test）+ L1/L2 有界配置（proptest 默认 case 数 + `proptest-regressions/` 固化 seed 必重放）+ L3 已有 corpus 回归。
 - **慢轨 `just deep`**（本地按需 + 远程周跑）：长程 proptest / fuzz 定时冒烟 / sanitizer 按需 / cargo-mutants / Kani 全量 proof / llvm-cov 报告 + 内核地板线校验。慢轨失败产物 = issue（带失败指纹：测试名 + 首次失败 commit + 复现命令），不阻塞 commit。
 - 三条流程纪律：① **新门禁件观察期**——任何新检查先以「只记录不阻塞」身份跑若干周，flaky 率达标再转硬门禁；② **flaky 台账先行**——快轨尽早产出 flaky 率遥测（哪条测试、跨 run 翻转率），flaky 失控 = 人与 agent 一起学会无视红；③ **merge queue 触发器**——同一工作日出现 ≥2 个并行 agent 工作流推 main 时，合并面必须引入「测组合」机制（merge queue 或等价物），两两组合的正确性无法由任何单 agent 自证。
-- 创建时点：`just deep` recipe 与远程周跑 workflow 随第一个慢轨件（cargo-mutants 周跑）落地时创建；本定稿只立架构不立空 recipe（ADR-0031 Consequences 登记）。（2026-10-15 修订注：T10.0 拍板 Q1 提前 recipe 创建——首批内容 = llvm-cov 报告 + 膨胀遥测件，非空 recipe；远程周跑 workflow 仍随 mutants 周跑落地 = T10.2。）
+- 创建时点：`just deep` recipe 与远程周跑 workflow 随第一个慢轨件（cargo-mutants 周跑）落地时创建；本定稿只立架构不立空 recipe（ADR-0031 Consequences 登记）。（2026-10-15 修订注：T10.0 拍板 Q1 提前 recipe 创建——首批内容 = llvm-cov 报告 + 膨胀遥测件，非空 recipe；远程周跑 workflow 仍随 mutants 周跑落地 = T10.2。同日 Q2：内核地板线校验落快轨 = `just cov-floor`（空地板文件起步，零成本），慢轨只载 llvm-cov 报告。）
 
 ## 3. 检查/纠错工具图谱
 
@@ -148,6 +148,7 @@ flaky 三件套：
 
 - `.github/workflows/`（全部）、`.github/dependabot.yml`
 - `justfile`、`rust-toolchain.toml`、`.pre-commit-config.yaml`、`deny.toml`、`dprint.json`
+- `.config/cov-floor.toml`（内核覆盖率地板值；2026-10-15 修订注登记）
 - `crates/xtask/`（check-commit / pr_guard / agent_docs 等门禁实现）
 - 测试套件的豁免面：`#[mutants::skip]` 清单、insta 快照的批量接受、proptest 回归文件的删除
 - hosting 设置（ruleset / 合并策略）——走 GitHub 设置面，ASK 条款已覆盖

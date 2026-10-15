@@ -57,6 +57,10 @@ deny:
 snapshot-review:
     cargo insta review
 
+# Kernel-crate line-coverage floors (values: .config/cov-floor.toml — gate surface)
+cov-floor:
+    cargo run -q -p xtask -- cov-floor
+
 # Smoke check for agent-facing docs plus the structural docs/ integrity gates
 # of the doc lifecycle (ADR-0033): doc map, internal links, freshness, archive
 # consistency. Check semantics SSOT = the crates/xtask agent_docs module doc.
@@ -77,7 +81,7 @@ pr-guard pr="":
 
 # The local full quality gate ≡ CI (.github/workflows/ci.yml runs the same
 # recipes); run before committing
-ci: lint test doc deny agent-check
+ci: lint test doc deny agent-check cov-floor
     @echo "just ci: all green ✅"
 
 # Add an internal crate (unpublished by default; rules in CONTRIBUTING.md "Adding a crate")

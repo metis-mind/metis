@@ -31,6 +31,7 @@ const GATE_PATHS: &[&str] = &[
     ".pre-commit-config.yaml",
     "deny.toml",
     "dprint.json",
+    ".config/cov-floor.toml",
     "crates/xtask/",
 ];
 

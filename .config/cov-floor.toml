@@ -1,0 +1,6 @@
+# Kernel-crate line-coverage floors (testing-strategy D3 / §3.C). Checked by
+# `xtask cov-floor` in `just ci`; empty until the first kernel station pins
+# measured values at closeout. Ratchet: values only rise. Gate surface
+# (registered in testing-strategy §4.2) — changes need the Gate-Surface:
+# trailer. Format: `crate-name = percent` lines; blanks and `#` comments
+# (whole-line or inline) ok.

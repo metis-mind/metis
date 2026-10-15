@@ -10,6 +10,7 @@ use std::process::ExitCode;
 mod agent_docs;
 mod bump_toolchain;
 mod commit;
+mod cov_floor;
 mod gate_guard;
 mod new_crate;
 mod pr_guard;
@@ -23,6 +24,7 @@ fn main() -> ExitCode {
     match command.as_str() {
         "check-commit" => commit::run(&rest),
         "gate-guard" => gate_guard::run(&rest),
+        "cov-floor" => cov_floor::run(&rest),
         "agent-check" => agent_docs::run(&rest),
         "new-crate" => new_crate::run(&rest),
         "bump-toolchain" => bump_toolchain::run(&rest),
@@ -36,7 +38,9 @@ fn main() -> ExitCode {
 
 fn usage() -> ExitCode {
     eprintln!(
-        "usage: cargo run -q -p xtask -- <check-commit [FILE] | gate-guard [FILE] | agent-check | new-crate <name> | bump-toolchain | pr-guard [PR] | pr-guard --staged>"
+        "usage: cargo run -q -p xtask -- <command>\n  \
+         check-commit [FILE] | gate-guard [FILE] | cov-floor | agent-check\n  \
+         new-crate <name> | bump-toolchain | pr-guard [PR] | pr-guard --staged"
     );
     ExitCode::from(2)
 }

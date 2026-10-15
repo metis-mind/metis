@@ -10,7 +10,7 @@
 - Iterate with the narrowest loop first (`cargo check -p <crate>`, scoped nextest); finish with `just ci`
 - Snapshot updates: `just snapshot-review` (two-stage: state the expected change first, then approve each diff against it by hand; never bulk-accept — ADR-0031 doctrine 5)
 - New crate: `just new-crate <name>`
-- Dependency policy: `just deny`; docs build: `just doc`; agent-doc smoke check + docs/ integrity (map orphans/dangling, internal links, freshness, archive): `just agent-check`
+- Dependency policy: `just deny`; docs build: `just doc`; agent-doc smoke check + docs/ integrity (map orphans/dangling, internal links, freshness, archive): `just agent-check`; kernel-crate coverage floors: `just cov-floor` (values: `.config/cov-floor.toml`)
 - Toolchain bump: `just toolchain-bump` (wrapped by the weekly toolchain-update workflow; bot PRs don't trigger CI — the in-job `just ci` is the gate)
 
 ## Environment
