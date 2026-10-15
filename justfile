@@ -45,10 +45,11 @@ doc:
     cargo doc --no-deps --workspace
 
 # Dependency policy: advisories / licenses / duplicate versions / sources (see deny.toml).
-# The two -D lints are the staleness fuses: an advisory ignore or per-crate
-# license exception whose crate has left the tree fails CI instead of rotting.
+# The three -D lints are the staleness fuses: an advisory ignore, per-crate
+# license exception or duplicate skip whose target has left the tree fails CI
+# instead of rotting.
 deny:
-    cargo deny check -D advisory-not-detected -D license-exception-not-encountered
+    cargo deny check -D advisory-not-detected -D license-exception-not-encountered -D unmatched-skip
 
 # Snapshot review: approve diffs one by one; CI is read-only and never auto-accepts
 snapshot-review:

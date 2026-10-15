@@ -63,10 +63,10 @@ graph TD
 
 ### T10 实现
 
-- 状态：**进行中**（T10.0a 开工 = 2026-10-15；已完成 = 站表立 + 全景图重生成 + T10.0 预检 + Q1–Q9 拍板固化（全按推荐案，2026-10-15）；下一步 = T10.0a 实现批（序：gate-guard 机器闸 → machete → llvm-cov → cov-floor → testing-ledger/遥测 → insta 语料孤儿闸）；未拍板项 = Q10 duplicate 警告处置（锚点见本块末临时行））
+- 状态：**进行中**（T10.0a 开工 = 2026-10-15；已完成 = 站表立 + 全景图重生成 + T10.0 预检 + Q1–Q9 拍板固化 + Q10/Q11 拍板并落地（全按推荐案，2026-10-15）；下一步 = T10.0a 实现批（序：gate-guard 机器闸 → machete → llvm-cov → cov-floor → testing-ledger/遥测 → insta 语料孤儿闸）；未拍板项 = 无）
 - 依赖：T11（✅ 2026-10-14）/ T12（✅ 2026-10-14 = [ADR-0033](decisions/0033-doc-lifecycle.md)）——开工门槛全备
 - 站表（依赖列 = 硬依赖，即不可提前的并行面边界；清单锚点指向各 doc 登记原位不转抄；除 T10.0a/b 外每站自带 F 类写实清单（D8）；内核 crate 站自带 D11 测试来源声明 + llvm-cov 地板线（首钉 = T10.1））：
-  - T10.0a 质量基建·快轨与机器闸——门禁面（justfile / `.pre-commit-config.yaml` / rust-toolchain.toml / crates/xtask）；依赖：无（非硬阻塞，后续站消费其门禁件故推荐最先）；清单 = [ADR-0031](decisions/0031-testing-strategy.md) Consequences 实现期清单（指针不转抄）；拍板形态（2026-10-15，Q2–Q5/Q7/Q8）= xtask `gate-guard`（commit trailer 机器闸；§4.2 清单 xtask 硬编码 + 注释指回散文 SSOT）+ AGENTS.md NEVER 增补 / cargo-machete 进 `just lint` / cargo-llvm-cov + rust-toolchain `llvm-tools-preview` 组件 / xtask `cov-floor` + `.config` 空地板文件（登记进 §4.2 修订注）/ `docs/testing-ledger.md` + xtask `test-telemetry`（增长率历史不做）/ `insta --unreferenced=auto` 进 `just ci`；HARD 人审门，依赖件逐项走 adding-dependencies。
+  - T10.0a 质量基建·快轨与机器闸——门禁面（justfile / `.pre-commit-config.yaml` / rust-toolchain.toml / crates/xtask）；依赖：无（非硬阻塞，后续站消费其门禁件故推荐最先）；清单 = [ADR-0031](decisions/0031-testing-strategy.md) Consequences 实现期清单（指针不转抄）；拍板形态（2026-10-15，Q2–Q5/Q7/Q8）= xtask `gate-guard`（commit trailer 机器闸；§4.2 清单 xtask 硬编码 + 注释指回散文 SSOT）+ AGENTS.md NEVER 增补 / cargo-machete 进 `just lint` / cargo-llvm-cov + rust-toolchain `llvm-tools-preview` 组件 / xtask `cov-floor` + `.config` 空地板文件（登记进 §4.2 修订注）/ `docs/testing-ledger.md` + xtask `test-telemetry`（增长率历史不做）/ `insta --unreferenced=auto` 进 `just ci`；追加（2026-10-15 Q10 拍板）= deny.toml duplicate skip 静音基线 + `-D unmatched-skip` fuse（随批落地，非 ADR-0031 原清单项）；HARD 人审门，依赖件逐项走 adding-dependencies。
   - T10.0b 质量基建·慢轨件——`just deep` recipe（本地）；依赖：T10.0a；拍板形态（2026-10-15，Q1/Q6）= 首批内容 = llvm-cov 报告 + 膨胀遥测件（非空 recipe；§2.4/§5 原触发器提前，修订注在案）；远程周跑 workflow 与慢轨失败自动开 issue 机制推迟至 T10.2 随 mutants 首个硬门禁件落地。
   - T10.1 metis-value——`crates/metis-value`；依赖：无；锚 = ADR-0015/0022 + luau-abi §A6.3/§A6.8 登记表；Bytes 扩展位保留不立（context-events §3 方案 C 行）。
   - T10.2 metis-fiber-core——`crates/metis-fiber-core`（禁 tokio/mlua）；依赖：T10.1；锚 = ADR-0010/0019/0023 + fiber.md §10 开放项（SIGTERM 处理 / drain 总预算数值）+ luau-abi §A4.6 登记表（exclusive 名字回收 D1.2 / wait-for 图 D1.7）与实现期配置行（在飞协程预算与事件在途投递界 D10.2 / 优雅窗口 + drain 预算 D11.1）；随站 = Kani（D7）+ mutants 门禁（D4）+ D6 fiber 内存件；另随本站落地 = 远程周跑 workflow 首建（碰 `.github/workflows/`，ADR-0031 已授权）+ 慢轨失败自动开 issue 机制（2026-10-15 Q1/Q6 拍板划入）。
@@ -82,8 +82,7 @@ graph TD
   - T10.12 安装事务——`crates/metis-loader` + runtime 协调；依赖：T10.7 / T10.8 / T10.9 / T10.10；锚 = ADR-0008（审批门 v1 接口预留不实现）+ luau-abi §A4.5 D11.5（cordis 事务式重载纪律）+ config-format.md C7（D48/D49 卸载两档）+ testing-strategy.md §3.F（F 类基建落地，failpoint 选型走 adding-dependencies）+ D6 热更件。
 - 范围外（触发器未满足）：metis-codec TLV 位分配（luau-abi §A6.6 D6.2）与盒 trap 句柄处置（§A5.3 D14.4）——首盒发布前冻结即可；registry 扩展位 5 处 / context-events §0.5 优化位与 §3 Bytes 扩展位 / WIT 生成器（盒面）/ `metis install` 工具化与分发机制（长回）。
 - 开窗前置：worktree bootstrap 自动化（[ADR-0032](decisions/0032-operating-protocol.md) Consequences 登记，届时再建）。
-- 评审面三数：拍板 15（2026-10-15 拆分批 Q1–Q6 + T10.0 批 Q1–Q9 全按推荐案）/ self-review findings 7（站表判断 pass：2 Critical + 5 Required，随本块修复）/ 耗时 —（开工后逐站记录）
-- 未拍板锚点（临时行：拍板后固化进对应位置、本行即删）：Q10 cargo-deny duplicate 警告处置（荐 = deny.toml `[bans].skip` 逐条带理由注释 + 失效 fuse 实测钉入，达成绿即静音基线；deny.toml 属 §4.2 门禁面，本项即其 ASK）
+- 评审面三数：拍板 17（2026-10-15 拆分批 Q1–Q6 + T10.0 批 Q1–Q9 + Q10/Q11，全按推荐案）/ self-review findings 11（站表 pass 7 = 2 Critical + 5 Required 已随块修复；本会话 4 笔 commit 各 1 Required 随笔修复）/ 耗时 —（开工后逐站记录）
 
 ### 收官与延后记录（单行）
 

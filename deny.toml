@@ -13,6 +13,24 @@ ignore = []
 # tree evolves, but must be explicitly acknowledged in review
 multiple-versions = "warn"
 highlight = "all"
+# Pinned duplicate acceptance (2026-10-15, backlog Q10): each entry is one
+# half of a duplicate pair we cannot converge ourselves; the comment names
+# the upstream trigger that resolves it. The fuse is `just deny`'s
+# `-D unmatched-skip`: when the pinned version leaves the tree CI fails,
+# forcing the entry to be deleted (duplicate gone) or re-pinned (duplicate
+# moved to a newer version) in the same change. The stream stays
+# silent-green — a new duplicate warning is signal, not noise floor.
+skip = [
+    # syn 2.x comes from miette-derive / tracing-attributes, 3.x from
+    # clap_derive / thiserror-impl / the synstructure chain. Proc-macro-only
+    # duplicate: compile-time cost, no runtime surface.
+    # Trigger: miette and tracing bump their derive stacks onto syn 3.
+    { name = "syn", version = "=2.0.119" },
+    # miette 7.6.0 depends on unicode-width 0.1 directly while its textwrap
+    # 0.16 dependency uses 0.2 — the pair converges only upstream.
+    # Trigger: a miette release aligning its direct dep with textwrap's.
+    { name = "unicode-width", version = "=0.1.14" },
+]
 
 [licenses]
 # A new dependency's license must already be on this list; extending the list
