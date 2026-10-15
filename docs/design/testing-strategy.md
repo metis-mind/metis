@@ -59,7 +59,7 @@ crate 级显式声明两种测试来源：**人写/审测试**（规格属性强
 - **快轨 `just ci`**（per-commit 本地必跑 + 远程矩阵同一套，现状不动）：L0 全量（含任务 10 起伴随实现站的 arch-test）+ L1/L2 有界配置（proptest 默认 case 数 + `proptest-regressions/` 固化 seed 必重放）+ L3 已有 corpus 回归。
 - **慢轨 `just deep`**（本地按需 + 远程周跑）：长程 proptest / fuzz 定时冒烟 / sanitizer 按需 / cargo-mutants / Kani 全量 proof / llvm-cov 报告 + 内核地板线校验。慢轨失败产物 = issue（带失败指纹：测试名 + 首次失败 commit + 复现命令），不阻塞 commit。
 - 三条流程纪律：① **新门禁件观察期**——任何新检查先以「只记录不阻塞」身份跑若干周，flaky 率达标再转硬门禁；② **flaky 台账先行**——快轨尽早产出 flaky 率遥测（哪条测试、跨 run 翻转率），flaky 失控 = 人与 agent 一起学会无视红；③ **merge queue 触发器**——同一工作日出现 ≥2 个并行 agent 工作流推 main 时，合并面必须引入「测组合」机制（merge queue 或等价物），两两组合的正确性无法由任何单 agent 自证。
-- 创建时点：`just deep` recipe 与远程周跑 workflow 随第一个慢轨件（cargo-mutants 周跑）落地时创建；本定稿只立架构不立空 recipe（ADR-0031 Consequences 登记）。
+- 创建时点：`just deep` recipe 与远程周跑 workflow 随第一个慢轨件（cargo-mutants 周跑）落地时创建；本定稿只立架构不立空 recipe（ADR-0031 Consequences 登记）。（2026-10-15 修订注：T10.0 拍板 Q1 提前 recipe 创建——首批内容 = llvm-cov 报告 + 膨胀遥测件，非空 recipe；远程周跑 workflow 仍随 mutants 周跑落地 = T10.2。）
 
 ## 3. 检查/纠错工具图谱
 
@@ -154,22 +154,22 @@ flaky 三件套：
 
 ## 5. 推迟登记（含触发条件，防丢）
 
-| 项                                  | 何时捡回                                                                                           |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------- |
-| loom / shuttle                      | 第一个手写无锁/原子结构出现时                                                                      |
-| criterion                           | MVP 后出现公认热路径时                                                                             |
-| cargo-vet                           | 依赖数量或 agent 自选依赖频率失控时                                                                |
-| fuzz（L3）全面铺开                  | 配置格式 / Luau ABI 稳定后                                                                         |
-| Verus 试点                          | disposer / epoch 局部内核实现收官后；优先 LLM 证明生成工具链                                       |
-| Lean model-first spike              | fiber 状态机实现收官；判据 = §2.1 四条                                                             |
-| DST 全套（虚拟时间快进/脚本化故障） | 事件系统收官后实测到难复现并发 bug；轻量前身 = L2 按 sled/turmoil 配方升级（虚拟时间 + seed 重放） |
-| merge queue                         | ≥2 个并行 agent 工作流并发推 main（§2.4 纪律 ③）                                                   |
-| `just deep` recipe + 远程周跑       | 第一个慢轨件（cargo-mutants 周跑）落地时                                                           |
-| Miri                                | 某 crate 局部放开 unsafe（须先过 ADR）                                                             |
-| ~~workflow lint~~                   | ✅ 已随 workflows 恢复回归（2026-10-13，[ADR-0030](../decisions/0030-engineering-phase-2.md)）     |
-| ~~轻 PR 评审面~~                    | ✅ 结案 = 不立（ADR-0030 条款 4；触发器 = 外部贡献放开或维护者主动要求）                           |
-| Windows native CI                   | 首个真实 Windows 用户需求（ADR-0030 条款 2）                                                       |
-| require status checks               | 外部 PR 放开时（ADR-0030 条款 2）                                                                  |
+| 项                                  | 何时捡回                                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| loom / shuttle                      | 第一个手写无锁/原子结构出现时                                                                                                      |
+| criterion                           | MVP 后出现公认热路径时                                                                                                             |
+| cargo-vet                           | 依赖数量或 agent 自选依赖频率失控时                                                                                                |
+| fuzz（L3）全面铺开                  | 配置格式 / Luau ABI 稳定后                                                                                                         |
+| Verus 试点                          | disposer / epoch 局部内核实现收官后；优先 LLM 证明生成工具链                                                                       |
+| Lean model-first spike              | fiber 状态机实现收官；判据 = §2.1 四条                                                                                             |
+| DST 全套（虚拟时间快进/脚本化故障） | 事件系统收官后实测到难复现并发 bug；轻量前身 = L2 按 sled/turmoil 配方升级（虚拟时间 + seed 重放）                                 |
+| merge queue                         | ≥2 个并行 agent 工作流并发推 main（§2.4 纪律 ③）                                                                                   |
+| ~~`just deep` recipe~~ + 远程周跑   | recipe 提前至 T10.0b（未开始；2026-10-15 Q1 拍板：首批 = llvm-cov 报告 + 膨胀遥测件）；远程周跑 workflow 仍随 mutants 周跑 = T10.2 |
+| Miri                                | 某 crate 局部放开 unsafe（须先过 ADR）                                                                                             |
+| ~~workflow lint~~                   | ✅ 已随 workflows 恢复回归（2026-10-13，[ADR-0030](../decisions/0030-engineering-phase-2.md)）                                     |
+| ~~轻 PR 评审面~~                    | ✅ 结案 = 不立（ADR-0030 条款 4；触发器 = 外部贡献放开或维护者主动要求）                                                           |
+| Windows native CI                   | 首个真实 Windows 用户需求（ADR-0030 条款 2）                                                                                       |
+| require status checks               | 外部 PR 放开时（ADR-0030 条款 2）                                                                                                  |
 
 ## 6. 定稿记录（原大讨论待决清单）
 

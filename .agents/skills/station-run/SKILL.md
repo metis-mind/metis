@@ -35,9 +35,9 @@ concurrency window (operating-protocol §3 + appendix A).
    test work from day one; the final declaration lands at closeout.
 5. **Gate-surface check.** Touching any file in testing-strategy §4.2 = HARD
    human-review gate: the explicit approval must exist before the change
-   (T10.0 is entirely this shape).
+   (T10.0a/b are entirely this shape).
 6. **Closeout-infrastructure check.** If a closeout obligation names a
-   T10.0-owned gate piece (mutation gate, llvm-cov floor check), verify that
+   T10.0a/b-owned gate piece (mutation gate, llvm-cov floor check), verify that
    piece exists before starting; if it does not, stop and report — closeout
    is the most expensive place to discover it.
 
@@ -60,7 +60,7 @@ concurrency window (operating-protocol §3 + appendix A).
 - **实现期配置 values** — fill each with the mechanism station it belongs to;
   record chosen values where the registering doc expects them.
 - **Slow-track legs** (testing-strategy §2.4) — `just deep` is created by
-  T10.0; when the station row assigns slow-track legs (mutants / Kani), run
+  T10.0b; when the station row assigns slow-track legs (mutants / Kani), run
   them and report outcomes in the acceptance pack. Slow-track failures never
   block commits: they are filed as issues carrying the failure fingerprint
   (test name + first-failing commit + repro command). The llvm-cov floor
@@ -92,7 +92,7 @@ Assemble all of the following, then present as one batch (operating-protocol
    station.
 6. **Coverage floor** — kernel-list crates report the llvm-cov number
    (fast-track check, §3.C); the first kernel station (T10.1) measures and
-   pins the floor value into the check built by T10.0 (ratchet: only
+   pins the floor value into the check built by T10.0a (ratchet: only
    rises).
 7. **Ledger update** — station row ✅ with SHAs; T10 block status line (one
    of the ten fixed status words, done scope, next step, open items,
