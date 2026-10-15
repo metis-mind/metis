@@ -62,7 +62,7 @@ graph TD
 
 - 状态：**进行中**（拆分议题批拍板 = 2026-10-15，Q1–Q6 全按推荐 + T10.11 拆分追认 ✅；已完成 = 站表立 + 全景图重生成；下一步 = T10.0 门禁面 ASK 批出示；未拍板项 = 无）
 - 依赖：T11（✅ 2026-10-14）/ T12（✅ 2026-10-14 = [ADR-0033](decisions/0033-doc-lifecycle.md)）——开工门槛全备
-- 站表（依赖列 = 硬依赖，即不可提前的并行面边界；清单锚点指向各 doc 登记原位不转抄；除 T10.0 外每站自带 F 类写实清单 + D11 测试来源声明 + llvm-cov 地板线（T10.1 首站钉数值））：
+- 站表（依赖列 = 硬依赖，即不可提前的并行面边界；清单锚点指向各 doc 登记原位不转抄；除 T10.0 外每站自带 F 类写实清单（D8）；内核 crate 站自带 D11 测试来源声明 + llvm-cov 地板线（首钉 = T10.1））：
   - T10.0 质量基建前置批——门禁面（justfile / `.pre-commit-config.yaml` / `.github/workflows/`）；依赖：无（非硬阻塞，后续站消费其门禁件故推荐最先）；清单 = [ADR-0031](decisions/0031-testing-strategy.md) Consequences 实现期清单（指针不转抄）；HARD 人审门，依赖件逐项走 adding-dependencies。
   - T10.1 metis-value——`crates/metis-value`；依赖：无；锚 = ADR-0015/0022 + luau-abi §A6.3/§A6.8 登记表；Bytes 扩展位保留不立（context-events §3 方案 C 行）。
   - T10.2 metis-fiber-core——`crates/metis-fiber-core`（禁 tokio/mlua）；依赖：T10.1；锚 = ADR-0010/0019/0023 + fiber.md §10 开放项（SIGTERM 处理 / drain 总预算数值）+ luau-abi §A4.6 登记表（exclusive 名字回收 D1.2 / wait-for 图 D1.7）与实现期配置行（在飞协程预算与事件在途投递界 D10.2 / 优雅窗口 + drain 预算 D11.1）；随站 = Kani（D7）+ mutants 门禁（D4）+ D6 fiber 内存件。

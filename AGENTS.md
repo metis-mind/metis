@@ -29,6 +29,7 @@
 - `code-simplification` — behavior-preserving dedup/dead-code/abstraction cleanup, always as its own change
 - `chinese-doc-style` — docs/ Chinese prose style: fidelity-first rewriting, task modes, 「」/spacing/one-paragraph-per-line typography
 - `explain-diff` — maintainer-facing rich HTML walkthrough of a change + in-chat quiz, for reading large diffs
+- `station-run` — implementation station lifecycle: pre-flight (anchors / dependencies / granularity re-check), test layering obligations, closeout acceptance pack (T10.x stations; exemplar = T10.1)
 
 Done = `just ci` green + self-review of the working diff.
 
