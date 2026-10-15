@@ -21,10 +21,11 @@ highlight = "all"
 # moved to a newer version) in the same change. The stream stays
 # silent-green — a new duplicate warning is signal, not noise floor.
 skip = [
-    # syn 2.x comes from miette-derive / tracing-attributes, 3.x from
-    # clap_derive / thiserror-impl / the synstructure chain. Proc-macro-only
+    # syn 2.x comes from miette-derive (tracing-attributes left the tree
+    # with the unused tracing dep, 2026-10-15), 3.x from clap_derive /
+    # thiserror-impl / the synstructure chain. Proc-macro-only
     # duplicate: compile-time cost, no runtime surface.
-    # Trigger: miette and tracing bump their derive stacks onto syn 3.
+    # Trigger: miette bumps its derive stack onto syn 3.
     { name = "syn", version = "=2.0.119" },
     # miette 7.6.0 depends on unicode-width 0.1 directly while its textwrap
     # 0.16 dependency uses 0.2 — the pair converges only upstream.

@@ -26,14 +26,16 @@ fmt:
     cargo fmt --all
     dprint fmt
 
-# Static checks: rustfmt --check, dprint check (markdown), clippy (-D warnings), actionlint on workflow YAML.
+# Static checks: rustfmt --check, dprint check (markdown), clippy (-D warnings),
+# actionlint on workflow YAML, cargo-machete on unused dependencies.
 # No path argument for actionlint: it discovers .github/workflows/ itself, because
 # the Windows shell (PowerShell) does not expand globs for native commands.
 lint:
     cargo fmt --all -- --check
     dprint check
-    cargo clippy --workspace --all-targets -- -D warnings
+    cargo machete
     actionlint
+    cargo clippy --workspace --all-targets -- -D warnings
 
 # Tests: nextest (process isolation) + doctests (README/rustdoc examples are compiled too)
 test:

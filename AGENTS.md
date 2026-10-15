@@ -5,7 +5,7 @@
 ## Commands (just is the only entry point; never bypass the quality gates)
 
 - Full quality gate: `just ci` (run before every commit; remote CI runs the same recipes on push/PR — `.github/workflows/ci.yml`)
-- Format / static checks: `just fmt` / `just lint` (rustfmt + dprint for markdown + actionlint for workflow YAML)
+- Format / static checks: `just fmt` / `just lint` (rustfmt + dprint for markdown + cargo-machete for unused deps + actionlint for workflow YAML + clippy -D warnings)
 - All tests: `just test`; single test: `cargo nextest run -p metis <name>`
 - Iterate with the narrowest loop first (`cargo check -p <crate>`, scoped nextest); finish with `just ci`
 - Snapshot updates: `just snapshot-review` (two-stage: state the expected change first, then approve each diff against it by hand; never bulk-accept — ADR-0031 doctrine 5)
