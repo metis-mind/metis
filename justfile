@@ -37,10 +37,13 @@ lint:
     actionlint
     cargo clippy --workspace --all-targets -- -D warnings
 
-# Tests: nextest (process isolation) + doctests (README/rustdoc examples are compiled too)
+# Tests: cargo-insta drives nextest (process isolation) + doctests (README/rustdoc
+# examples are compiled too), then handles snapshot orphans — rejected in CI,
+# deleted locally (D12). `--all-targets` is gone: cargo-insta forwards post-`--`
+# options to the test binaries, not the runner; benches/examples re-add the
+# equivalent when they appear.
 test:
-    cargo nextest run --workspace --all-targets
-    cargo test --doc --workspace
+    cargo insta test --workspace --test-runner nextest --unreferenced=auto
 
 # Build docs (rustdoc warnings are errors; RUSTDOCFLAGS injected at the top of this file)
 doc:
