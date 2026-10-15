@@ -16,12 +16,42 @@
 
 ## 全景图（活跃任务 + 未消费火花；任务或火花变更时重生成）
 
-图 = 派生视图（内容 SSOT = 任务块与火花登记区）：只画活跃面（未开始 / 进行中 / 阻塞）+ 未消费火花节点（label = 火-N + 短语 + 消费点）；已完成 / 延后节点离图，已满足依赖不画边（满足态住任务块「依赖」行）。
+图 = 派生视图（内容 SSOT = 任务块与火花登记区）：只画活跃面（未开始 / 进行中 / 阻塞）+ 未消费火花节点（label = 火-N + 短语 + 消费点）；已完成 / 延后节点离图，已满足依赖不画边（满足态住任务块「依赖」行）；边 = 传递归约后的硬依赖（无路径相连 = 结构可并行面）。
 
 ```mermaid
 graph TD
-    T10["T10 实现（未开始，门槛全备）"]
+    T10_0["T10.0 质量基建（未开始；无硬阻塞，推荐最先）"]
+    T10_1["T10.1 metis-value（未开始）"]
+    T10_2["T10.2 fiber-core（未开始）"]
+    T10_3["T10.3 schema DSL（未开始）"]
+    T10_4["T10.4 事件派发（未开始）"]
+    T10_5["T10.5 journal 机器（未开始）"]
+    T10_6["T10.6 拦截点接入（未开始）"]
+    T10_7["T10.7 注册表/inject（未开始）"]
+    T10_8["T10.8 配置读写（未开始）"]
+    T10_9["T10.9 diff/索引/analyze（未开始）"]
+    T10_10["T10.10 luau 转换层（未开始）"]
+    T10_11["T10.11 能力面（未开始）"]
+    T10_12["T10.12 安装事务（未开始）"]
     S4["火-4 台账工具化（未消费；消费点 = 任务系统工具化立项）"]
+    T10_1 --> T10_2
+    T10_1 --> T10_3
+    T10_1 --> T10_5
+    T10_1 --> T10_10
+    T10_2 --> T10_4
+    T10_3 --> T10_6
+    T10_3 --> T10_7
+    T10_3 --> T10_8
+    T10_4 --> T10_6
+    T10_4 --> T10_7
+    T10_4 --> T10_11
+    T10_5 --> T10_6
+    T10_8 --> T10_9
+    T10_10 --> T10_11
+    T10_5 --> T10_11
+    T10_7 --> T10_12
+    T10_9 --> T10_12
+    T10_10 --> T10_12
 ```
 
 ## 内部任务
@@ -30,12 +60,25 @@ graph TD
 
 ### T10 实现
 
-- 状态：**未开始**（阻塞解除 = T12 ✅ 2026-10-14 收官）
-- 依赖：T11（✅ 2026-10-14 收官）、T12（✅ 2026-10-14 收官 = [ADR-0033](decisions/0033-doc-lifecycle.md)）
-- 开工门槛：审计流程完备（✅ ADR-0031）+ 开发流程完备（✅ T11 收官 = ADR-0032 + operating-protocol）+ HANDOFF 迁移完毕（✅ 同 T11 收官 commit）+ T12 收官（✅ 2026-10-14）——**门槛全备，可开工**
-- 实现序：metis-value → metis-fiber-core → 事件系统（含 journal 拦截点）→ 服务注册表/inject → loader+配置 → Luau 绑定 → 安装事务
-- 各实现期清单 SSOT = ADR-0027 / ADR-0028 / ADR-0031 Consequences（另 ADR-0032 登记：worktree bootstrap 自动化）
-- 评审面三数：（开工后逐站记录）
+- 状态：**进行中**（拆分议题批拍板 = 2026-10-15，Q1–Q6 全按推荐；已完成 = 站表立 + 全景图重生成；下一步 = T10.0 门禁面 ASK 批出示；未拍板项 = T10.10 拆分出 T10.11 能力面，待追认）
+- 依赖：T11（✅ 2026-10-14）/ T12（✅ 2026-10-14 = [ADR-0033](decisions/0033-doc-lifecycle.md)）——开工门槛全备
+- 站表（依赖列 = 硬依赖，即不可提前的并行面边界；清单锚点指向各 doc 登记原位不转抄；除 T10.0 外每站自带 F 类写实清单 + D11 测试来源声明 + llvm-cov 地板线（T10.1 首站钉数值））：
+  - T10.0 质量基建前置批——门禁面（justfile / `.pre-commit-config.yaml` / `.github/workflows/`）；依赖：无（非硬阻塞，后续站消费其门禁件故推荐最先）；清单 = [ADR-0031](decisions/0031-testing-strategy.md) Consequences 实现期清单（指针不转抄）；HARD 人审门，依赖件逐项走 adding-dependencies。
+  - T10.1 metis-value——`crates/metis-value`；依赖：无；锚 = ADR-0015/0022 + luau-abi §A6.3/§A6.8 登记表；Bytes 扩展位保留不立（context-events §3 方案 C 行）。
+  - T10.2 metis-fiber-core——`crates/metis-fiber-core`（禁 tokio/mlua）；依赖：T10.1；锚 = ADR-0010/0019/0023 + fiber.md §10 开放项（SIGTERM 处理 / drain 总预算数值）+ luau-abi §A4.6 登记表（exclusive 名字回收 D1.2 / wait-for 图 D1.7）与实现期配置行（在飞协程预算与事件在途投递界 D10.2 / 优雅窗口 + drain 预算 D11.1）；随站 = Kani（D7）+ mutants 门禁（D4）+ D6 fiber 内存件。
+  - T10.3 schema DSL——`crates/metis-loader`；依赖：T10.1；锚 = luau-abi §A7.0（YAML parser 选型，走 adding-dependencies）/ §A7.1 D16.2 / §A7.3 D18.3 / §A7.4 D19.1 / §A7.5 与 §A8.5 登记表（表达式串 parser / 规范化比较器 / 命名空间合并解析器 / 启用期对账器 / 反向索引 D22.6 / 记忆化预算）。
+  - T10.4 事件系统派发——`crates/metis-runtime`；依赖：T10.2；锚 = ADR-0011/0013/0014/0016/0017 + context-events.md §0.3 修订注（背压面写实 + worker 伪码语义更新两件实现期登记）+ luau-abi §A4.2（tokio 可学结构）/ §A4.6 表（裸 yield 检测 D9.3）；随站 = D6 事件吞吐件。
+  - T10.5 journal 机器——`crates/metis-runtime`；依赖：T10.1；锚 = journal.md J1.6/J3.6/J4.4 实现期清单行（存活 10 项）+ luau-abi §A6.7 D7.3（JSONL + Int 字符串惯例）/ §A6.2（深快照预算数值）；D5 快照纪律随站。
+  - T10.6 拦截点接入——`crates/metis-runtime`；依赖：T10.3 / T10.4 / T10.5；锚 = journal.md D82/D84（拦截点骨架形态；范围 = router / 生命周期机两族）+ luau-abi §A8.5 表（emit 校验器 D22.4 / internal/ emit 拦截 D20.2）；**能力使用族与 VM 族拦截（挂载位 = ctx 方法）划出本站 = T10.11**。
+  - T10.7 服务注册表/inject——`crates/metis-runtime`；依赖：T10.2 / T10.3 / T10.4；锚 = service-registry.md S1–S6 机制本体（扩展位 5 处不做：withdraw / host 有界等待 / 跨 VM 取消 / check 谓词 / 自动重试）+ instance-model.md S3.7/S4.8 登记（D61/D63/D64/D68/D70/D72）+ luau-abi §A9.2（对账五格 D25 / warn 日志点 D25.1 / required 依赖图 D25.4）/ §A1.4（加载墙钟预算数值）+ config-format.md D43 级联执行半（与 T10.9 检测半汇合）；开工核对 = service-registry §3/§7 两格兑现抽查；**最大站——开工先过粒度闸，超阈值处置 = 拆 7a registry 本体 / 7b 实例与 mount 面**。
+  - T10.8 配置读写管线——`crates/metis-loader` + runtime 胶水；依赖：T10.3；锚 = config-format.md C1–C3/C5/C6/C8 各章联动登记（D29 脚手架两件 / D36 读管线 / D39 原子写与串行队列 / D40 行块补丁器 / D47 secrets 内存 map 与两分 / C8 core 节容器校验）+ instance-model.md D67（实例配置合成器）。
+  - T10.9 diff/reload + 部署索引——`crates/metis-loader`；依赖：T10.8；锚 = config-format.md C4/C7/C9 联动登记（D41 diff 器 / D42 重入与结构相等 / D43 检测半 / D34 部署索引扫描含残迹 / D52 analyze 判环 / 显式 reload 命令形态）+ luau-abi §A8.5（部署契约索引）/ §A9.1 D24（部署索引）/ §A10 登记表（AST 选型 D28.2 / luau-lsp 钉版 / 四生成器减 WIT / abi_rev 比较 D27.2）+ instance-model.md S2.6（fleet 校验 D56/D60）；**收窄 = 静态/纯算法面，生效动作执行（重挂载 / 级联重启用 / 卸载生效）划出 = T10.7 启用管线与 T10.12 汇合**。
+  - T10.10 metis-luau 转换层——`crates/metis-luau`；依赖：T10.1；锚 = luau-abi §A3.11（mlua 无条件安装件处置）/ §A4.6 表（coroutine shim 的 mlua resume/yield 链 spike + 开销实测 D9.2 / shim + SENTINEL 环境准备）/ §A6.1（push_int64_exact）/ §A6.8 表 + seam-capabilities.md §1.4（环境准备同批）/ §1.6（数字格式化与 table 遍历序断言）/ §3.3（内存限额数值 + 单 VM 基线实测）/ §6.3；spike 先行。
+  - T10.11 能力面（**拆分处置，待追认**）——`crates/metis-runtime` 能力实现 + metis-luau ctx 暴露；依赖：T10.4 / T10.5 / T10.10；锚 = seam-capabilities.md（ADR-0025 机制本体：fs/http/sqlite/timer/process）+ §2.1（有界微基准）+ luau-abi §A3.6–§A3.10（能力预算数值 + TOCTOU 硬化）/ §A6.4 D4.3（UTF-8 校验）/ §A6.5 D5.4/D5.5（流式句柄族 + 宿主缓冲预算）+ journal 能力使用族 / VM 族拦截（自 T10.6 划入，挂载位 = ctx 方法）。
+  - T10.12 安装事务——`crates/metis-loader` + runtime 协调；依赖：T10.7 / T10.8 / T10.9 / T10.10；锚 = ADR-0008（审批门 v1 接口预留不实现）+ luau-abi §A4.5 D11.5（cordis 事务式重载纪律）+ config-format.md C7（D48/D49 卸载两档）+ testing-strategy.md §3.F（F 类基建落地，failpoint 选型走 adding-dependencies）+ D6 热更件。
+- 范围外（触发器未满足）：metis-codec TLV 位分配（luau-abi §A6.6 D6.2）与盒 trap 句柄处置（§A5.3 D14.4）——首盒发布前冻结即可；registry 扩展位 5 处 / context-events §0.5 优化位与 §3 Bytes 扩展位 / WIT 生成器（盒面）/ `metis install` 工具化与分发机制（长回）。
+- 开窗前置：worktree bootstrap 自动化（[ADR-0032](decisions/0032-operating-protocol.md) Consequences 登记，届时再建）。
+- 评审面三数：拍板 6（2026-10-15 拆分批 Q1–Q6）/ self-review findings 7（站表判断 pass：2 Critical + 5 Required，随本块修复）/ 耗时 —（开工后逐站记录）
 
 ### 收官与延后记录（单行）
 
