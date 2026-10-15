@@ -130,7 +130,7 @@ flaky 三件套：
 - journal 条目序列进 insta 快照（核心行为链回归网，随 journal 实现站落地）。
 - 失败语料固化进版本控制（proptest `proptest-regressions/` 进 VCS、先重放固化用例再生成新用例；OSS-Fuzz 语料治理先例）；语料孤儿机器可判——`insta --unreferenced=auto` 进 `just ci`（CI 中 reject、本地 delete）。
 - **快照定位纪律**：快照 = 变更检测层，证明「行为未变」而非「行为正确」；agent 把快照绿当正确性证据 = oracle 从实现反推（评审经济学报告 RQ3 前提不变量「Policy 显式性」行的破坏方式）。快照确认走两阶段（§7）。
-- 膨胀遥测（诊断位，不设门禁）：测试/产品行数比、每 crate 测试数增长率、flaky 台账进慢轨报告。
+- 膨胀遥测（诊断位，不设门禁）：测试/产品行数比、每 crate 测试数增长率、flaky 台账进慢轨报告。（2026-10-15 修订注：Q5 拍板收窄——增长率历史不做；遥测 = `xtask test-telemetry`（行数比 + 测试数），flaky 台账 = [testing-ledger](../testing-ledger.md)。）
 - 测试删除驱动挂 mutation 体检：周跑产出中「杀不死任何变异体且长期零失败」的测试清单 = 删除候选（免逐条人审）。
 
 ## 4. v1 子集与门禁面清单

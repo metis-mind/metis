@@ -61,6 +61,10 @@ snapshot-review:
 cov-floor:
     cargo run -q -p xtask -- cov-floor
 
+# Test-bloat telemetry (D12, diagnostic only): product/test line ratio + test counts
+test-telemetry:
+    cargo run -q -p xtask -- test-telemetry
+
 # Smoke check for agent-facing docs plus the structural docs/ integrity gates
 # of the doc lifecycle (ADR-0033): doc map, internal links, freshness, archive
 # consistency. Check semantics SSOT = the crates/xtask agent_docs module doc.

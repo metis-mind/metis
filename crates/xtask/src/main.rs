@@ -14,6 +14,7 @@ mod cov_floor;
 mod gate_guard;
 mod new_crate;
 mod pr_guard;
+mod test_telemetry;
 
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
@@ -25,6 +26,7 @@ fn main() -> ExitCode {
         "check-commit" => commit::run(&rest),
         "gate-guard" => gate_guard::run(&rest),
         "cov-floor" => cov_floor::run(&rest),
+        "test-telemetry" => test_telemetry::run(&rest),
         "agent-check" => agent_docs::run(&rest),
         "new-crate" => new_crate::run(&rest),
         "bump-toolchain" => bump_toolchain::run(&rest),
@@ -39,7 +41,7 @@ fn main() -> ExitCode {
 fn usage() -> ExitCode {
     eprintln!(
         "usage: cargo run -q -p xtask -- <command>\n  \
-         check-commit [FILE] | gate-guard [FILE] | cov-floor | agent-check\n  \
+         check-commit [FILE] | gate-guard [FILE] | cov-floor | test-telemetry | agent-check\n  \
          new-crate <name> | bump-toolchain | pr-guard [PR] | pr-guard --staged"
     );
     ExitCode::from(2)

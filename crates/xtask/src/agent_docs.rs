@@ -273,12 +273,12 @@ fn check_agents_md(root: &Path, failures: &mut Vec<String>) {
 
 /// Doc-map orphan check: the AGENTS.md Documentation section is the map an
 /// agent reads first; a committed doc absent from it is invisible in
-/// practice. Every `docs/design/*.md` and `docs/research/*.md` file plus
-/// `docs/backlog.md` must therefore appear as a relative path in AGENTS.md.
+/// practice. Every `docs/*.md`, `docs/design/*.md` and `docs/research/*.md`
+/// file must therefore appear as a relative path in AGENTS.md.
 /// (docs/decisions is exempt: the four-digit number sequence is the index.)
 fn check_doc_map_orphans(root: &Path, agents_text: &str, failures: &mut Vec<String>) {
     let mut docs: Vec<String> = Vec::new();
-    for dir in ["docs/design", "docs/research"] {
+    for dir in ["docs", "docs/design", "docs/research"] {
         let Ok(entries) = std::fs::read_dir(root.join(dir)) else {
             continue;
         };
@@ -288,9 +288,6 @@ fn check_doc_map_orphans(root: &Path, agents_text: &str, failures: &mut Vec<Stri
                 docs.push(format!("{dir}/{}", entry.file_name().to_string_lossy()));
             }
         }
-    }
-    if root.join("docs/backlog.md").is_file() {
-        docs.push("docs/backlog.md".to_string());
     }
     docs.sort();
     for rel in find_doc_map_orphans(&docs, agents_text) {
