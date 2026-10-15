@@ -60,7 +60,7 @@ graph TD
 
 ### T10 实现
 
-- 状态：**进行中**（拆分议题批拍板 = 2026-10-15，Q1–Q6 全按推荐 + T10.11 拆分追认 ✅；已完成 = 站表立 + 全景图重生成；下一步 = T10.0 门禁面 ASK 批出示；未拍板项 = 无）
+- 状态：**进行中**（T10.0 预检过 = 2026-10-15（station-run §1；粒度复核 → Q9 出示拆分选项、D11 = 本站无内核 crate 故 N/A）；已完成 = 站表立 + 全景图重生成 + T10.0 预检与门禁面 ASK 批（Q1–Q9）出示；下一步 = 维护者对 Q1–Q9 拍板后 T10.0 开工；未拍板项 = T10.0 ASK 批 Q1–Q9（锚点见本块末临时行））
 - 依赖：T11（✅ 2026-10-14）/ T12（✅ 2026-10-14 = [ADR-0033](decisions/0033-doc-lifecycle.md)）——开工门槛全备
 - 站表（依赖列 = 硬依赖，即不可提前的并行面边界；清单锚点指向各 doc 登记原位不转抄；除 T10.0 外每站自带 F 类写实清单（D8）；内核 crate 站自带 D11 测试来源声明 + llvm-cov 地板线（首钉 = T10.1））：
   - T10.0 质量基建前置批——门禁面（justfile / `.pre-commit-config.yaml` / `.github/workflows/`）；依赖：无（非硬阻塞，后续站消费其门禁件故推荐最先）；清单 = [ADR-0031](decisions/0031-testing-strategy.md) Consequences 实现期清单（指针不转抄）；HARD 人审门，依赖件逐项走 adding-dependencies。
@@ -79,6 +79,7 @@ graph TD
 - 范围外（触发器未满足）：metis-codec TLV 位分配（luau-abi §A6.6 D6.2）与盒 trap 句柄处置（§A5.3 D14.4）——首盒发布前冻结即可；registry 扩展位 5 处 / context-events §0.5 优化位与 §3 Bytes 扩展位 / WIT 生成器（盒面）/ `metis install` 工具化与分发机制（长回）。
 - 开窗前置：worktree bootstrap 自动化（[ADR-0032](decisions/0032-operating-protocol.md) Consequences 登记，届时再建）。
 - 评审面三数：拍板 6（2026-10-15 拆分批 Q1–Q6）/ self-review findings 7（站表判断 pass：2 Critical + 5 Required，随本块修复）/ 耗时 —（开工后逐站记录）
+- 未拍板锚点（临时行：Q1–Q9 拍板后推荐案固化进对应站行/doc、本行即删；先例 = 拆分批 pending 住会话、拍板即固化）：Q1 just deep 创建时点与首批内容（荐 = 本站建，首批 = llvm-cov 报告 + 遥测件，非空 recipe）/ Q2 llvm-cov 地板线机制与地板值文件（荐 = xtask cov-floor + .config 空地板文件 + 登记进 §4.2 修订注）/ Q3 门禁面机器闸确认标记（荐 = commit trailer 带文件清单 + AGENTS.md NEVER 增补一条）/ Q4 §4.2 清单机器化 SSOT（荐 = xtask 硬编码 + 注释指回散文 SSOT）/ Q5 flaky 台账与膨胀遥测形态（荐 = docs/testing-ledger.md + xtask test-telemetry，增长率历史不做）/ Q6 慢轨失败自动开 issue 机制时点（荐 = 推迟至 T10.2 随 mutants 首个硬门禁件落地）/ Q7 cargo-machete 进 just lint（adding-dependencies 判断已备）/ Q8 cargo-llvm-cov 引入（rust-toolchain 需加 llvm-tools-preview 组件）/ Q9 站粒度（荐 = 拆 0a 快轨与机器闸 / 0b 慢轨两批验收）
 
 ### 收官与延后记录（单行）
 
