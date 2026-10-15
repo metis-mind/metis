@@ -1,12 +1,12 @@
 ---
 name: station-run
-description: "Use when working an implementation station (T10.x and later) — the per-station runbook covering pre-flight (anchors, dependency closure, granularity re-check), the implementation loop (commit discipline, test layering, D5/F-class obligations), and closeout (D11 test-provenance declaration, acceptance pack assembly, ledger update). Exemplar run = T10.1."
+description: "Use when working an implementation station (a row in the backlog ledger's station table) — the per-station runbook covering pre-flight (anchors, dependency closure, granularity re-check), the implementation loop (commit discipline, test layering, D5/F-class obligations), and closeout (D11 test-provenance declaration, acceptance pack assembly, ledger update)."
 ---
 
 # Station run (implementation station lifecycle)
 
-A station is the acceptance unit of T10: one row in the T10 block of
-`docs/backlog.md` (boundary, dependencies, anchors), accepted in one review
+A station is the acceptance unit of an implementation wave: one row in the
+station table (站表) of `docs/backlog.md` (boundary, dependencies, anchors), accepted in one review
 sitting per the granularity rule (`docs/design/operating-protocol.md` §2
 任务粒度). This skill is procedure only — it points at the sources of truth
 and never restates them: station content = the anchored design docs; test
@@ -35,9 +35,9 @@ concurrency window (operating-protocol §3 + appendix A).
    test work from day one; the final declaration lands at closeout.
 5. **Gate-surface check.** Touching any file in testing-strategy §4.2 = HARD
    human-review gate: the explicit approval must exist before the change
-   (T10.0a/b are entirely this shape).
+   (a quality-infrastructure station is entirely this shape).
 6. **Closeout-infrastructure check.** If a closeout obligation names a
-   T10.0a/b-owned gate piece (mutation gate, llvm-cov floor check), verify that
+   gate piece owned by another station (mutation gate, llvm-cov floor check), verify that
    piece exists before starting; if it does not, stop and report — closeout
    is the most expensive place to discover it.
 
@@ -59,8 +59,8 @@ concurrency window (operating-protocol §3 + appendix A).
   as you implement; every window gets a fault-point × recovery-promise row.
 - **实现期配置 values** — fill each with the mechanism station it belongs to;
   record chosen values where the registering doc expects them.
-- **Slow-track legs** (testing-strategy §2.4) — `just deep` is created by
-  T10.0b; when the station row assigns slow-track legs (mutants / Kani), run
+- **Slow-track legs** (testing-strategy §2.4) — `just deep`'s owner lives in
+  the station table; when the station row assigns slow-track legs (mutants / Kani), run
   them and report outcomes in the acceptance pack. Slow-track failures never
   block commits: they are filed as issues carrying the failure fingerprint
   (test name + first-failing commit + repro command). The llvm-cov floor
@@ -84,20 +84,20 @@ Assemble all of the following, then present as one batch (operating-protocol
    does not own the sampling frame (doctrine 3).
 4. **D11 declaration** — the requirement is testing-strategy §2.2's
    (kernel crates declare composition at closeout); the location is this
-   skill's convention, to be confirmed or amended by the T10.1 exemplar: a
+   skill's convention, to be confirmed or amended by the exemplar run: a
    `Testing provenance (D11)` section in the crate's root rustdoc stating
    the composition (human-written/reviewed vs agent-written + mutation
    gate) and, for agent-written suites, the mutation-gate result (§3.C).
 5. **F-class update** — §3.F crash-window list and matrix current for this
    station.
 6. **Coverage floor** — kernel-list crates report the llvm-cov number
-   (fast-track check, §3.C); the first kernel station (T10.1) measures and
-   pins the floor value into the check built by T10.0a (ratchet: only
+   (fast-track check, §3.C); the first kernel station measures and
+   pins the floor value into the floor check (ratchet: only
    rises).
-7. **Ledger update** — station row ✅ with SHAs; T10 block status line (one
+7. **Ledger update** — station row ✅ with SHAs; the task block status line (one
    of the ten fixed status words, done scope, next step, open items,
    review-surface three numbers); regenerate the panorama graph (completed
-   stations leave it). Mid-station session ends still update the T10 block
+   stations leave it). Mid-station session ends still update the task block
    status line (operating-protocol §2 会话收尾序列).
 
 ## Rationalizations that fail
@@ -112,6 +112,6 @@ Assemble all of the following, then present as one batch (operating-protocol
 
 ---
 
-Exemplar run = T10.1 (metis-value): the zero-dependency first station,
-carrying the firsts (floor pinning, first D11 declaration, first F-class
+Exemplar run = the first kernel-crate station under this skill, carrying
+the firsts (floor-value pinning, first D11 declaration, first F-class
 list). What the exemplar teaches lands back in this skill in the same change.
