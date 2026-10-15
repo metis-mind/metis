@@ -5,4 +5,4 @@
 # gate — that interception is intentional).
 [toolchain]
 channel = "1.98.0"
-components = ["rustfmt", "clippy", "rust-analyzer", "rust-src"]
+components = ["rustfmt", "clippy", "rust-analyzer", "rust-src", "llvm-tools-preview"]
