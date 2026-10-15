@@ -152,6 +152,8 @@ flaky 三件套：
 - 测试套件的豁免面：`#[mutants::skip]` 清单、insta 快照的批量接受、proptest 回归文件的删除
 - hosting 设置（ruleset / 合并策略）——走 GitHub 设置面，ASK 条款已覆盖
 
+（2026-10-15 修订注：pre-commit 机器闸已落地 = commit-msg 钩子 `xtask gate-guard`，确认标记 = commit trailer `Gate-Surface:` 文件清单；本节清单的机器化 SSOT = `crates/xtask/src/gate_guard.rs` 硬编码表，两侧同 commit 改动。insta 批量接受仍是流程闸（两阶段 snapshot-review），hosting 设置在 git 外——两者不在钩子面。）
+
 ## 5. 推迟登记（含触发条件，防丢）
 
 | 项                                  | 何时捡回                                                                                                                           |

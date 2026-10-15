@@ -23,6 +23,14 @@ repos:
         entry: cargo run -q -p xtask -- check-commit
         language: unsupported
         stages: [commit-msg]
+      # D9 machine gate: a commit touching gate-surface files needs the
+      # Gate-Surface: trailer (local half only — commit-msg hooks do not run
+      # under `prek run --all-files` in the CI quality-gate job)
+      - id: gate-guard
+        name: gate-surface trailer
+        entry: cargo run -q -p xtask -- gate-guard
+        language: unsupported
+        stages: [commit-msg]
       # the local half of the pr-guard gate: secrets never reach a commit.
       # (no-op in the CI quality-gate job — fresh checkout, empty staged
       # diff; the PR-diff coverage lives in .github/workflows/pr-guard.yml)

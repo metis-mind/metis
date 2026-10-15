@@ -44,6 +44,7 @@ Done = `just ci` green + self-review of the working diff.
 - NEVER add agent-attribution footers (`Co-Authored-By`, "Generated with …") to commits.
 - NEVER force-push or rewrite shared history unless the human explicitly asks.
 - ASK before touching: new third-party dependencies (see the `adding-dependencies` skill), any file on the gate-surface list (`docs/design/testing-strategy.md` §4.2 — CI workflows, justfile, hook configs, `crates/xtask`, deny/dprint config, test-exemption surfaces), hosting/branch-protection settings.
+- NEVER commit gate-surface changes without a `Gate-Surface:` trailer naming every touched gate path — the commit-msg hook (`xtask gate-guard`) is the machine half, and the trailer is the record that the ASK above happened.
 
 ## Style (the part lints can't enforce)
 
