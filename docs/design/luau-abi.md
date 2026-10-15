@@ -1,6 +1,6 @@
 # Metis — Luau ABI 设计（living doc）
 
-> 状态：living design doc——A 系列十章已冻结 = [ADR-0026](../decisions/0026-luau-abi.md)（2026-10-10）。本文档保持 living：细则澄清、教学条与实现期登记继续沉淀于此；**语义变更走 ADR-0026 演进纪律**（additive → `abi_rev`；破坏式 → 新 ADR supersede），不只走本文档修订注。
+> 状态：📦 已归档（2026-10-15；归档制 = [doc-lifecycle](doc-lifecycle.md) §2）——A 系列十章随 [ADR-0026](../decisions/0026-luau-abi.md) 由 [ADR-0034](../decisions/0034-wasm-first-carrier.md) 整篇取代（wasm-first 转向，Lua 任何形式出局）；本文保留作历史记录，不再更新，默认不读（考古除外）；语义继承者 = [wit-abi](wit-abi.md)（W 系列，A 系列语义平移源对照表见其章节目录）。原注（冻结存档）：A 系列十章曾冻结 = ADR-0026（2026-10-10）；语义变更曾走 ADR-0026 演进纪律。
 > 来源：ABI 议题地图 A 系列逐条讨论拍板。前提：产品模型（core = 插件管理与组合机器 + syscall 层 VM 基底，不提供 agent 领域服务）；载体分层 = [ADR-0024](../decisions/0024-carrier-layering.md)（盒管模型）；接缝能力集 = [seam-capabilities](seam-capabilities.md)。
 > 相关 ADR：[0002](../decisions/0002-config-as-pure-data.md) / [0003](../decisions/0003-module-require-discipline.md) / [0004](../decisions/0004-plugin-forms.md) / [0006](../decisions/0006-config-schema-ssot.md) / [0007](../decisions/0007-yaml-config-subset.md) / [0011](../decisions/0011-actor-execution-model.md) / [0014](../decisions/0014-dispatch-semantics.md) / [0018](../decisions/0018-service-registry.md) / [0019](../decisions/0019-crate-layout.md) / [0023](../decisions/0023-core-restart-semantics.md) / [0024](../decisions/0024-carrier-layering.md)
 > Last reviewed: 2026-10

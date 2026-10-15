@@ -11,6 +11,7 @@
 - 任务生命周期状态 = 未开始 / 进行中 / 阻塞 / 已完成 + **延后（deferred）**：无限期延后，重开 = 维护者明示——延后是队列处置态，不进 Reporting 十词。
 - 收官压单行与离库：任务收官后块压成单行（状态词 + 日期 + 产出指针 ADR+SHA），过程叙事溯源 = ADR 正文 + git 史；收官行 = 衔接过渡态，默认存活约一个任务周期——旧行清理走压缩仪式微缩版（下次收官或巡检时出示 → 维护者批准；[doc-lifecycle](design/doc-lifecycle.md) §7），deferred 行例外（队列处置态，留至重开或维护者明示丢弃）。
 - 并发窗口一任务一写者：同一时刻一个任务块只有一个写者；并行窗口内每 agent 只写自己的任务块（[operating-protocol](design/operating-protocol.md) §3）——写冲突结构性规避，不靠锁。
+- **注册先于执行（2026-10-15 维护者立，为以后所有任务/工作的前提）**：任何跨 session 的工作单元必须先在本台账登记为可续单元（任务块 / 下一步行 / 剩余工作清单），再执行；session 可随意中断，新 session 仅凭本台账续作——工作状态不以会话内记忆为载体。
 - 文档结构性改动视同共享契约串行：本文件的节结构与任务块格式改动不走并行窗口。
 - git 追踪原则（维护者原话）：「我们不能依赖任何非 git 追踪的文件。不然会非常容易出现悬垂指针，导致文档腐烂。」——运行状态一律 git 追踪；外部服务只作对外接口（GitHub Issues 不迁队列、不建 label；外部事项被采纳时才以链接条目进本台账，单写者、无双向同步）。
 
@@ -33,7 +34,7 @@ graph TD
     T10_10["T10.10 luau 转换层（未开始）"]
     T10_11["T10.11 能力面（未开始）"]
     T10_12["T10.12 安装事务（未开始）"]
-    T13["T13 wasm-first 转向（未开始）"]
+    T13["T13 wasm-first 转向（进行中）"]
     S4["火-4 台账工具化（未消费；消费点 = 任务系统工具化立项）"]
     S5["火-5 命令输出瘦身（未消费；消费点 = 命令输出瘦身方案立项）"]
     T10_1 --> T10_2
@@ -90,8 +91,15 @@ graph TD
 
 ### T13 wasm-first 转向
 
-- 状态：**未开始**（方向拍板 = 2026-10-15 维护者对话；下一步 = 转向 ADR 批次起草 + 开工预检；未拍板项 = 站级重规划细节 / SDK 形态 / 构建管线方案）
-- 维护者拍板约束（2026-10-15 原话，verbatim 留存至 ADR 批次消费）：「我们应该全面转向使用 wasm，不再考虑使用lua的任何形式了」；「wasi+wit，这个是非常恶心的地方，我们开发的时候需要将其包起来，做成sdk提供给用户，让用户完全不知道wasi和wit，使用对应语言的软件包开发即可」；「目前似乎只在rust上有完美体验……我们可以优先支持rust，其他语言可以后续再陆续支持」；「使用其他语言之后，就无法实现即写即用了，我们需要想一个优雅的工程方案来让这个过程不用太麻烦，更优雅」
+- 状态：**进行中**（已完成 = 方向拍板消化 + ADR-0034 批次（0021/0026 整篇 supersede、0024 局部、luau-abi 归档、wit-abi 开章、AGENTS.md 清单）+ S1 spike **PASS**（证据 = wasm-research 补遗 6）——W1 风险解除为可绕行摩擦项；**本批变更提交中**（授权 = 2026-10-15）；下一步 = 见下方剩余工作注册清单；未拍板项 = 站级重规划细节 / SDK 形态 / 构建管线方案）
+- 剩余工作注册（每项 = 新 session 仅凭本台账即可续作的最小单元；开工输入列 = 续作锚点）：
+  - T13-a 提交转向批：内容 = 本批 docs 变更（ADR-0034 + 三个 supersede 状态行 + luau-abi 归档 + wit-abi 开章 + wasm-research 补遗 5/6 + 本台账）；前置 = `just ci`（已绿 2026-10-15）+ self-review（判断 pass = 4 Required，已随批修复）；提交授权已批（2026-10-15），本行随提交收官。
+  - T13-b T10 站表修订批：T10.3/9/10/11 修订 + 新增 SDK/构建管线站 + 空壳 crate `crates/metis-luau` 处置（删除或改向 metis-component）；依赖 = T13-a；开工输入 = [ADR-0034](decisions/0034-wasm-first-carrier.md) §8 + 补遗 6。
+  - T13-c wit-abi W4 章（async 与交错语义）：依赖 = T13-a；开工输入 = 补遗 6（S1 矩阵 + papercuts）+ [luau-abi](design/luau-abi.md) §A4（语义平移源，已归档仅考古读）。
+  - T13-d SDK 形态议题（metis-plugin crate 宏形状 / 作者面）：依赖 = 无硬依赖（可与 b/c 并行）；开工输入 = ADR-0034 §4 + 先例清单（proxy-wasm SDK / zed_extension_api / Spin / Extism PDK 宏藏 ABI 模式）。
+  - T13-e 构建管线方案（`metis dev` watch / 构建缓存 / 部署内工具链服务 / 远端构建场）：依赖 = 无硬依赖；开工输入 = ADR-0034 §6。
+  - T13-f Luau 措辞修订批（seam-capabilities / context-events / instance-model 修订注 + ADR-0008 地位复审议题）：依赖 = 无硬依赖；来源 = ADR-0034 遗留议题登记。
+- 维护者拍板约束原话 = [ADR-0034](decisions/0034-wasm-first-carrier.md) Context 末节（verbatim SSOT；本行曾逐字留存，ADR 批次消费后按冗余纪律删除，逐字原文见 git 史）
 - 范围：ADR-0021 整篇 supersede + ADR-0024 局部（盒管模型收敛为单层组件 + 内建件 + 外部服务 + T2 例外）+ ADR-0026 整篇 supersede（luau-abi.md 归档 archived，doc-lifecycle 纪律）+ WIT ABI 重设计（A 系列语义平移，A4 挂起/交错重做 = 最高风险章）+ T10 站表重规划（T10.3/9/10/11 修订 + 新增 SDK/构建管线站）+ S1 spike（guest async 工效学，按补遗 5 §5.3 修订为「工效学验证」）
 - 证据基线：[wasm-research 补遗 5](research/wasm-research.md)（wit-bindgen 0.63 async 正式特性 / wasip3 0.9.0+wasi-0.3.0 / wasip3 target Tier 3 入树 / 零拷贝语义四层修正 / Extism 判决 = 参照非选项）；ADR-0008（Creator 模式）前提削弱，审批门 v1 接口预留（T10.12 在案）不受影响，Creator 直写通道关闭须在新 ADR 明示
 

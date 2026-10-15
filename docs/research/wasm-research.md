@@ -372,3 +372,75 @@ fn set_global_i64(lua: &Lua, name: &'static CStr, v: i64) -> LuaResult<()> {
 报错统一为 resolve 阶段 `error: type \`X\` depends on itself`，工具链未提供任何开关绕过——当前 WIT 工具链不支持任何形式的递归类型。对本项目零冲击：D6.1 已取琐碎签名形态（每方法只搬 `list<u8>`），schema→WIT 生成器永不输出递归类型；本实测是对该选型的独立印证。
 
 附带发现（影响将来生成器）：`float64`/`float32` 已改名 `f64`/`f32`，旧拼写在 1.261.0 直接报错（可设 `WIT_REQUIRE_F32_F64=0` 临时豁免）。
+
+## 补遗 5（2026-10-15）：wasm-first 转向核实批——Extism 路线 / 工业案例扩充 / guest 工具链现状 / 零拷贝语义修正
+
+> 性质：addendum——维护者调研触发（2026-10-15 对话：WASI 0.3 / WIT / Extism / 工业采用四问，及 wit-bindgen·wasip3 版本说与「0.3 零拷贝」说的核实请求），全部网络核查均此日访问。本补遗含对补遗 1 修正二「guest 工具链未跟上」的状态修订（不改写原文）。
+
+### 5.1 四问核实
+
+- **WASI 0.3 已发布**：wasi.dev 确认三里程碑（0.1/0.2/0.3）；BA 博客《WASI 0.3 Launched》（2026-06-11）：「async is now native to WebAssembly Components……runtime and toolchain support is landing now」。🔍
+- **WIT = 组件模型的 IDL**（非运行时、非框架）：正文 §1.2 已立，本次仅确认无变化。🔍
+- **Extism = 与组件模型平行的私有 ABI 路线**（非 WASI 生态一环）：core wasm 模块 + 字节流过共享内存（通常 JSON）+ 私有 host 函数集 + XTP Bindgen（OpenAPI 风格私有 IDL → 10 语言 PDK）；底层 wasmtime。主仓 5.8k stars，BSD-3，dylibso 治理，v1.41.0（2026-10-09，升级 wasmtime v49）。🔍
+- **工业采用新增核实四例**：**Zed 编辑器**扩展 = Rust 编译至 `wasm32-wasip2` + `extension.toml` manifest + dev extension 本地热装 🔍（zed.dev docs）；**moon / proto** 插件系统 = Extism + wasmtime，虚拟路径前缀映射（≈fs scope 设计参照）、`github://` 插件定位符分发（release asset + 缓存）、官方自述「still experimental, expect breaking changes」🔍（moonrepo.dev docs）；**Redpanda Data Transforms** = broker 内联 wasm，完整 SDK/配置/部署/监控文档链 🔍（docs.redpanda.com）；**Kubewarden** = CNCF Sandbox，K8s 准入策略引擎 🔍（docs.kubewarden.io；「策略即 wasm 模块」细节 🧠）。未核实名单（🧠）：Kong WasmX / Apache APISIX / Higress / OPA / Fluent Bit。
+
+### 5.2 Extism 判决：设计参照，非技术选项
+
+| 维度 | Extism | 组件模型 + WIT |
+| --- | --- | --- |
+| 插件形态 | core 模块（任何老工具链可产） | 组件（wasip2/p3 工具链） |
+| ABI | 私有极简：字节过内存，类型靠双方自觉 | WIT 类型化 + canonical ABI 编译期检查 |
+| 绑定生成 | XTP Bindgen（私有 IDL） | wit-bindgen（标准工具链，多语言） |
+| 治理 | 单厂商（dylibso） | W3C 标准 + BA，多运行时 |
+
+可抄模式：manifest 授权（allowed_hosts ≈ 能力政策声明）、实例 Pool、PDK 宏藏 ABI（`#[plugin_fn]` 式作者体验）。退路地位：若组件模型 guest 工具链验证失败，core-module ABI 为兜底层（吃任何工具链产出）。
+
+### 5.3 guest 工具链现状（修订补遗 1 修正二的「BLOCKED」）
+
+- `wit-bindgen` 当前 **0.63.0**（2026-10-14）；`async` 特性自 0.45（2025-08）起进 default features（另含 `async-spawn` / `futures-stream` / `inter-task-wakeup`）——guest 侧组件模型 async 绑定为正式特性。🔍 crates.io
+- `wasip3` crate 当前 **0.9.0+wasi-0.3.0**（2026-09-10，bytecodealliance/wasi-rs）；版本线完整追踪 0.3.0 RC → 正式版（0.7.0 于 2026-06-12 跟进，即 0.3.0 发布次日）。🔍 crates.io
+- `wasm32-wasip3` rustc target **已入树，Tier 3**：不进 CI、std 迁移过渡中（产物可能仍 import p2 API）、`wasip3` crate 在 std 依赖路径上（`rustc-dep-of-std` feature）。🔍 rustc book platform-support 页
+- 判词：**绑定层就绪、std 层过渡中**——「能不能」已解，「工效学好不好」归 wasm-first 的 S1 spike。
+
+### 5.4 「0.3 零拷贝」语义修正
+
+流传说法「WASI 0.3 跨组件交互不再拷贝」不准确。canonical ABI 拷贝语义四层（每实例独立线性内存 = 沙箱本体，值传递无零拷贝）：
+
+| 形态 | 拷贝次数 | 机制 |
+| --- | --- | --- |
+| 值类型（record/variant/list/string/数字） | 每次跨界 1 次（永久） | lift/lower = 拷贝协议（规范级） |
+| `stream<T>`（0.3 新增） | 每块 1 次，边产边消 | read/write 直接在生产者↔消费者缓冲间拷贝；免全量物化、免宿主中间队列 |
+| 流转发（0.3 解决的三明治问题） | **中介 0 次** | 读端直转最终消费者；宿主中转架构（Metis 插件间通信模型）最对口 |
+| `resource` / `own` / `borrow` | **0 次（真零拷贝）** | 数据驻留宿主或产出方，跨界只传句柄 |
+
+对 Metis 的映射：拷贝本是冻结设计的一部分（ADR-0015 值语义 + 边界深快照 = 隔离与 journal replay 前提）；大负载句柄化（流式句柄族 + 接缝 Arc）在 WIT 路线下映射为 `resource`；实测预算锚（补遗 1/2：host 调用 4.3 ns、拷入 15.6 GiB/s）下 1 KB 载荷拷贝 ≈64 ns，高频小负载为噪声级。唯一真·值零拷贝路径（shared-memory threads）与限额/池化冲突，维持禁用（正文 §1.4 / ADR-0024 C2）——「一切交互严格零拷贝」与隔离互斥，正确需求提法 = 最小拷贝 + 大负载句柄化 + 流式管线。
+
+## 补遗 6（2026-10-15）：S1 spike——guest async 工效学验证（wasm-first 转向托底件）
+
+> 性质：addendum——[ADR-0034](../decisions/0034-wasm-first-carrier.md) 落地纪律第 8 条的 S1 spike 结果收录。执行 = 子代理一次性工程（`scratch/s1-guest-async/`，gitignored，原始文件与完整命令见其 README.md），本补遗收录全部结论性数据。判决：**PASS——W1 风险（guest async 工效学）解除为可绕行摩擦项**。
+
+### 环境
+
+rustup 自管 `1.98.1-x86_64-unknown-linux-gnu` + target `wasm32-wasip2`（rustc 1.98.1 / LLVM 22.1.8）；guest = wit-bindgen **0.63.0** + futures 0.3.34；host = wasmtime **49.0.3** + wasmtime-wasi 49.0.3 + tokio 1.53.3（current_thread 运行时）。注：本机 `stable` 实为 1.95.0 不满足 wasmtime 49 的 MSRV 1.96，且其宿主链接器在本 NixOS 上损坏——均为环境问题，非路线问题。
+
+### 验证矩阵（WIT = 自建 `metis:s1@0.1.0`：`tick` 同步 + `sleep: async func(ms: u64)` 导入；`export run: async func() -> list<string>`）
+
+| 项 | 结果 | 关键数字 |
+| --- | --- | --- |
+| V1 构建链 | PASS | `cargo build --target wasm32-wasip2 --release` 直出组件 105,180 B；首建 13.83 s，增量重建 **0.22–0.29 s**（即写即用工程面的地板实测） |
+| V2 async import 往返 | PASS | guest 内 `futures::join!(sleep(500), sleep(500), tick)`；单实例墙钟 **500/501 ms**（串行应 ~1000 ms——guest 内并发成立） |
+| V3 单宿主线程并发在飞（核心裁决项） | PASS | current_thread 上 `tokio::join!` 两实例（独立 Store + `run_concurrent`）：墙钟 **502 ms**（两次运行一致）——guest 挂起不阻塞宿主线程，多实例并发在飞成立 |
+| V4 工效学 | PASS | guest `lib.rs` **31 行**（管道代码仅 `generate!` 4 行 + `export!` 1 行）；host 全量 debug 冷建 50.24 s（16 核，wasmtime+cranelift 依赖树首次编译） |
+
+### Papercuts（工效学原始材料，归 wit-abi W3/W4 章与 SDK 站输入）
+
+1. **wasip2 std 无条件拖带 14 个 WASI 0.2.9 导入**（cli/terminal/io/clocks）——零 IO 的 guest 也迫使 host 注册 wasmtime-wasi p2 才能实例化；报错精确可操作。
+2. `add_to_linker` 必须 turbofish，rustc 建议文本是半成品。
+3. wasmtime 49 的 `Config::async_support` 已废弃为 no-op（async 常开）；并发路径仍需显式 `concurrency_support(true)`。
+4. `run_concurrent(...).await??` 双层 Result + async 闭包需显式返回类型。
+5. 文档缺口：wit-bindgen docs.rs 无 async guest 示例；wasmtime `Accessor` 顶层来源只藏在 `call_concurrent` 例子里。
+6. wasmtime-wasi 的 p3 模块自述 experimental/incomplete——WASI 0.3 宿主侧尚非实用路径（与补遗 5 §5.3「std 层过渡中」互证）。
+
+### 总结论
+
+「Rust guest 写 async 组件 + 宿主单线程多实例并发在飞」在 wit-bindgen 0.63 / wasmtime 49 / rustc 1.98.1 + wasm32-wasip2 下零配置成立；摩擦集中在 wasip2 std 拖带导入与文档缺口，是可绕行项，不是路线级障碍。

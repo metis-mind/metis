@@ -77,7 +77,8 @@ Done = `just ci` green + self-review of the working diff.
   - `docs/design/context-events.md` — context surface and event system (frozen, ADR-0011/0013–0017/0022)
   - `docs/design/service-registry.md` — service registry and inject (frozen, ADR-0018)
   - `docs/design/seam-capabilities.md` — seam capability set (frozen, ADR-0025)
-  - `docs/design/luau-abi.md` — Luau ABI (frozen, ADR-0026)
+  - `docs/design/luau-abi.md` — Luau ABI (archived 2026-10-15: superseded by ADR-0034 wasm-first pivot; archaeology only)
+  - `docs/design/wit-abi.md` — WIT ABI (living, opened 2026-10-15; ADR-0034 lineage)
   - `docs/design/config-format.md` — config format (frozen, ADR-0027)
   - `docs/design/instance-model.md` — instance model (frozen, ADR-0028)
   - `docs/design/journal.md` — journal: core operation/audit log (frozen, ADR-0029)
@@ -88,7 +89,7 @@ Done = `just ci` green + self-review of the working diff.
 - `docs/research/` — point-in-time reports; corrections land as addenda, never rewrite conclusions:
   - `docs/research/cordis-research.md` — Cordis/Harness survey (project-direction input)
   - `docs/research/journal-replay-research.md` — journal/replay research (ADR-0029 input)
-  - `docs/research/wasm-research.md` — wasm carrier research with addenda 1–4 (ADR-0024 spike evidence)
+  - `docs/research/wasm-research.md` — wasm carrier research with addenda 1–6 (ADR-0024 spike evidence; S1 guest-async spike = addendum 6)
   - `docs/research/luau-toolchain-spike.md` — Luau toolchain spike results
   - `docs/research/review-economics-research.md` — review-economics report RQ1–RQ8 (ADR-0031/0032 input)
   - `docs/research/review-economics-admission-check.md` — independent source spot-check of the report (19/19 pass)

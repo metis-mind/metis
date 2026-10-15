@@ -1,6 +1,6 @@
 # 0021. 扩展语言运行时选型：Luau + mlua
 
-- Status: accepted（淘汰表 wasm 行适用范围由 [ADR-0024](0024-carrier-layering.md) 局部取代；整插件进程（T2）例外通道地位由同 ADR 订立）
+- Status: superseded by [ADR-0034](0034-wasm-first-carrier.md)（2026-10-15 wasm-first 转向：Creator 权重撤销后插件唯一载体 = wasm 组件，Lua 任何形式出局；正文冻结存档——原注：淘汰表 wasm 行适用范围曾由 [ADR-0024](0024-carrier-layering.md) 局部取代、T2 例外通道地位曾由同 ADR 订立）
 - Date: 2026-10-03
 
 ## Context

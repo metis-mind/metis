@@ -1,6 +1,6 @@
 # 0008. 自我修改路径：Creator 模式
 
-- Status: accepted（💤 方向已定，实施推迟——当前优先自由组合与动态更新主路径；2026-10-11 修订意向：模型配置写入面 = 插件目录 `config.yml` 经审批事务，overlay 收缩为装配补丁层（[config-format](../design/config-format.md) D36）；正式 supersede 已吸收 = [ADR-0027](0027-config-format.md) 批次 #5（2026-10-11））
+- Status: accepted（💤 方向已定，实施推迟——当前优先自由组合与动态更新主路径；2026-10-11 修订意向：模型配置写入面 = 插件目录 `config.yml` 经审批事务，overlay 收缩为装配补丁层（[config-format](../design/config-format.md) D36）；正式 supersede 已吸收 = [ADR-0027](0027-config-format.md) 批次 #5（2026-10-11）；前提削弱登记 = [ADR-0034](0034-wasm-first-carrier.md)（2026-10-15 wasm-first 转向：Creator 权重撤销，Luau 直写通道关闭，本 ADR 本体地位复审归后续议题））
 - Date: 2026-09-29
 
 ## Context
