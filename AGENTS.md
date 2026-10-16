@@ -64,6 +64,7 @@ Done = `just ci` green + self-review of the working diff.
 - Green-with-warnings is reportable: a gate run (`just ci` & co.) that passes with warning lines on stderr is reported with the warning list attached — an unmentioned standing warning is the noise floor the next real warning drowns in.
 - Evidence is locatable: `path:line`, commit SHA, full command.
 - Decision points go to numbered options, the recommended one first, marked 「（推荐）」.
+- Decision briefings are self-contained: every ratification item carries its own background (what the current design is, why it was made, what changed) — the decider has not seen what the agent has seen. Background already covered earlier in the same discussion round may be abbreviated, not repeated.
 - Verification claims prefer agent-unforgeable anchors (CI run URL, commit SHA) over self-reported results.
 - Every item presented for ratification must pass the actionable admission test: it asks the maintainer for a decision or an action; pure announcements demote to `docs/backlog.md` and never occupy a ratification batch.
 - Uncertainty is never papered over with 「可能 / 大概 / 应该是」 — mark 「未确认」 and name the confirmation method. (Core absorbed from github.com/dualface/ste-zh, MIT.)

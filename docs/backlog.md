@@ -90,14 +90,14 @@ graph TD
 
 ### T13 wasm-first 转向
 
-- 状态：**进行中**（已完成 = 方向拍板消化 + ADR-0034 批次（0021/0026 整篇 supersede、0024 局部、luau-abi 归档、wit-abi 开章、AGENTS.md 清单）+ S1 spike **PASS**（证据 = wasm-research 补遗 6）——W1 风险解除为可绕行摩擦项；本批变更已提交（2026-10-15 = `f5bdc7c`）+ T13-g 设计重审 **已完成**（2026-10-16，产出 = [wasm-first-design-review](research/wasm-first-design-review.md)：A 消亡 10 项 / B 更优 9 项 / C 不动 10 项 / D 新机会 4 项 / E 硬张力 5 题 + T13-b/f 修订建议）；下一步 = 维护者拍板 E1–E5 议题批 + T13-f 范围扩充批，随后进 T13-b 站表修订；未拍板项 = E1–E5（报告 §6）+ 站级重规划细节 / SDK 形态 / 构建管线方案）
+- 状态：**进行中**（已完成 = 方向拍板消化 + ADR-0034 批次（0021/0026 整篇 supersede、0024 局部、luau-abi 归档、wit-abi 开章、AGENTS.md 清单）+ S1 spike **PASS**（证据 = wasm-research 补遗 6）——W1 风险解除为可绕行摩擦项；本批变更已提交（2026-10-15 = `f5bdc7c`）+ T13-g 设计重审 **已完成**（2026-10-16，产出 = [wasm-first-design-review](research/wasm-first-design-review.md)：A 消亡 10 项 / B 更优 9 项 / C 不动 10 项 / D 新机会 4 项 / E 硬张力 5 题 + T13-b/f 修订建议）；拍板进展（2026-10-16）= E3 已定（最大化并发投递、宿主零同步原语、同步归 guest 语言设施；同实例重入 = W4 开工 spike 项）+ T13-f 标准已定（清写至零 Lua 痕迹，新人零前置可读；living doc 清写非修订注考古，冻结 ADR 正文不动走 supersede，luau-abi 保归档）；讨论中 = E1+E2+E5 合并为接口数据定义议题（背景补齐与三分法提案已出示）+ E4 fs 抽象原语提案已出示；下一步 = 维护者对两提案拍板后进 T13-b 站表修订；未拍板项 = 接口数据三分法（E1/E2/E5 合并案）/ E4 fs 抽象原语案 / 站级重规划细节 / SDK 形态 / 构建管线方案）
 - 剩余工作注册（每项 = 新 session 仅凭本台账即可续作的最小单元；开工输入列 = 续作锚点）：
   - T13-a 提交转向批 — **已完成**（2026-10-15 = `f5bdc7c`；just ci 绿 + self-review 判断 pass 4 Required 修复后提交；钩子全过 = fmt/lint/secret scan/commit-msg/gate-guard）。
   - T13-b T10 站表修订批：T10.3/9/10/11 修订 + 新增 SDK/构建管线站 + 空壳 crate `crates/metis-luau` 处置（删除或改向 metis-component）；依赖 = T13-a；开工输入 = [ADR-0034](decisions/0034-wasm-first-carrier.md) §8 + 补遗 6。
   - T13-c wit-abi W4 章（async 与交错语义）：依赖 = T13-a；开工输入 = 补遗 6（S1 矩阵 + papercuts）+ [luau-abi](design/luau-abi.md) §A4（语义平移源，已归档仅考古读）。
   - T13-d SDK 形态议题（metis-plugin crate 宏形状 / 作者面）：依赖 = 无硬依赖（可与 b/c 并行）；开工输入 = ADR-0034 §4 + 先例清单（proxy-wasm SDK / zed_extension_api / Spin / Extism PDK 宏藏 ABI 模式）。
   - T13-e 构建管线方案（`metis dev` watch / 构建缓存 / 部署内工具链服务 / 远端构建场）：依赖 = 无硬依赖；开工输入 = ADR-0034 §6。
-  - T13-f Luau 措辞修订批（seam-capabilities / context-events / instance-model 修订注 + ADR-0008 地位复审议题）：依赖 = 无硬依赖；来源 = ADR-0034 遗留议题登记。**范围扩充建议（T13-g 产出，待拍板）**：扩为 f1 living doc 批（+ fiber / config-format / service-registry）+ f2 冻结 ADR 处置批（ADR-0003/0019 机制死亡 supersede、0015/0022/0005/0011 rationale 换血，可并入 W 章批）；明细 = 报告 §7。
+  - T13-f Luau 痕迹清除批（标准已于 2026-10-16 拍板 = **清写至零 Lua 痕迹**：living 设计文档重写为只讲当前设计，新人无需知道 Lua 存在过；非修订注考古——修订注层随清写吸收，历史住 git 史与冻结 ADR；冻结 ADR 正文不动，机制死亡者走 supersede；luau-abi 保归档不删）：依赖 = 无硬依赖；范围 = f1 living doc 清写（seam-capabilities / context-events / instance-model / fiber / config-format / service-registry）+ f2 冻结 ADR 处置（ADR-0003/0019 机制死亡 supersede、0015/0022/0005/0011 rationale 换血，可并入 W 章批）+ ADR-0008 地位复议题；明细 = [wasm-first-design-review](research/wasm-first-design-review.md) §7。
   - T13-g 设计重审（Luau 妥协面盘点）— **已完成**（2026-10-16 = [wasm-first-design-review](research/wasm-first-design-review.md)；待拍板 = E1–E5 议题批 + T13-f 扩充批，拍板结果消费进 T13-b/c/d/f）
 - 维护者拍板约束原话 = [ADR-0034](decisions/0034-wasm-first-carrier.md) Context 末节（verbatim SSOT；本行曾逐字留存，ADR 批次消费后按冗余纪律删除，逐字原文见 git 史）
 - 范围：ADR-0021 整篇 supersede + ADR-0024 局部（盒管模型收敛为单层组件 + 内建件 + 外部服务 + T2 例外）+ ADR-0026 整篇 supersede（luau-abi.md 归档 archived，doc-lifecycle 纪律）+ WIT ABI 重设计（A 系列语义平移，A4 挂起/交错重做 = 最高风险章）+ T10 站表重规划（T10.3/9/10/11 修订 + 新增 SDK/构建管线站）+ S1 spike（guest async 工效学，按补遗 5 §5.3 修订为「工效学验证」）
