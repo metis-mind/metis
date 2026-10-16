@@ -91,6 +91,15 @@ pr-guard pr="":
 ci: lint test doc deny agent-check cov-floor
     @echo "just ci: all green ✅"
 
+# Slow track (testing-strategy §2.4): llvm-cov workspace report (HTML under
+# target/llvm-cov/html + stdout summary — `report` reuses the run's merged
+# profile: --summary-only cannot combine with --html) + test-bloat telemetry.
+# Local on-demand; failures file issues, never block commits. The remote
+# weekly run lands with the first cargo-mutants weekly leg.
+deep: test-telemetry
+    cargo llvm-cov --workspace --html
+    cargo llvm-cov report --summary-only
+
 # Add an internal crate (unpublished by default; rules in CONTRIBUTING.md "Adding a crate")
 new-crate name:
     cargo run -q -p xtask -- new-crate {{name}}

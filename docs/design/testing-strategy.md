@@ -157,22 +157,22 @@ flaky 三件套：
 
 ## 5. 推迟登记（含触发条件，防丢）
 
-| 项                                  | 何时捡回                                                                                                                           |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| loom / shuttle                      | 第一个手写无锁/原子结构出现时                                                                                                      |
-| criterion                           | MVP 后出现公认热路径时                                                                                                             |
-| cargo-vet                           | 依赖数量或 agent 自选依赖频率失控时                                                                                                |
-| fuzz（L3）全面铺开                  | 配置格式 / Luau ABI 稳定后                                                                                                         |
-| Verus 试点                          | disposer / epoch 局部内核实现收官后；优先 LLM 证明生成工具链                                                                       |
-| Lean model-first spike              | fiber 状态机实现收官；判据 = §2.1 四条                                                                                             |
-| DST 全套（虚拟时间快进/脚本化故障） | 事件系统收官后实测到难复现并发 bug；轻量前身 = L2 按 sled/turmoil 配方升级（虚拟时间 + seed 重放）                                 |
-| merge queue                         | ≥2 个并行 agent 工作流并发推 main（§2.4 纪律 ③）                                                                                   |
-| ~~`just deep` recipe~~ + 远程周跑   | recipe 提前至 T10.0b（未开始；2026-10-15 Q1 拍板：首批 = llvm-cov 报告 + 膨胀遥测件）；远程周跑 workflow 仍随 mutants 周跑 = T10.2 |
-| Miri                                | 某 crate 局部放开 unsafe（须先过 ADR）                                                                                             |
-| ~~workflow lint~~                   | ✅ 已随 workflows 恢复回归（2026-10-13，[ADR-0030](../decisions/0030-engineering-phase-2.md)）                                     |
-| ~~轻 PR 评审面~~                    | ✅ 结案 = 不立（ADR-0030 条款 4；触发器 = 外部贡献放开或维护者主动要求）                                                           |
-| Windows native CI                   | 首个真实 Windows 用户需求（ADR-0030 条款 2）                                                                                       |
-| require status checks               | 外部 PR 放开时（ADR-0030 条款 2）                                                                                                  |
+| 项                                  | 何时捡回                                                                                                                                  |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| loom / shuttle                      | 第一个手写无锁/原子结构出现时                                                                                                             |
+| criterion                           | MVP 后出现公认热路径时                                                                                                                    |
+| cargo-vet                           | 依赖数量或 agent 自选依赖频率失控时                                                                                                       |
+| fuzz（L3）全面铺开                  | 配置格式 / Luau ABI 稳定后                                                                                                                |
+| Verus 试点                          | disposer / epoch 局部内核实现收官后；优先 LLM 证明生成工具链                                                                              |
+| Lean model-first spike              | fiber 状态机实现收官；判据 = §2.1 四条                                                                                                    |
+| DST 全套（虚拟时间快进/脚本化故障） | 事件系统收官后实测到难复现并发 bug；轻量前身 = L2 按 sled/turmoil 配方升级（虚拟时间 + seed 重放）                                        |
+| merge queue                         | ≥2 个并行 agent 工作流并发推 main（§2.4 纪律 ③）                                                                                          |
+| ~~`just deep` recipe~~ + 远程周跑   | ✅ recipe 落地（2026-10-16 = T10.0b；首批 = llvm-cov 报告 + 膨胀遥测件，2026-10-15 Q1 拍板）；远程周跑 workflow 仍随 mutants 周跑 = T10.2 |
+| Miri                                | 某 crate 局部放开 unsafe（须先过 ADR）                                                                                                    |
+| ~~workflow lint~~                   | ✅ 已随 workflows 恢复回归（2026-10-13，[ADR-0030](../decisions/0030-engineering-phase-2.md)）                                            |
+| ~~轻 PR 评审面~~                    | ✅ 结案 = 不立（ADR-0030 条款 4；触发器 = 外部贡献放开或维护者主动要求）                                                                  |
+| Windows native CI                   | 首个真实 Windows 用户需求（ADR-0030 条款 2）                                                                                              |
+| require status checks               | 外部 PR 放开时（ADR-0030 条款 2）                                                                                                         |
 
 ## 6. 定稿记录（原大讨论待决清单）
 
