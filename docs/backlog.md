@@ -36,11 +36,19 @@ graph TD
     T10_13["T10.13 metis-codec（未开始）"]
     T10_14["T10.14 插件 SDK（未开始）"]
     T10_15["T10.15 构建管线（未开始）"]
-    T13["T13 wasm-first 转向（进行中；余量 = W1–W3/W5–W10 章批）"]
     T13_c["T13-c wit-abi W4 章（未开始）"]
     T13_d["T13-d SDK 形态议题（未开始）"]
     T13_e["T13-e 构建管线方案（未开始）"]
     T13_f["T13-f Luau 痕迹清写（未开始）"]
+    T13_h["T13-h W1 插件包形态（未开始）"]
+    T13_i["T13-i W2 manifest（未开始）"]
+    T13_j["T13-j W3 ctx 形态（未开始）"]
+    T13_k["T13-k W5 错误习语（未开始）"]
+    T13_l["T13-l W6 边界转换（未开始）"]
+    T13_m["T13-m W7 契约/类型（未开始）"]
+    T13_n["T13-n W8 事件声明（未开始）"]
+    T13_o["T13-o W9 能力门（未开始）"]
+    T13_p["T13-p W10 工具/版本（未开始）"]
     S4["火-4 台账工具化（未消费；消费点 = 任务系统工具化立项）"]
     S5["火-5 命令输出瘦身（未消费；消费点 = 命令输出瘦身方案立项）"]
     T10_1 --> T10_2
@@ -66,15 +74,23 @@ graph TD
     T10_13 --> T10_14
     T10_12 --> T10_15
     T10_14 --> T10_15
-    T13 --> T10_3
-    T13 --> T10_9
-    T13 --> T10_10
-    T13 --> T10_11
-    T13 --> T10_14
     T13_c --> T10_10
-    T13_c --> T10_11
     T13_d --> T10_14
     T13_e --> T10_15
+    T13_h --> T10_10
+    T13_l --> T10_10
+    T13_m --> T10_3
+    T13_j --> T10_11
+    T13_j --> T10_14
+    T13_p --> T10_9
+    T13_n --> T10_9
+    T13_h --> T13_j
+    T13_c --> T13_j
+    T13_k --> T13_j
+    T13_i --> T13_m
+    T13_m --> T13_n
+    T13_n --> T13_o
+    T13_h --> T13_p
 ```
 
 ## 内部任务
@@ -110,16 +126,26 @@ graph TD
 
 ### T13 wasm-first 转向
 
-- 状态：**进行中**（已完成 = 方向拍板消化 + ADR-0034 批次（0021/0026 整篇 supersede、0024 局部、luau-abi 归档、wit-abi 开章、AGENTS.md 清单）+ S1 spike **PASS**（证据 = wasm-research 补遗 6）——W1 风险解除为可绕行摩擦项；本批变更已提交（2026-10-15 = `f5bdc7c`）+ T13-g 设计重审 **已完成**（2026-10-16，产出 = [wasm-first-design-review](research/wasm-first-design-review.md)：A 消亡 10 项 / B 更优 9 项 / C 不动 10 项 / D 新机会 4 项 / E 硬张力 5 题 + T13-b/f 修订建议）；拍板进展（2026-10-16 两轮）= E3 定（最大化并发投递、宿主零同步原语、同步归 guest 语言设施；澄清：实例内各任务共享同一堆，同步件 = await 间天然原子 + async mutex，原子变量无场景；同实例重入 = W4 开工首项 spike）+ E1/E2/E5 合并案定（接口数据三分法：平台封闭面 = WIT 富类型 / 开放数据面 = TLV + 瘦身形状 DSL + SDK 生成类型 / 大负载 = stream·resource）+ E4 定（fs 三层原语：private=preopen、命名根 = 部署者绑定、global=自研逃逸舱；workspace/session 语义归插件层服务投影）+ T13-f 标准与两边界定（清写至零 Lua 痕迹；冻结 ADR 不动、luau-abi 保归档）；T13-b 站表修订批 **已完成**（2026-10-16：T10.3/9/10/11 按拍板结论修订 + 新增 T10.13 metis-codec / T10.14 插件 SDK / T10.15 构建管线三站 + 空壳 `crates/metis-luau` 删除、`crates/metis-component` 占位建立 + wit-abi 目录 W4/W6/W7 行对齐拍板；产出 = 本批 diff，验收归维护者评审）；下一步 = T13-c（W4 章）/ T13-d / T13-e 三件无互依赖可并行；未拍板项 = SDK 形态 / 构建管线方案（归 T13-d/e 议题批））
+- 状态：**进行中**（已完成 = 方向拍板消化 + ADR-0034 批次（0021/0026 整篇 supersede、0024 局部、luau-abi 归档、wit-abi 开章、AGENTS.md 清单）+ S1 spike **PASS**（证据 = wasm-research 补遗 6）——W1 风险解除为可绕行摩擦项；本批变更已提交（2026-10-15 = `f5bdc7c`）+ T13-g 设计重审 **已完成**（2026-10-16，产出 = [wasm-first-design-review](research/wasm-first-design-review.md)：A 消亡 10 项 / B 更优 9 项 / C 不动 10 项 / D 新机会 4 项 / E 硬张力 5 题 + T13-b/f 修订建议）；拍板进展（2026-10-16 两轮）= E3 定（最大化并发投递、宿主零同步原语、同步归 guest 语言设施；澄清：实例内各任务共享同一堆，同步件 = await 间天然原子 + async mutex，原子变量无场景；同实例重入 = W4 开工首项 spike）+ E1/E2/E5 合并案定（接口数据三分法：平台封闭面 = WIT 富类型 / 开放数据面 = TLV + 瘦身形状 DSL + SDK 生成类型 / 大负载 = stream·resource）+ E4 定（fs 三层原语：private=preopen、命名根 = 部署者绑定、global=自研逃逸舱；workspace/session 语义归插件层服务投影）+ T13-f 标准与两边界定（清写至零 Lua 痕迹；冻结 ADR 不动、luau-abi 保归档）；T13-b 站表修订批 **已完成**（2026-10-16：T10.3/9/10/11 按拍板结论修订 + 新增 T10.13 metis-codec / T10.14 插件 SDK / T10.15 构建管线三站 + 空壳 `crates/metis-luau` 删除、`crates/metis-component` 占位建立 + wit-abi 目录 W4/W6/W7 行对齐拍板；产出 = 本批 diff，验收归维护者评审）；下一步 = 立即可开工面 = T13-c/d/e/f + T13-h/i/k/l（W1/W2/W5/W6 章）八件无互依赖可并行；W3（待 h/c/k）/ W7（待 i）/ W8（待 m）/ W9（待 n）/ W10（待 h）有章序依赖（见全景图）；未拍板项 = SDK 形态 / 构建管线方案（归 T13-d/e 议题批））
 - 剩余工作注册（每项 = 新 session 仅凭本台账即可续作的最小单元；开工输入列 = 续作锚点）：
   - T13-a 提交转向批 — **已完成**（2026-10-15 = `f5bdc7c`；just ci 绿 + self-review 判断 pass 4 Required 修复后提交；钩子全过 = fmt/lint/secret scan/commit-msg/gate-guard）。
   - T13-b T10 站表修订批 — **已完成**（2026-10-16；产出 = T10.3/9/10/11 修订 + T10.13/14/15 新增 + 空壳 crate 处置 + wit-abi 目录行对齐 + 范围外拨出三件，同批 diff 一处看全；just ci 绿 + self-review 判断 pass 3 Required 随笔修复；验收 = 维护者 diff 评审）。
-  - T13-c wit-abi W4 章（async 与交错语义）：依赖 = T13-a；开工输入 = 补遗 6（S1 矩阵 + papercuts）+ [luau-abi](design/luau-abi.md) §A4（语义平移源，已归档仅考古读）+ E3 拍板与澄清（2026-10-16：最大化并发、宿主零同步原语、实例内同步件形态；同实例重入 = 开工首项 spike）。
+  - T13-c wit-abi W4 章（async 与交错语义）：依赖 = T13-a；开工输入 = 补遗 6（S1 矩阵 + papercuts）+ [luau-abi](design/luau-abi.md) §A4（语义平移源，已归档仅考古读）+ E3 拍板与澄清（2026-10-16：最大化并发、宿主零同步原语、实例内同步件形态；同实例重入 = 开工首项 spike）；f2 候选吸收 = ADR-0011（伪码 pcall 与时间盒措辞换血）。
   - T13-d SDK 形态议题（metis-plugin crate 宏形状 / 作者面）：依赖 = 无硬依赖（可与 b/c 并行）；开工输入 = ADR-0034 §4 + 先例清单（proxy-wasm SDK / zed_extension_api / Spin / Extism PDK 宏藏 ABI 模式）。
   - T13-e 构建管线方案（`metis dev` watch / 构建缓存 / 部署内工具链服务 / 远端构建场）：依赖 = 无硬依赖；开工输入 = ADR-0034 §6。
-  - T13-f Luau 痕迹清除批（标准已于 2026-10-16 拍板 = **清写至零 Lua 痕迹**：living 设计文档重写为只讲当前设计，新人无需知道 Lua 存在过；非修订注考古——修订注层随清写吸收，历史住 git 史与冻结 ADR；冻结 ADR 正文不动，机制死亡者走 supersede；luau-abi 保归档不删）：依赖 = 无硬依赖；范围 = f1 living doc 清写（seam-capabilities / context-events / instance-model / fiber / config-format / service-registry）+ f2 冻结 ADR 处置（ADR-0003/0019 机制死亡 supersede、0015/0022/0005/0011 rationale 换血，可并入 W 章批）+ ADR-0008 地位复议题；明细 = [wasm-first-design-review](research/wasm-first-design-review.md) §7。
+  - T13-f Luau 痕迹清除批（标准已于 2026-10-16 拍板 = **清写至零 Lua 痕迹**：living 设计文档重写为只讲当前设计，新人无需知道 Lua 存在过；非修订注考古——修订注层随清写吸收，历史住 git 史与冻结 ADR；冻结 ADR 正文不动，机制死亡者走 supersede；luau-abi 保归档不删）：依赖 = 无硬依赖；范围 = f1 living doc 清写（seam-capabilities / context-events / instance-model / fiber / config-format / service-registry）+ f2 冻结 ADR 处置 + ADR-0008 地位复议题；**f2 主通道 = 随对应 W 章吸收**（ADR-0005→T13-h / 0003→T13-i / 0015·0022→T13-l / 0019 C3→T13-m / 0011→T13-c，各章收官时同批落地），f 不单独执行已分配项，只兜未吸收余项；明细 = [wasm-first-design-review](research/wasm-first-design-review.md) §7。
   - T13-g 设计重审（Luau 妥协面盘点）— **已完成**（2026-10-16 = [wasm-first-design-review](research/wasm-first-design-review.md)；E1–E5 与 T13-f 扩充批已于 2026-10-16 两轮拍板，消费去向 = T13-b（已消费）/ T13-c/d/f（随各件开工消费））
-- 评审面三数：拍板 5 批（ADR-0034 转向批 + E3 + E1/E2/E5 合并案 + E4 + T13-f 标准）/ self-review findings = T13-a 批 4 Required（已修复）+ T13-b 批 3 Required 随笔修复 + 6 Nit/Optional（3 采纳：E1 选项① 记号 / 风险 W 行限定词 / D16.2 锚回补；1 半采纳：wit-abi 拍板锚行压缩并登记吸收点；2 推回：T13→T10.9 边保留 = W10 章未开，trap→fiber 依赖面归站前依赖重检）/ 耗时未系统计量（多轮会话）
+  - T13-h wit-abi W1 章（插件包形态与入口契约：world 定义 / export setup·dispose）：依赖 = 无硬依赖；开工输入 = luau-abi §A1（语义平移源，考古读）+ ADR-0034 §1/§3 + 三分法①（封闭接口面 WIT 富类型）+ design-review B7（实例即弃顺风）；f2 候选吸收 = ADR-0005 Consequences 成本账换血（D2）。
+  - T13-i wit-abi W2 章（manifest 格式）：依赖 = 无硬依赖；开工输入 = luau-abi §A2 + 三分法②（config 值 = TLV + 瘦身形状 DSL）；f2 候选吸收 = ADR-0003（require 纪律机制死亡 supersede）。
+  - T13-j wit-abi W3 章（ctx 形态：WIT import 接口集与 SDK 映射）：依赖 = T13-h / T13-c / T13-k；开工输入 = luau-abi §A3 + E3 拍板（同步件不进 ABI）+ E4 拍板（能力面三层）+ 补遗 6 papercuts + design-review B2（纯算内建件消解）。
+  - T13-k wit-abi W5 章（错误与 result 习语）：依赖 = 无硬依赖；开工输入 = luau-abi §A5 + design-review B5（错误封套类型化）+ 三分法①（错误族 = WIT 富类型原生）。
+  - T13-l wit-abi W6 章（边界转换：canonical ABI / TLV / resource 句柄族）：依赖 = 无硬依赖；开工输入 = luau-abi §A6 + E1 选项①（TLV 主线化；E1 三题答疑已录 = T13 状态行）+ 补遗 5 §5.4（零拷贝四层）+ design-review B6（Bytes 提正重裁归本章）；f2 候选吸收 = ADR-0015/0022 rationale 换血。
+  - T13-m wit-abi W7 章（契约与类型来源）：依赖 = T13-i；开工输入 = luau-abi §A7 + E5 拍板（瘦身形状 DSL 半消融）+ design-review A2 存活物（契约包数据职能）；f2 候选吸收 = ADR-0019 C3（lib 体系机制死亡 supersede）。
+  - T13-n wit-abi W8 章（事件静态声明）：依赖 = T13-m；开工输入 = luau-abi §A8 + E5 拍板（事件形状 = 瘦身 DSL；emit/on = string name + TLV payload import）。
+  - T13-o wit-abi W9 章（deps/provide 与能力门）：依赖 = T13-n；开工输入 = luau-abi §A9 + design-review B1（进口对账升格 = 编译期结构事实）+ 三分法①（能力/契约的 WIT 富类型面）；无站边写实 = 对账五格语义冻结存活（C 类），本章 = WIT 形态重写，不闸任何站。
+  - T13-p wit-abi W10 章（工具形态与 ABI 版本纪律）：依赖 = T13-h；开工输入 = luau-abi §A10 + ADR-0034 §3（package version 承接 abi_rev）+ ADR-0034 风险 W3（钉版纪律平移）。
+  - （2026-10-16 维护者触发：W 章批逐章立项 = T13-h…p；章序依赖写实为图边，立即可开工面 = c/d/e/f + h/i/k/l 八件）
+- 评审面三数：拍板 6 批（ADR-0034 转向批 + E3 + E1/E2/E5 合并案 + E4 + T13-f 标准 + W 章逐章立项 2026-10-16）/ self-review findings = T13-a 批 4 Required（已修复）+ T13-b 批 3 Required 随笔修复 + 6 Nit/Optional（3 采纳：E1 选项① 记号 / 风险 W 行限定词 / D16.2 锚回补；1 半采纳：wit-abi 拍板锚行压缩并登记吸收点；2 推回：T13→T10.9 边保留 = W10 章未开（W 章立项后已细化为 T13_p→T10_9），trap→fiber 依赖面归站前依赖重检）+ W 章立项批 1 Required（f2 归属双主 = 主通道定死随 W 章吸收）+ 3 Nit 全采纳（T13_n→T10_9 边补画 / 「三问」措辞 / T13-o 三分法①指名）/ 耗时未系统计量（多轮会话）
 - 维护者拍板约束原话 = [ADR-0034](decisions/0034-wasm-first-carrier.md) Context 末节（verbatim SSOT；本行曾逐字留存，ADR 批次消费后按冗余纪律删除，逐字原文见 git 史）
 - 范围：ADR-0021 整篇 supersede + ADR-0024 局部（盒管模型收敛为单层组件 + 内建件 + 外部服务 + T2 例外）+ ADR-0026 整篇 supersede（luau-abi.md 归档 archived，doc-lifecycle 纪律）+ WIT ABI 重设计（A 系列语义平移，A4 挂起/交错重做 = 最高风险章）+ T10 站表重规划（T10.3/9/10/11 修订 + 新增 SDK/构建管线站）+ S1 spike（guest async 工效学，按补遗 5 §5.3 修订为「工效学验证」）
 - 证据基线：[wasm-research 补遗 5](research/wasm-research.md)（wit-bindgen 0.63 async 正式特性 / wasip3 0.9.0+wasi-0.3.0 / wasip3 target Tier 3 入树 / 零拷贝语义四层修正 / Extism 判决 = 参照非选项）；ADR-0008（Creator 模式）前提削弱，审批门 v1 接口预留（T10.12 在案）不受影响，Creator 直写通道关闭须在新 ADR 明示
