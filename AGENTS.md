@@ -100,3 +100,4 @@ Done = `just ci` green + self-review of the working diff.
   - `docs/research/testing-practice-formal-verification.md` — testing-practice supplement: formal methods and DST
   - `docs/research/testing-practice-parallel-engineering.md` — testing-practice supplement: parallel testing engineering
   - `docs/research/handoff-era-archive.md` — verbatim archive of the final HANDOFF.md (retired session-handoff regime, ADR-0032)
+  - `docs/research/wasm-first-design-review.md` — wasm-first design review: Luau-compromise inventory and overturn list (T13 input)
