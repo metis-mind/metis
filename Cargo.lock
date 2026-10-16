@@ -433,15 +433,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "metis-component"
+version = "0.0.0"
+
+[[package]]
 name = "metis-fiber-core"
 version = "0.0.0"
 
 [[package]]
 name = "metis-loader"
-version = "0.0.0"
-
-[[package]]
-name = "metis-luau"
 version = "0.0.0"
 
 [[package]]

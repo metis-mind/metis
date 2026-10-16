@@ -29,17 +29,19 @@ graph TD
     T10_6["T10.6 拦截点接入（未开始）"]
     T10_7["T10.7 注册表/inject（未开始）"]
     T10_8["T10.8 配置读写（未开始）"]
-    T10_9["T10.9 diff/索引/analyze（未开始）"]
-    T10_10["T10.10 luau 转换层（未开始）"]
+    T10_9["T10.9 diff/索引/静态对账（未开始）"]
+    T10_10["T10.10 组件运行时（未开始）"]
     T10_11["T10.11 能力面（未开始）"]
     T10_12["T10.12 安装事务（未开始）"]
+    T10_13["T10.13 metis-codec（未开始）"]
+    T10_14["T10.14 插件 SDK（未开始）"]
+    T10_15["T10.15 构建管线（未开始）"]
     T13["T13 wasm-first 转向（进行中）"]
     S4["火-4 台账工具化（未消费；消费点 = 任务系统工具化立项）"]
     S5["火-5 命令输出瘦身（未消费；消费点 = 命令输出瘦身方案立项）"]
     T10_1 --> T10_2
     T10_1 --> T10_3
     T10_1 --> T10_5
-    T10_1 --> T10_10
     T10_2 --> T10_4
     T10_3 --> T10_6
     T10_3 --> T10_7
@@ -54,10 +56,18 @@ graph TD
     T10_7 --> T10_12
     T10_9 --> T10_12
     T10_10 --> T10_12
+    T10_1 --> T10_13
+    T10_13 --> T10_10
+    T10_3 --> T10_14
+    T10_13 --> T10_14
+    T10_12 --> T10_15
+    T10_14 --> T10_15
     T13 --> T10_3
     T13 --> T10_9
     T13 --> T10_10
     T13 --> T10_11
+    T13 --> T10_14
+    T13 --> T10_15
 ```
 
 ## 内部任务
@@ -73,32 +83,36 @@ graph TD
   - T10.0b 质量基建·慢轨件 ✅（2026-10-16 验收；维护者明示收尾、抽检配额未执行在案；SHAs = b9c0e69…8880e7d）——`just deep` recipe（本地）；依赖：T10.0a（✅ 2026-10-16）；拍板形态（2026-10-15，Q1/Q6）= 首批内容 = llvm-cov 报告 + 膨胀遥测件（非空 recipe；§2.4/§5 原触发器提前，修订注在案）；远程周跑 workflow 与慢轨失败自动开 issue 机制推迟至 T10.2 随 mutants 首个硬门禁件落地。
   - T10.1 metis-value——`crates/metis-value`；依赖：无；锚 = ADR-0015/0022 + luau-abi §A6.3/§A6.8 登记表；Bytes 扩展位保留不立（context-events §3 方案 C 行）。
   - T10.2 metis-fiber-core——`crates/metis-fiber-core`（禁 tokio/mlua）；依赖：T10.1；锚 = ADR-0010/0019/0023 + fiber.md §10 开放项（SIGTERM 处理 / drain 总预算数值）+ luau-abi §A4.6 登记表（exclusive 名字回收 D1.2 / wait-for 图 D1.7）与实现期配置行（在飞协程预算与事件在途投递界 D10.2 / 优雅窗口 + drain 预算 D11.1）；随站 = Kani（D7）+ mutants 门禁（D4）+ D6 fiber 内存件；另随本站落地 = 远程周跑 workflow 首建（碰 `.github/workflows/`，ADR-0031 已授权）+ 慢轨失败自动开 issue 机制（2026-10-15 Q1/Q6 拍板划入）。
-  - T10.3 schema DSL——`crates/metis-loader`；依赖：T10.1；锚 = luau-abi §A7.0（YAML parser 选型，走 adding-dependencies）/ §A7.1 D16.2 / §A7.3 D18.3 / §A7.4 D19.1 / §A7.5 与 §A8.5 登记表（表达式串 parser / 规范化比较器 / 命名空间合并解析器 / 启用期对账器 / 反向索引 D22.6 / 记忆化预算）。
+  - T10.3 schema DSL——`crates/metis-loader`；依赖：T10.1；锚 = luau-abi §A7.0（YAML parser 选型，走 adding-dependencies）/ §A7.1 D16.2（记法与产生式冻结纪律）/ §A7.3 D18.3（规范化比较器）/ §A7.4 D19.1（运行期 walk 校验器 = 宿主两跳中点原位存活）/ §A7.5 与 §A8.5 登记表（表达式串 parser / 命名空间合并解析器 / 启用期对账器 / 反向索引 D22.6 / 记忆化预算）——A7 半消融 = E5 拍板：记法裁至只服务 Value 形状（`buffer`/`function` 等 ctx 面词族消亡），config schema `type:` 接线与契约包三来源存活；新增 = WIT 包加载与契约命名空间合并（wit-parser 系选型走 adding-dependencies；契约包数据职能的 WIT 继承面 = design-review A2 存活物）+ 平台封闭接口面 WIT 富类型契约（三分法①）；形态定稿锚 = wit-abi W2/W7 章。
   - T10.4 事件系统派发——`crates/metis-runtime`；依赖：T10.2；锚 = ADR-0011/0013/0014/0016/0017 + context-events.md §0.3 修订注（背压面写实 + worker 伪码语义更新两件实现期登记）+ luau-abi §A4.2（tokio 可学结构）/ §A4.6 表（裸 yield 检测 D9.3）；随站 = D6 事件吞吐件。
   - T10.5 journal 机器——`crates/metis-runtime`；依赖：T10.1；锚 = journal.md J1.6/J3.6/J4.4 实现期清单行（存活 10 项）+ luau-abi §A6.7 D7.3（JSONL + Int 字符串惯例）/ §A6.2（深快照预算数值）；D5 快照纪律随站。
   - T10.6 拦截点接入——`crates/metis-runtime`；依赖：T10.3 / T10.4 / T10.5；锚 = journal.md D82/D84（拦截点骨架形态；范围 = router / 生命周期机两族）+ luau-abi §A8.5 表（emit 校验器 D22.4 / internal/ emit 拦截 D20.2）；**能力使用族与 VM 族拦截（挂载位 = ctx 方法）划出本站 = T10.11**。
   - T10.7 服务注册表/inject——`crates/metis-runtime`；依赖：T10.2 / T10.3 / T10.4；锚 = service-registry.md S1–S6 机制本体（扩展位 5 处不做：withdraw / host 有界等待 / 跨 VM 取消 / check 谓词 / 自动重试）+ instance-model.md S3.7/S4.8 登记（D61/D63/D64/D68/D70/D72）+ luau-abi §A9.2（对账五格 D25 / warn 日志点 D25.1 / required 依赖图 D25.4）/ §A1.4（加载墙钟预算数值）+ config-format.md D43 级联执行半（与 T10.9 检测半汇合）；开工核对 = service-registry §3/§7 两格兑现抽查；**最大站——开工先过粒度闸，超阈值处置 = 拆 7a registry 本体 / 7b 实例与 mount 面**。
   - T10.8 配置读写管线——`crates/metis-loader` + runtime 胶水；依赖：T10.3；锚 = config-format.md C1–C3/C5/C6/C8 各章联动登记（D29 脚手架两件 / D36 读管线 / D39 原子写与串行队列 / D40 行块补丁器 / D47 secrets 内存 map 与两分 / C8 core 节容器校验）+ instance-model.md D67（实例配置合成器）。
-  - T10.9 diff/reload + 部署索引——`crates/metis-loader`；依赖：T10.8；锚 = config-format.md C4/C7/C9 联动登记（D41 diff 器 / D42 重入与结构相等 / D43 检测半 / D34 部署索引扫描含残迹 / D52 analyze 判环 / 显式 reload 命令形态）+ luau-abi §A8.5（部署契约索引）/ §A9.1 D24（部署索引）/ §A10 登记表（AST 选型 D28.2 / luau-lsp 钉版 / 四生成器减 WIT / abi_rev 比较 D27.2）+ instance-model.md S2.6（fleet 校验 D56/D60）；**收窄 = 静态/纯算法面，生效动作执行（重挂载 / 级联重启用 / 卸载生效）划出 = T10.7 启用管线与 T10.12 汇合**。
-  - T10.10 metis-luau 转换层——`crates/metis-luau`；依赖：T10.1；锚 = luau-abi §A3.11（mlua 无条件安装件处置）/ §A4.6 表（coroutine shim 的 mlua resume/yield 链 spike + 开销实测 D9.2 / shim + SENTINEL 环境准备）/ §A6.1（push_int64_exact）/ §A6.8 表 + seam-capabilities.md §1.4（环境准备同批）/ §1.6（数字格式化与 table 遍历序断言）/ §3.3（内存限额数值 + 单 VM 基线实测）/ §6.3；spike 先行。
-  - T10.11 能力面——`crates/metis-runtime` 能力实现 + metis-luau ctx 暴露；依赖：T10.4 / T10.5 / T10.10；锚 = seam-capabilities.md（ADR-0025 机制本体：fs/http/sqlite/timer/process）+ §2.1（有界微基准）+ luau-abi §A3.6–§A3.10（能力预算数值 + TOCTOU 硬化）/ §A6.4 D4.3（UTF-8 校验）/ §A6.5 D5.4/D5.5（流式句柄族 + 宿主缓冲预算）+ journal 能力使用族 / VM 族拦截（自 T10.6 划入，挂载位 = ctx 方法）。
+  - T10.9 diff/reload + 部署索引——`crates/metis-loader`；依赖：T10.8；锚 = config-format.md C4/C7/C9 联动登记（D41 diff 器 / D42 重入与结构相等 / D43 检测半 / D34 部署索引扫描含残迹 / D52 analyze 判环 / 显式 reload 命令形态）+ luau-abi §A8.5（部署契约索引）/ §A9.1 D24（部署索引）+ instance-model.md S2.6（fleet 校验 D56/D60）——静态/纯算法面全存活；消亡 = 钉版 luau-lsp / AST 选型 / 四生成器（design-review A8）；换血 = `abi_rev` 比较 → WIT package version 比较（ADR-0034 §3 承接，D27.2 min 语义原位）+ 组件自描述进口清单解析进部署索引（D24.1 面扩展；启用期进口对账 = B1 编译期结构事实，判定面归 T10.7）+ emit 对账形状源 = 瘦身形状 DSL（E5）；**收窄 = 静态/纯算法面，生效动作执行（重挂载 / 级联重启用 / 卸载生效）划出 = T10.7 启用管线与 T10.12 汇合**。
+  - T10.10 组件运行时——`crates/metis-component`（wasmtime 嵌入：Store/Instance 管理、实例即弃池化、fuel/epoch 预算、host imports 注册、wasm trap 处置接 fiber 错误遏制）；依赖：T10.1 / T10.13；锚 = ADR-0005（遏制四约束原生兑现 = design-review D2）+ wasm-research 补遗 5 §5.4（边界拷贝语义四层）/ 补遗 6（S1 矩阵 + papercuts）+ wit-abi W1/W4/W6 章（设计锚）；wasmtime 引入走 adding-dependencies（ADR-0034 风险 W4）；原 Luau 锚点（push_int64_exact / coroutine shim spike / mlua 处置件）全失效，空壳 `crates/metis-luau` 已于 T13-b 批删除。
+  - T10.11 能力面——`crates/metis-runtime` 能力实现 + metis-component host imports 暴露（ctx 面 = WIT imports，作者面 SDK 映射归 T10.14）；依赖：T10.4 / T10.5 / T10.10；锚 = seam-capabilities.md（ADR-0025 能力集语义本体存活：fs/http/sqlite/timer/process；§1 stdlib 卫生章消亡 = design-review A1，清写归 T13-f）+ E4 拍板三层（private = wasi:filesystem preopen / 命名根 = manifest 声明 + 部署者绑定（D44 workspace 的诚实形态，preopen 承载）/ global = host-mediated 自研逃逸舱；workspace/session 语义归插件层服务投影，核心不做一一映射）+ luau-abi §A3.6–§A3.10（能力预算数值 + TOCTOU 硬化语义锚存活）/ §A6.5 D5.4/D5.5（流式句柄族语义存活，形态按 WASI 0.3 `stream<T>` 重做）+ design-review B2（纯算内建件族消解进 guest 包生态，核心收缩 = 效应能力 + crypto 硬件论据 + wasi 标准件；seam §2.1 微基准与 sync 白名单机器大半随之消亡）+ journal 能力使用族 / VM 族拦截（自 T10.6 划入，挂载位 = host import 实现侧）；消亡 = §A6.4 D4.3 UTF-8 校验与 buffer 面（WIT `string`/`list<u8>` 原生）。
   - T10.12 安装事务——`crates/metis-loader` + runtime 协调；依赖：T10.7 / T10.8 / T10.9 / T10.10；锚 = ADR-0008（审批门 v1 接口预留不实现）+ luau-abi §A4.5 D11.5（cordis 事务式重载纪律）+ config-format.md C7（D48/D49 卸载两档）+ testing-strategy.md §3.F（F 类基建落地，failpoint 选型走 adding-dependencies）+ D6 热更件。
-- 范围外（触发器未满足）：metis-codec TLV 位分配（luau-abi §A6.6 D6.2）与盒 trap 句柄处置（§A5.3 D14.4）——首盒发布前冻结即可；registry 扩展位 5 处 / context-events §0.5 优化位与 §3 Bytes 扩展位 / WIT 生成器（盒面）/ `metis install` 工具化与分发机制（长回）。
+  - T10.13 metis-codec——`crates/metis-codec`（TLV 线编码 crate，双 target = 宿主与 guest 共用）；依赖：T10.1；锚 = luau-abi §A6.6 已拍板设计（`list<u8>` 进 / `result<list<u8>, list<u8>>` 出 / 格式版本字段）——E1 选项① 拍板主线化（自范围外拨出，位分配冻结时点 = 首插件发布前原位）；D11 声明 + cov 地板 + round-trip 测试基线随站。
+  - T10.14 插件 SDK——`crates/metis-plugin`（guest 侧官方 SDK，ADR-0034 §4：`#[metis::plugin]` 宏藏 ABI + trait 实现形态，作者不见 WASI/WIT；world 固定，能力白名单 = manifest 声明对账）；依赖：T10.1 / T10.3 / T10.13；锚 = 先例（proxy-wasm SDK / zed_extension_api / Spin / Extism PDK 宏藏 ABI 模式）+ 三分法②（瘦身形状 DSL → 具体 Rust 类型生成，`any` 回落 `metis::Value`）+ E3 拍板（宿主零同步原语：fanout = guest 异步设施原生、exclusive = SDK async mutex 助手；D1.2 三规则重估面随站）+ design-review B2（内建件便利 re-export = feature 面）+ 补遗 6 papercut 1（wasip2 std 拖带 14 导入的 world 收敛）；开工输入 += T13-d SDK 形态议题结论 + wit-abi W1/W3 章；D11 声明随站（guest 面形态随站定）。
+  - T10.15 即写即用构建管线——`metis dev` watch 守护（保存 → 构建 → 热换 = 主答案）+ 构建缓存 + 脚手架模板；依赖：T10.12 / T10.14；锚 = ADR-0034 §6 四件（watch / 构建缓存 / 部署内工具链服务（可选件 = Creator 体面退场形态）/ 远端构建场（marketplace 配套，与确定性构建信任链同管线）——后两件触发器未满足，不进 v1 面）+ design-review B9（地板实测：增量重建 0.22–0.29 s + 实例化 1.7 µs）+ ADR-0034 风险 W3（WIT 包 SSOT + wit-bindgen/wasm-tools/wasmtime 钉版纪律）+ `metis sdk` 命令面重组（D28.1 存活件 = new/check 归本面与 T10.9 同实现；analyze 读代码扫描面消亡 = design-review B1）；开工输入 += T13-e 构建管线方案。
+- 范围外（触发器未满足）：registry 扩展位 5 处 / context-events §0.5 优化位与 §3 Bytes 扩展位（提正重裁归 wit-abi W6 章 = design-review B6，不再等触发器）/ `metis install` 工具化与分发机制（长回）。（2026-10-16 T13-b 拨出三件：metis-codec TLV 位分配 = E1 选项① 主线化提正归 T10.13；盒 trap 句柄处置随盒概念消解（ADR-0034 §2）归 T10.10 本体；WIT 生成器（盒面）随 Luau 工具面全撤消亡 = design-review A8。）
 - 开窗前置：worktree bootstrap 自动化（[ADR-0032](decisions/0032-operating-protocol.md) Consequences 登记，届时再建）。
 - 评审面三数：拍板 21（2026-10-15 拆分批 Q1–Q6 + T10.0 批 Q1–Q9 + Q10/Q11 + 验收包四项：bddb55b 保留不重置 / flake.nix 不入 §4.2 / 推送归并行会话 / 暂存规则不立——并行同工作区为特殊态）/ self-review findings 23（站表 pass 7 已随块修复；0a 批 8 笔 commit 判断 pass 共产出 14 Required 随笔修复；llvm-cov / insta 两笔判断 pass 漏跑、事后追认 pass = clean，流程漏记一条在案；0b 批 2 Required（backlog 随行 + Gate-Surface trailer，均落地形态项随笔处置）+ 1 Nit / 1 Optional 推回在案）/ 耗时 <1h ×2（0a/0b 均验收会话即收尾，抽检配额未执行）
-- **2026-10-15 方向变更注**：wasm-first 转向拍板（= T13，维护者对话）——T10.3 / T10.9 / T10.10 / T10.11 的 Luau 锚点失效，待 T13 重规划后修订；T10.0a/b 与 T10.1/2/4/5/6/7/8/12 的语言无关面继续有效，T10.0a 实现批不受阻塞。
+- **2026-10-15 方向变更注**：wasm-first 转向拍板（= T13，维护者对话）——T10.3 / T10.9 / T10.10 / T10.11 已随 T13-b 修订（2026-10-16，另新增 T10.13/14/15 三站）；T10.0a/b 与 T10.1/2/4/5/6/7/8/12 的语言无关面继续有效。其余站线散见 Luau 子锚点开工核对四项：T10.2 的 exclusive 名字回收 D1.2 随 E3 拍板归 T10.14 SDK 助手面；T10.4 的裸 yield 检测 D9.3 消亡（guest async 运行时自管，design-review A7）；T10.8 的 D29 `.luaurc` 脚手架件消亡（require 体系全链 = A2）；T10.7 的盒对账格 D25.5 升格为全插件进口对账（B1，语义原位存活）。
 
 ### T13 wasm-first 转向
 
-- 状态：**进行中**（已完成 = 方向拍板消化 + ADR-0034 批次（0021/0026 整篇 supersede、0024 局部、luau-abi 归档、wit-abi 开章、AGENTS.md 清单）+ S1 spike **PASS**（证据 = wasm-research 补遗 6）——W1 风险解除为可绕行摩擦项；本批变更已提交（2026-10-15 = `f5bdc7c`）+ T13-g 设计重审 **已完成**（2026-10-16，产出 = [wasm-first-design-review](research/wasm-first-design-review.md)：A 消亡 10 项 / B 更优 9 项 / C 不动 10 项 / D 新机会 4 项 / E 硬张力 5 题 + T13-b/f 修订建议）；拍板进展（2026-10-16 两轮）= E3 定（最大化并发投递、宿主零同步原语、同步归 guest 语言设施；澄清：实例内各任务共享同一堆，同步件 = await 间天然原子 + async mutex，原子变量无场景；同实例重入 = W4 开工首项 spike）+ E1/E2/E5 合并案定（接口数据三分法：平台封闭面 = WIT 富类型 / 开放数据面 = TLV + 瘦身形状 DSL + SDK 生成类型 / 大负载 = stream·resource）+ E4 定（fs 三层原语：private=preopen、命名根 = 部署者绑定、global=自研逃逸舱；workspace/session 语义归插件层服务投影）+ T13-f 标准与两边界定（清写至零 Lua 痕迹；冻结 ADR 不动、luau-abi 保归档）；下一步 = T13-b 站表修订可开工；未拍板项 = 站级重规划细节 / SDK 形态 / 构建管线方案）
+- 状态：**进行中**（已完成 = 方向拍板消化 + ADR-0034 批次（0021/0026 整篇 supersede、0024 局部、luau-abi 归档、wit-abi 开章、AGENTS.md 清单）+ S1 spike **PASS**（证据 = wasm-research 补遗 6）——W1 风险解除为可绕行摩擦项；本批变更已提交（2026-10-15 = `f5bdc7c`）+ T13-g 设计重审 **已完成**（2026-10-16，产出 = [wasm-first-design-review](research/wasm-first-design-review.md)：A 消亡 10 项 / B 更优 9 项 / C 不动 10 项 / D 新机会 4 项 / E 硬张力 5 题 + T13-b/f 修订建议）；拍板进展（2026-10-16 两轮）= E3 定（最大化并发投递、宿主零同步原语、同步归 guest 语言设施；澄清：实例内各任务共享同一堆，同步件 = await 间天然原子 + async mutex，原子变量无场景；同实例重入 = W4 开工首项 spike）+ E1/E2/E5 合并案定（接口数据三分法：平台封闭面 = WIT 富类型 / 开放数据面 = TLV + 瘦身形状 DSL + SDK 生成类型 / 大负载 = stream·resource）+ E4 定（fs 三层原语：private=preopen、命名根 = 部署者绑定、global=自研逃逸舱；workspace/session 语义归插件层服务投影）+ T13-f 标准与两边界定（清写至零 Lua 痕迹；冻结 ADR 不动、luau-abi 保归档）；T13-b 站表修订批 **已完成**（2026-10-16：T10.3/9/10/11 按拍板结论修订 + 新增 T10.13 metis-codec / T10.14 插件 SDK / T10.15 构建管线三站 + 空壳 `crates/metis-luau` 删除、`crates/metis-component` 占位建立 + wit-abi 目录 W4/W6/W7 行对齐拍板；产出 = 本批 diff，验收归维护者评审）；下一步 = T13-c（W4 章）/ T13-d / T13-e 三件无互依赖可并行；未拍板项 = SDK 形态 / 构建管线方案（归 T13-d/e 议题批））
 - 剩余工作注册（每项 = 新 session 仅凭本台账即可续作的最小单元；开工输入列 = 续作锚点）：
   - T13-a 提交转向批 — **已完成**（2026-10-15 = `f5bdc7c`；just ci 绿 + self-review 判断 pass 4 Required 修复后提交；钩子全过 = fmt/lint/secret scan/commit-msg/gate-guard）。
-  - T13-b T10 站表修订批：T10.3/9/10/11 修订 + 新增 SDK/构建管线站 + 空壳 crate `crates/metis-luau` 处置（删除或改向 metis-component）；依赖 = T13-a；开工输入 = [ADR-0034](decisions/0034-wasm-first-carrier.md) §8 + 补遗 6 + [wasm-first-design-review](research/wasm-first-design-review.md) + 两轮拍板结论（接口三分法 / E3 / E4 / T13-f 标准，见 T13 状态行）。
+  - T13-b T10 站表修订批 — **已完成**（2026-10-16；产出 = T10.3/9/10/11 修订 + T10.13/14/15 新增 + 空壳 crate 处置 + wit-abi 目录行对齐 + 范围外拨出三件，同批 diff 一处看全；just ci 绿 + self-review 判断 pass 3 Required 随笔修复；验收 = 维护者 diff 评审）。
   - T13-c wit-abi W4 章（async 与交错语义）：依赖 = T13-a；开工输入 = 补遗 6（S1 矩阵 + papercuts）+ [luau-abi](design/luau-abi.md) §A4（语义平移源，已归档仅考古读）+ E3 拍板与澄清（2026-10-16：最大化并发、宿主零同步原语、实例内同步件形态；同实例重入 = 开工首项 spike）。
   - T13-d SDK 形态议题（metis-plugin crate 宏形状 / 作者面）：依赖 = 无硬依赖（可与 b/c 并行）；开工输入 = ADR-0034 §4 + 先例清单（proxy-wasm SDK / zed_extension_api / Spin / Extism PDK 宏藏 ABI 模式）。
   - T13-e 构建管线方案（`metis dev` watch / 构建缓存 / 部署内工具链服务 / 远端构建场）：依赖 = 无硬依赖；开工输入 = ADR-0034 §6。
   - T13-f Luau 痕迹清除批（标准已于 2026-10-16 拍板 = **清写至零 Lua 痕迹**：living 设计文档重写为只讲当前设计，新人无需知道 Lua 存在过；非修订注考古——修订注层随清写吸收，历史住 git 史与冻结 ADR；冻结 ADR 正文不动，机制死亡者走 supersede；luau-abi 保归档不删）：依赖 = 无硬依赖；范围 = f1 living doc 清写（seam-capabilities / context-events / instance-model / fiber / config-format / service-registry）+ f2 冻结 ADR 处置（ADR-0003/0019 机制死亡 supersede、0015/0022/0005/0011 rationale 换血，可并入 W 章批）+ ADR-0008 地位复议题；明细 = [wasm-first-design-review](research/wasm-first-design-review.md) §7。
-  - T13-g 设计重审（Luau 妥协面盘点）— **已完成**（2026-10-16 = [wasm-first-design-review](research/wasm-first-design-review.md)；待拍板 = E1–E5 议题批 + T13-f 扩充批，拍板结果消费进 T13-b/c/d/f）
+  - T13-g 设计重审（Luau 妥协面盘点）— **已完成**（2026-10-16 = [wasm-first-design-review](research/wasm-first-design-review.md)；E1–E5 与 T13-f 扩充批已于 2026-10-16 两轮拍板，消费去向 = T13-b（已消费）/ T13-c/d/f（随各件开工消费））
+- 评审面三数：拍板 5 批（ADR-0034 转向批 + E3 + E1/E2/E5 合并案 + E4 + T13-f 标准）/ self-review findings = T13-a 批 4 Required（已修复）+ T13-b 批 3 Required 随笔修复 + 6 Nit/Optional（3 采纳：E1 选项① 记号 / 风险 W 行限定词 / D16.2 锚回补；1 半采纳：wit-abi 拍板锚行压缩并登记吸收点；2 推回：T13→T10.9 边保留 = W10 章未开，trap→fiber 依赖面归站前依赖重检）/ 耗时未系统计量（多轮会话）
 - 维护者拍板约束原话 = [ADR-0034](decisions/0034-wasm-first-carrier.md) Context 末节（verbatim SSOT；本行曾逐字留存，ADR 批次消费后按冗余纪律删除，逐字原文见 git 史）
 - 范围：ADR-0021 整篇 supersede + ADR-0024 局部（盒管模型收敛为单层组件 + 内建件 + 外部服务 + T2 例外）+ ADR-0026 整篇 supersede（luau-abi.md 归档 archived，doc-lifecycle 纪律）+ WIT ABI 重设计（A 系列语义平移，A4 挂起/交错重做 = 最高风险章）+ T10 站表重规划（T10.3/9/10/11 修订 + 新增 SDK/构建管线站）+ S1 spike（guest async 工效学，按补遗 5 §5.3 修订为「工效学验证」）
 - 证据基线：[wasm-research 补遗 5](research/wasm-research.md)（wit-bindgen 0.63 async 正式特性 / wasip3 0.9.0+wasi-0.3.0 / wasip3 target Tier 3 入树 / 零拷贝语义四层修正 / Extism 判决 = 参照非选项）；ADR-0008（Creator 模式）前提削弱，审批门 v1 接口预留（T10.12 在案）不受影响，Creator 直写通道关闭须在新 ADR 明示

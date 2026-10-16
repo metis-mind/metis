@@ -1,6 +1,6 @@
 [package]
-name = "metis-luau"
-description = "Luau FFI boundary: mlua wrapper, ctx userdata, Value<->Lua conversion, require wrapper (ADR-0003)"
+name = "metis-component"
+description = "wasmtime embedding: Store/Instance lifecycle, disposable pooling, fuel/epoch budgets, host imports (ADR-0034)"
 # Internal crates carry no semver burden. To publish later (when release
 # engineering returns): switch to version.workspace = true and drop
 # publish = false — see CONTRIBUTING.md.
