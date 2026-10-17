@@ -91,7 +91,7 @@ Done = `just ci` green + self-review of the working diff.
 - `docs/research/` — point-in-time reports; corrections land as addenda, never rewrite conclusions:
   - `docs/research/cordis-research.md` — Cordis/Harness survey (project-direction input)
   - `docs/research/journal-replay-research.md` — journal/replay research (ADR-0029 input)
-  - `docs/research/wasm-research.md` — wasm carrier research with addenda 1–6 (ADR-0024 spike evidence; S1 guest-async spike = addendum 6)
+  - `docs/research/wasm-research.md` — wasm carrier research with addenda 1–7 (ADR-0024 spike evidence; S1 guest-async spike = addendum 6; S2 same-instance reentrancy spike = addendum 7)
   - `docs/research/luau-toolchain-spike.md` — Luau toolchain spike results
   - `docs/research/review-economics-research.md` — review-economics report RQ1–RQ8 (ADR-0031/0032 input)
   - `docs/research/review-economics-admission-check.md` — independent source spot-check of the report (19/19 pass)

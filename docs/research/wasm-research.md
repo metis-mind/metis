@@ -444,3 +444,40 @@ rustup 自管 `1.98.1-x86_64-unknown-linux-gnu` + target `wasm32-wasip2`（rustc
 ### 总结论
 
 「Rust guest 写 async 组件 + 宿主单线程多实例并发在飞」在 wit-bindgen 0.63 / wasmtime 49 / rustc 1.98.1 + wasm32-wasip2 下零配置成立；摩擦集中在 wasip2 std 拖带导入与文档缺口，是可绕行项，不是路线级障碍。
+
+## 补遗 7（2026-10-17）：S2 spike——同实例重入验证（wit-abi W4 章开工首项）
+
+> 性质：addendum——S1 的续作；E3 拍板澄清（2026-10-16）指定「同实例重入 = W4 开工首项 spike」（[wasm-first-design-review](wasm-first-design-review.md) §6 E3 登记）。执行 = 子代理一次性工程（`scratch/s2-reentrancy/`，gitignored，原始文件与完整命令见其 README.md），本补遗收录全部结论性数据。判决：**PASS——同实例重入成立，E3 拍板语义全部实证**。
+
+### 环境
+
+rustup 自管 `1.98.1-x86_64-unknown-linux-gnu` + target `wasm32-wasip2`；guest = wit-bindgen 0.63.0 + futures 0.3.34；host = wasmtime 49.0.3 + wasmtime-wasi 49.0.3 + tokio（current_thread 运行时）。全程 `--offline` 构建运行（registry 缓存命中）；guest 冷建 9.25 s，host 依赖树暖缓存 7.45 s。WIT = 自建 `metis:s2@0.1.0`（import `sleep: async func(ms: u64)`；export `bump: async func(id: u32, ms: u64) -> list<string>` / `read_modify_write: async func(ms: u64) -> u32` / `atomic_bump: func() -> u32`）。
+
+### 验证矩阵
+
+| 项 | 结果 | 关键数字 |
+| --- | --- | --- |
+| R1 同实例重入（核心裁决项） | PASS | 单实例单 Store，`run_concurrent` 内并发 bump(1,500) ∥ bump(2,100)：墙钟 500.70 / 500.97 ms 两轮（串行应 ≈600 ms）；两个不同时刻的 guest 日志快照拼出唯一完整序 start 1 → start 2 → end 2 → end 1——第二条调用在第一条挂起（await host sleep）期间进入同一实例并先完成 |
+| R2a 挂起点间原子 | PASS | 顺序两调 `atomic_bump()`（无 await 读改写）→ 1、2 |
+| R2b 跨挂起点读改写丢失更新 | 实证成立 | 并发 read_modify_write(500) ∥ read_modify_write(100) → 两者均读 0 写 1，终值 1（非 2）；墙钟 501.57 / 501.38 ms（确为并发在飞）——实例内各任务共享同一线性内存堆、跨 await 读改写无保护，async mutex 动机成立 |
+| R4a 在飞任务随并发域遗弃 | 观察 | `run_concurrent` future 在 guest 任务在飞时被 drop（timeout 300 ms vs 5000 ms sleep）→ 无 panic 无报错，Store 可继续调用，干净 drop |
+| R4b 后台 spawn 不等待 | 观察 | 闭包内 spawn 后不 await JoinHandle 即返回 → `run_concurrent` 立即正常返回（不等后台任务），guest 任务静默遗弃，Store 可复用 |
+
+### 宿主侧 API 形状（T10.4 / T10.10 参考）
+
+- 配置：`Config::wasm_component_model(true).concurrency_support(true)`（wasmtime 49 default features 已含 `component-model-async`）。
+- 链接：`wasmtime_wasi::p2::add_to_linker_async(&mut linker)` + 生成绑定 `S2::add_to_linker::<HostState, HostState>(&mut linker, |t| t)`；宿主类型须 `impl HasData`；WIT-async import 落在 `HostWithStore<T>`（supertrait `HasData + Send`），签名形如 `fn sleep(_accessor: &Accessor<T, Self>, ms: u64) -> impl Future<Output = ()> + Send`。
+- 同实例并发：`store.run_concurrent(async |accessor| -> wasmtime::Result<_> { ... }).await??`，闭包内 `futures::join!(api.call_bump(accessor, 1, 500), api.call_bump(accessor, 2, 100))`——两条调用均持 `&Accessor` 共享借用，无借用冲突；生成的 async export 调用走 `TypedFunc::call_concurrent` → `StagedCall` 排入实例事件循环，就绪门 `!(do_not_enter || backpressure > 0)` 在任务 1 挂起时放行任务 2（wasmtime-49.0.3 `concurrent.rs` `GuestCall::is_ready`）。
+- 后台任务：`accessor.spawn(task)`，`task` 须手写 `impl AccessorTask<HostState>`，返回 `JoinHandle`。
+
+### Papercuts（续补遗 6 的 1–6；归 wit-abi W3/W4 章与 SDK 站输入）
+
+7. `concurrency_support(true)` 下同步 export 的 `TypedFunc::call` 也被运行时拒绝（「store configuration requires that `*_async` functions are used instead」）→ `bindgen!` 需 `exports: { default: async }`，同步 WIT 函数的调用点也全部 `.await`。
+8. wasmtime-wasi 49 的 `WasiView` 形状变化：`fn ctx(&mut self) -> WasiCtxView<'_>` 单方法给出 ctx+table，无独立 `IoView` impl；`WasiView`/`WasiCtx` 在 crate 根，`p2::WasiView` 是私有 re-export（从 p2 导入吃 E0603）。
+9. 无返回值的 WIT-async import 生成 `-> impl Future<Output = ()> + Send`（无 Result 包装，除非 `trappable`）；报错指向宏展开内部，定位靠「required by a bound」行。
+10. `AccessorTask` 对 async 闭包无 blanket impl（源码注释：`AsyncFnOnce` 尚无法表达 Send bound），须手写 struct + impl。
+11. （次要）workspace 非根 package 的 `[profile.*]` 被 cargo 静默忽略。
+
+### 总结论
+
+wasmtime 49.0.3 组件模型 async 支持同实例重入：单宿主线程 `run_concurrent` 内对同一实例的第二条 export 调用在第一条挂起期间进入执行（≈500 ms 墙钟 + 交错日志序实证）；两条在飞任务共享同一线性内存堆，await 间原子、跨 await 读改写丢失更新。E3 拍板语义（最大化并发投递 / 实例内共享堆 / await 间天然原子）全部实证成立；wit-abi W4 章据此开章。

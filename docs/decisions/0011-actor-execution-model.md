@@ -1,6 +1,6 @@
 # 0011. 执行模型：actor 语义 + tokio
 
-- Status: accepted（Decision 首格「同一时刻一个插件最多一个回调在执行……串行性绝对」由 [ADR-0026](0026-luau-abi.md) 局部取代（2026-10-10，supersede 批次 #1）= 插件内协作式自由交错：同一瞬间至多一条协程在 CPU 上、多条回调可在飞交错、切换仅在挂起点；「插件作者写无锁顺序代码」保留）
+- Status: accepted（Decision 首格「同一时刻一个插件最多一个回调在执行……串行性绝对」由 [ADR-0026](0026-luau-abi.md) 局部取代（2026-10-10，supersede 批次 #1）= 插件内协作式自由交错：同一瞬间至多一条协程在 CPU 上、多条回调可在飞交错、切换仅在挂起点；「插件作者写无锁顺序代码」保留；Decision 首格「每插件实例 = 独立 `lua_State`」、第三格「VM 级时间盒（interrupt 回调查单次执行时长，硬截断）」与第四格三层保险第一层「VM 时间盒」的载体面由 [ADR-0034](0034-wasm-first-carrier.md) + [wit-abi](../design/wit-abi.md) W4 章局部取代（2026-10-17）= 实例 = wasm 组件实例（Store+Instance），单步执行硬截断 = fuel/epoch 计量——「防堵 executor」语义与三层保险的分层结构不动；actor 基线（邮箱 + 星型拓扑）本体不动）
 - Date: 2026-09-30
 
 ## Context
