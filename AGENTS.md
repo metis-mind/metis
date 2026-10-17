@@ -81,6 +81,7 @@ Done = `just ci` green + self-review of the working diff.
   - `docs/design/seam-capabilities.md` — seam capability set (frozen, ADR-0025)
   - `docs/design/luau-abi.md` — Luau ABI (archived 2026-10-15: superseded by ADR-0034 wasm-first pivot; archaeology only)
   - `docs/design/wit-abi.md` — WIT ABI (living, opened 2026-10-15; ADR-0034 lineage)
+  - `docs/design/plugin-sdk.md` — plugin SDK author surface (living, opened 2026-10-17; T13-d form decisions D98–D104)
   - `docs/design/config-format.md` — config format (frozen, ADR-0027)
   - `docs/design/instance-model.md` — instance model (frozen, ADR-0028)
   - `docs/design/journal.md` — journal: core operation/audit log (frozen, ADR-0029)
@@ -102,3 +103,4 @@ Done = `just ci` green + self-review of the working diff.
   - `docs/research/testing-practice-parallel-engineering.md` — testing-practice supplement: parallel testing engineering
   - `docs/research/handoff-era-archive.md` — verbatim archive of the final HANDOFF.md (retired session-handoff regime, ADR-0032)
   - `docs/research/wasm-first-design-review.md` — wasm-first design review: Luau-compromise inventory and overturn list (T13 input)
+  - `docs/research/sdk-precedent-survey.md` — SDK precedent survey: macro-hides-ABI mechanics of proxy-wasm / zed_extension_api / Spin / Extism PDK (T13-d input)
