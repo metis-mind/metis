@@ -116,16 +116,16 @@
 
 每条一句死因；考古读 [luau-abi](luau-abi.md) §A4（已归档）。
 
-| 机制                                                                        | 死因                                                                                                                              |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| coroutine shim / SENTINEL / 挂起冒泡链 / outstanding 防假注入（§A4.3 D9.2） | guest async 运行时原生挂起恢复，无需宿主令牌机器（S1/S2 实证）                                                                    |
-| 线程/协程术语分层（§A4.3 D9.1）                                             | 分层对象为 Luau coroutine；Rust guest 的 async task 无需再包装                                                                    |
-| 被登记线程裸 yield 响亮杀（§A4.3 D9.3）                                     | 无对应物——宿主无「无登记挂起」可检（guest 内部挂起宿主不可见 = W4.1）                                                             |
-| 调度规则纯函数化冻结进 ABI（§A4.1 D1.6）                                    | replay 不立（[journal](journal.md) D75）+ guest 内调度器宿主不可冻结；D27.1 ABI 确定性面随之缩没                                  |
-| 单可调度队列 FIFO 规范（§A4.2 D8.1）                                        | 问题形消解（W4.3）；tokio/Temporal/FDB 确定性调度教学条随之退役                                                                   |
-| `ctx.fanout` / `ctx.exclusive` ABI 原语（§A4.1 D1.2/D1.3）                  | 降级为 guest 异步设施与 SDK async mutex 助手（W4.2）                                                                              |
-| lint 三形状（§A4.1 D1.5）                                                   | Luau AST lint 管线消亡（design-review A8）；形状教材归 SDK/Creator（W4.4 层二）                                                   |
-| journal `fanout_cancelled` 族（[journal](journal.md) D78 错误现场族）       | fan-out 归 guest 内部件，宿主无观测点；D78 该格处置 = journal 演进纪律通道（ADR-0029：机制面破坏式 → 新 ADR supersede），登记待批 |
+| 机制                                                                        | 死因                                                                                                                                                                                                                 |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| coroutine shim / SENTINEL / 挂起冒泡链 / outstanding 防假注入（§A4.3 D9.2） | guest async 运行时原生挂起恢复，无需宿主令牌机器（S1/S2 实证）                                                                                                                                                       |
+| 线程/协程术语分层（§A4.3 D9.1）                                             | 分层对象为 Luau coroutine；Rust guest 的 async task 无需再包装                                                                                                                                                       |
+| 被登记线程裸 yield 响亮杀（§A4.3 D9.3）                                     | 无对应物——宿主无「无登记挂起」可检（guest 内部挂起宿主不可见 = W4.1）                                                                                                                                                |
+| 调度规则纯函数化冻结进 ABI（§A4.1 D1.6）                                    | replay 不立（[journal](journal.md) D75）+ guest 内调度器宿主不可冻结；D27.1 ABI 确定性面随之缩没                                                                                                                     |
+| 单可调度队列 FIFO 规范（§A4.2 D8.1）                                        | 问题形消解（W4.3）；tokio/Temporal/FDB 确定性调度教学条随之退役                                                                                                                                                      |
+| `ctx.fanout` / `ctx.exclusive` ABI 原语（§A4.1 D1.2/D1.3）                  | 降级为 guest 异步设施与 SDK async mutex 助手（W4.2）                                                                                                                                                                 |
+| lint 三形状（§A4.1 D1.5）                                                   | Luau AST lint 管线消亡（design-review A8）；形状教材归 SDK/Creator（W4.4 层二）                                                                                                                                      |
+| journal `fanout_cancelled` 族（[journal](journal.md) D78 错误现场族）       | fan-out 归 guest 内部件，宿主无观测点；D78 该格处置 = journal 演进纪律通道（ADR-0029：机制面破坏式 → 新 ADR supersede）——处置通道已拍板 = 随下一文档批（W5/W6 章批或 T13-f 兜底批）同批 supersede 小条（2026-10-17） |
 
 ### W4.7 联动登记汇总（章末）
 
@@ -137,7 +137,7 @@
 | W3 章（ctx 形态）    | 挂起点的作者面呈现（W4.1）；SDK async 映射输入（W4.1/W4.2）；补遗 6/7 papercuts 分流在案                                                                                                                                                                   |
 | W5 章（错误）        | fail-fast 清单的错误面接口（W4.4）——wait-for 圈 / 卸载期新账的错误族归置                                                                                                                                                                                   |
 | W6 章（边界转换）    | 流 `read()` 无界源登记（W4.4）；不可转换值跨界 fail-fast 格（W4.4）；流式句柄族 drain 强 close 铁律平移面（W4.5 D11.2）                                                                                                                                    |
-| journal.md           | `fanout_cancelled` 处置登记（W4.6，待批）；`unload_gate_closed`/`unload_killed` 两族存活（W4.5 语义原位，条目措辞随实现期载体词）                                                                                                                          |
+| journal.md           | `fanout_cancelled` 处置登记（W4.6；通道已拍板 = 随下一文档批同批 supersede 小条，2026-10-17）；`unload_gate_closed`/`unload_killed` 两族存活（W4.5 语义原位，条目措辞随实现期载体词）                                                                      |
 | 实现期配置           | 每实例在飞 async 任务预算（W4.3，超限 = 纯回压）；优雅窗口 + drain 总预算（W4.5）；host 侧事件在途投递界（A4 D10.2 原位存活）                                                                                                                              |
 | 扩展位               | exclusive 上报 wait-for 可见性（W4.2，触发器 = 首个死锁调试痛点）；原子方法族其余成员（A4 D1.8 平移，触发器 = 首个真实消费者）；per-read timeout 参数（W4.4 → W6 章面，触发器 = 真实需求）                                                                 |
 | seam-capabilities    | §2.8 FAQ（引 `ctx.fanout`/`ctx.exclusive`）与 §6.1「挂起点 = ctx 方法调用处」行 = 本批消亡/重定义件——清写归 T13-f（f1），本章登记交接                                                                                                                      |
