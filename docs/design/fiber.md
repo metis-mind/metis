@@ -1,7 +1,7 @@
 # Metis — Fiber 设计
 
 > 状态：核心已定（§8 四点 ✅ + §9 ✅ = [ADR-0019](../decisions/0019-crate-layout.md) + §10 ✅ = [ADR-0023](../decisions/0023-core-restart-semantics.md)）。
-> 2026-09-29 定稿；2026-10-02 §9 闭环（ADR-0019）；2026-10-03 §10 核心重启语义（ADR-0023）。机制调研依据：`docs/research/cordis-research.md`；决策登记：[ADR-0010](../decisions/0010-fiber-core.md)。
+> §9 闭环（ADR-0019）；§10 核心重启语义（ADR-0023）。机制调研依据：`docs/research/cordis-research.md`；决策登记：[ADR-0010](../decisions/0010-fiber-core.md)。
 > Last reviewed: 2026-10
 
 ---
@@ -58,11 +58,11 @@ stateDiagram-v2
 
 ## 6. 错误遏制三层
 
-| 层   | 机制                                                                                   |
-| ---- | -------------------------------------------------------------------------------------- |
-| Luau | 插件代码跑在 pcall 语义内，Lua 错误不过 FFI                                            |
-| VM   | 每实例独立 `lua_State`（[ADR-0005](../decisions/0005-vm-topology.md)），内存炸只炸自己 |
-| Rust | 插件调用一律 `Result`；异步任务 panic 由 JoinHandle 捕获 → `Failed(Report)`            |
+| 层   | 机制                                                                                                 |
+| ---- | ---------------------------------------------------------------------------------------------------- |
+| 组件 | guest 代码跑在 wasm 实例内，trap 由宿主捕获为错误，不炸穿 runtime                                    |
+| 实例 | 每插件独立组件实例（Store+Instance，[ADR-0005](../decisions/0005-vm-topology.md)），内存限额只炸自己 |
+| 宿主 | 插件调用一律 `Result`；异步任务 panic 由 JoinHandle 捕获 → `Failed(Report)`                          |
 
 ## 7. Rust 数据结构草案（示意，非最终实现）
 
@@ -85,7 +85,7 @@ pub struct Fiber {
     fingerprints: Vec<(ServiceKey, u64)>, // inject 时的 (key, epoch)
     parent: Option<FiberId>,
     children: Vec<FiberId>,
-    // vm 句柄、事件订阅登记等运行期附件
+    // 组件实例句柄、事件订阅登记等运行期附件
 }
 
 // 统一异步签名；同步撤销包成立即完成的 future
@@ -103,7 +103,7 @@ type Disposer = Box<dyn FnOnce() -> BoxFuture<'static, ()> + Send>;
 
 ## 9. fiber-core 纯 crate 切法（已定 ✅ = [ADR-0019](../decisions/0019-crate-layout.md)）
 
-5. 纯核心 = 不碰 tokio/mlua 的纯函数核心（状态机/账本 LIFO/epoch 指纹/失效闭包），返回动作描述由胶水解释执行；crate 物理分离（`metis-fiber-core`），仅允许纯数据依赖（slotmap/indexmap/thiserror 级）、不用 tracing；keyed diff 归独立纯 crate `metis-loader`。边界明细与被淘汰选项见 ADR-0019。
+5. 纯核心 = 不碰 tokio/wasmtime 的纯函数核心（状态机/账本 LIFO/epoch 指纹/失效闭包），返回动作描述由胶水解释执行；crate 物理分离（`metis-fiber-core`），仅允许纯数据依赖（slotmap/indexmap/thiserror 级）、不用 tracing；keyed diff 归独立纯 crate `metis-loader`。边界明细与被淘汰选项见 ADR-0019。
 
 ## 10. 核心重启与插件语义（已定 ✅ = [ADR-0023](../decisions/0023-core-restart-semantics.md)）
 
@@ -115,5 +115,5 @@ type Disposer = Box<dyn FnOnce() -> BoxFuture<'static, ()> + Send>;
 
 派生待办（登记不决）：
 
-- **跨重启状态政策**：进程死则 VM 全灭——什么状态落盘活下来（落盘 seam 原子写）、agent 自身连续性（进行中的对话、待审批）如何恢复，与 journal/replay 设计强耦合（2026-10-12 修订注：方向已定 = **fresh-start**——崩溃恢复复用本节全量 load 路径，journal 不参与状态重建（[journal](journal.md) D75）；落盘活下来 = 插件自建 fs/sql 持久化 + 审批机器文件原子写；agent 连续性归插件层；细则结案归 journal.md J3——**已结案 = D84–D88**（2026-10-12：v1 骨架化 + 崩溃自证 `shutdown_clean` + 在飞丢失写实 + 插件持久化/实例复活结案 + 崩溃窗口叙事）。）
-- **优雅关闭细则**：in-flight 服务调用与邮箱残留处置已定（2026-10-09 [luau-abi](luau-abi.md) §A4.5：四段时序关闸→优雅窗口→强杀→drain；对手方即 `Err(Unavailable)`、残留丢弃）；SIGTERM 处理、drain 总预算数值 = 实现期议题（2026-10-12 修订注：优雅关闭的 journal 侧义务**已定 = [journal](journal.md) D83**——writer 作为 drain 参与者排干通道 + 最终 fsync 后才退出，干净重启零窗口；SIGTERM 处理与 drain 总预算数值仍 = 实现期议题。）（2026-10-12 收缩注：journal 写入塌缩为同步写 = [journal](journal.md) D84——无通道可排；drain 义务存活 = 末尾写 `shutdown_clean` + 最终 fsync = D85。）
+- **跨重启状态政策**：进程死则组件实例全灭——什么状态落盘活下来（落盘 seam 原子写）、agent 自身连续性（进行中的对话、待审批）如何恢复，与 journal 设计强耦合（方向 = **fresh-start**——崩溃恢复复用本节全量 load 路径，journal 不参与状态重建（[journal](journal.md) D75）；落盘活下来 = 插件自建 fs/sql 持久化 + 审批机器文件原子写；agent 连续性归插件层；细则 = journal.md J3 D84–D88：v1 骨架化 + 崩溃自证 `shutdown_clean` + 在飞丢失写实 + 插件持久化/实例复活结案 + 崩溃窗口叙事）。
+- **优雅关闭细则**：在飞服务调用与邮箱残留处置已定（[wit-abi](wit-abi.md) W4.5 D97：四段时序关闸→优雅窗口→强杀→drain；对手方即 `Err(Unavailable)`、残留丢弃）；SIGTERM 处理、drain 总预算数值 = 实现期议题（journal 侧义务 = [journal](journal.md) D84/D85——同步写无通道可排，drain 末尾写 `shutdown_clean` + 最终 fsync）。

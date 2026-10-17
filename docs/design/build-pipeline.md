@@ -87,7 +87,7 @@
 - **校验阶段**（构建与安装之间，失败即停）：
   1. 校验 SSOT = 进程内 `wasmparser`（固定 feature 集合）；`wasm-tools` 只作 WIT 提取 / 调试，版本钉定，不参与安装判定；
   2. 组件 import 清单机械提取 → 与 SDK 封闭词汇表、manifest 能力声明对账（design-review B1）；
-  3. export / world 与 manifest 的 ABI 声明一致；`abi_rev` ≤ 宿主 ABI 版本（比较语义归 W10）；
+  3. export / world 与 manifest 的 ABI 声明一致；WIT package version ≤ 宿主 ABI 版本（比较语义归 W10）；
   4. 资源上限（初始/最大内存、表、组件大小）与禁用特性（threads / shared memory / cm-threading）检查；**v1 拒绝 start 函数**（start 在实例化时先于任何能力门执行，若 SDK 产物必需，实现期以 W1 spike 重裁）；
   5. `metis.build` 元数据在场且可解析（D112）；追加前先剥离源码自带的同名 section，校验恰好一条构建产物。
 - **代码归属**：构建管线逻辑住独立库 crate（建议 `crates/metis-build`，T10.15 开工确认）；`metis` 二进制只做 CLI 壳。纯校验 / import 提取住共享 crate（建议新建 `metis-validate`；若最终并入 `metis-component`，依赖方向 = `metis-build` / `metis-loader` → `metis-component`，`metis-component` 不反向依赖构建管线）。运行时 crate 不依赖 `metis-build`。不把 IO / 进程调用塞进 `metis-loader`（纯度边界，[ADR-0019](../decisions/0019-crate-layout.md)）。
@@ -142,10 +142,10 @@
 
 **D112 定案：统一预检 + 脚手架版本单一来源 + dev/dist 同 profile + 确定性 `metis.build` section。**
 
-- **预检**（`metis check` / `build` / `dev` 共同）：rustc / cargo、`wasm-component-ld`、`wasm-tools`、wit-bindgen 版本、`wasm32-wasip2` target 在场、插件 manifest 的 `abi_rev` / WIT package version vs 宿主 ABI 版本、发布级构建的 lockfile 在场。SDK SemVer 只作诊断，不作 ABI 兼容判定。失败 = miette 三段式（code + 说明 + help，如 `rustup target add wasm32-wasip2`）；**不自动安装**。
+- **预检**（`metis check` / `build` / `dev` 共同）：rustc / cargo、`wasm-component-ld`、`wasm-tools`、wit-bindgen 版本、`wasm32-wasip2` target 在场、插件 manifest 声明的 WIT package version vs 宿主 ABI 版本、发布级构建的 lockfile 在场。SDK SemVer 只作诊断，不作 ABI 兼容判定。失败 = miette 三段式（code + 说明 + help，如 `rustup target add wasm32-wasip2`）；**不自动安装**。
 - **脚手架版本来源**：`metis new` 的 `rust-toolchain.toml`、SDK 依赖版本、`.cargo/config.toml` 从 metis 二进制自身的构建常量生成（单一来源），不在模板里手写版本号。
 - **profile**：dev 与发布级构建共用优化 profile `metis`（继承 `release`）；不做 dev-only debug/未优化分叉，避免「dev 能跑、发布件行为不同」与缓存分叉。具体 `debug` / `strip` / `codegen-units` / `incremental` 值在 T10.15 以可复现测试钉定并写入脚手架。
-- **产物元数据**：构建完成后用 `wasm-encoder` 在 component 层追加 `metis.build` custom section；内容 = canonical JSON（键排序、无空白、无 timestamp、无绝对路径）：`pipeline_version`、`source_sha256`、`sdk_version`、`wit_package_version` / `abi_rev`、`target`、`profile`、`toolchain_version`（仅版本，不含 host / path）。追加前剥离所有同名 section，校验恰好一条；`metis.build` 是诊断 / 溯源面，不是信任锚，签名 / attestation 单独绑定产物。若后续有 strip/optimize 步骤，重新追加并校验在场。复现比较 = 剥离该 section 后的规范化 digest（D114）。
+- **产物元数据**：构建完成后用 `wasm-encoder` 在 component 层追加 `metis.build` custom section；内容 = canonical JSON（键排序、无空白、无 timestamp、无绝对路径）：`pipeline_version`、`source_sha256`、`sdk_version`、`wit_package_version`、`target`、`profile`、`toolchain_version`（仅版本，不含 host / path）。追加前剥离所有同名 section，校验恰好一条；`metis.build` 是诊断 / 溯源面，不是信任锚，签名 / attestation 单独绑定产物。若后续有 strip/optimize 步骤，重新追加并校验在场。复现比较 = 剥离该 section 后的规范化 digest（D114）。
 - **可复现姿态**：本地构建**不承诺**字节级可复现（Rust 对 wasm target 的可复现性仍在演进）；为远端构建场预留三件：路径重映射（`--remap-path-prefix`）、`--locked --offline`、钉版工具链镜像。源代码 hash 与构建指纹现在就稳定输出，供将来对账。
 - **UX**：成功 = 一行摘要（插件名 / 耗时 / 警告数）；失败 = 完整 miette 诊断；`--json` 输出 NDJSON 事件（构建开始 / 成功 / 失败 / 安装 / 重载）；`--verbose` 才透出 cargo 原始输出。构建事件不写 journal。
 
@@ -248,8 +248,8 @@
 | W1 章（T13-h）        | 可部署包的组件文件名与包布局 SSOT；start 函数政策与包形态的最终确认                                                                                                                                                                                                                                                                                                              |
 | W2 章（T13-i）        | manifest 形状与脚手架 manifest 骨架的 SSOT；**不引入任意 `build.command`**（D108 约束）                                                                                                                                                                                                                                                                                          |
 | W3 章（T13-j）        | D113 构建服务的传输形态（若走 WIT import）                                                                                                                                                                                                                                                                                                                                       |
-| W10 章（T13-p）       | `abi_rev` 比较与工具版本纪律；D112 预检消费其比较语义                                                                                                                                                                                                                                                                                                                            |
-| T13-f                 | [config-format](config-format.md) D29 仍含 `main.luau`、`.luaurc` 自动生成与「指路 `metis sdk`」行，[seam-capabilities](seam-capabilities.md) 仍含 `metis sdk` analyze 行；这些随命令面变更失效，清写 / supersede 归 T13-f；D35 修订注 = 源码侧 manifest 可选，包内始终合成最小 manifest                                                                                         |
+| W10 章（T13-p）       | WIT package version 比较与工具版本纪律；D112 预检消费其比较语义                                                                                                                                                                                                                                                                                                                  |
+| T13-f                 | 清写交接（2026-10-18）：[config-format](config-format.md) D29/D35 的旧入口与布线文件已改为组件布局，[seam-capabilities](seam-capabilities.md) 已按 wasm 能力面重写；命令面 = 本文件 D106 的 `metis new/check/build/dev`。D35 = 源码侧 manifest 可选，包内始终合成最小 manifest                                                                                                   |
 | journal               | 构建事件不写 journal；安装/卸载/重载条目由 T10.12 安装记录承载；来源/artifact hash/能力清单/审批结果入 journal = T10.12/T10.5 的 schema 扩展输入（ADR-0029）                                                                                                                                                                                                                     |
 | AGENTS.md             | 文档地图登记本文件与调研报告                                                                                                                                                                                                                                                                                                                                                     |
 
@@ -289,7 +289,7 @@
 | D109 | staging → 校验 → T10.12 事务（边界由 T10.12 拍板）；失败旧版本恢复；D65/D70；并发锁                        |
 | D110 | 全量源码监听 + 200 ms debounce + latest-wins + hash 门；sanitized build env                                |
 | D111 | 每工程 target dir + 内容寻址缓存；全量源码 hash；5 GiB / 30 天；pipeline_version 命名空间                  |
-| D112 | 全工具链预检；`abi_rev` 比较；同 profile；`metis.build` 非信任锚；复现比较剥离该 section                   |
+| D112 | 全工具链预检；WIT package version 比较；同 profile；`metis.build` 非信任锚；复现比较剥离该 section         |
 | D113 | 部署内工具链服务 = 扩展位；沙箱/无网络/配额/审批硬约束；安装记录承载 provenance                            |
 | D114 | 远端构建场 = 扩展位；BuildRequest / BuildAttestation；`reproduction_digest`；未复现分级                    |
 | D115 | 分发 lane 与自扩展 lane 共用构建管线；构建期信任边界；v1 高风险能力 = 预授权/策略；release ≠ build/install |

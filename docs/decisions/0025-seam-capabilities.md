@@ -1,6 +1,6 @@
 # 0025. 接缝能力集冻结：stdlib 卫生 / 挂载语义 / 内建件清单 / 出区通道
 
-- Status: accepted（fs scope 收窄意向登记 = private/global 两档、workspace 不立，外墙「归部署组成」结案 = [config-format](../design/config-format.md) §C5 D44/D45；正式批次已吸收 = [ADR-0027](0027-config-format.md) 批次 #9/#12（2026-10-11）；Consequences「audit 族降档开关面归任务 4」**已兑现** = [config-format](../design/config-format.md) §C8.1 D50（2026-10-11，兑现非 supersede）；任务 6（journal）批次已吸收 = [ADR-0029](0029-journal.md) 批次 #3（2026-10-13：§1/§5 replay 动机括注失效注——宿主受控时钟/PRNG 本体不动；§5 journal kind 映射格与 replay 分族原则格 supersede——kind 表 SSOT 移交 journal.md D78 骨架；Consequences 任务 6 行结案））
+- Status: accepted（fs scope 收窄意向登记 = private/global 两档、workspace 不立，外墙「归部署组成」结案 = [config-format](../design/config-format.md) §C5 D44/D45；正式批次已吸收 = [ADR-0027](0027-config-format.md) 批次 #9/#12（2026-10-11）；Consequences「audit 族降档开关面归任务 4」**已兑现** = [config-format](../design/config-format.md) §C8.1 D50（2026-10-11，兑现非 supersede）；任务 6（journal）批次已吸收 = [ADR-0029](0029-journal.md) 批次 #3（2026-10-13：§1/§5 replay 动机括注失效注——宿主受控时钟/PRNG 本体不动；§5 journal kind 映射格与 replay 分族原则格 supersede——kind 表 SSOT 移交 journal.md D78 骨架；Consequences 任务 6 行结案）；2026-10-18 载体面注：ADR-0034 wasm-first 转向后 §1 stdlib 卫生机制失去对象（能力集语义本体不变）；§5.2 fs 两档格局部 supersede = [ADR-0036](0036-fs-scope-three-layers.md)（三层））
 - Date: 2026-10-10
 
 ## Context

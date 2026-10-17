@@ -1,6 +1,6 @@
 # 0008. 自我修改路径：Creator 模式
 
-- Status: accepted（💤 方向已定，实施推迟——当前优先自由组合与动态更新主路径；2026-10-11 修订意向：模型配置写入面 = 插件目录 `config.yml` 经审批事务，overlay 收缩为装配补丁层（[config-format](../design/config-format.md) D36）；正式 supersede 已吸收 = [ADR-0027](0027-config-format.md) 批次 #5（2026-10-11）；前提削弱登记 = [ADR-0034](0034-wasm-first-carrier.md)（2026-10-15 wasm-first 转向：Creator 权重撤销，Luau 直写通道关闭，本 ADR 本体地位复审归后续议题））
+- Status: accepted（💤 方向已定，实施推迟——当前优先自由组合与动态更新主路径；2026-10-11 修订意向：模型配置写入面 = 插件目录 `config.yml` 经审批事务，overlay 收缩为装配补丁层（[config-format](../design/config-format.md) D36）；正式 supersede 已吸收 = [ADR-0027](0027-config-format.md) 批次 #5（2026-10-11）；前提削弱登记 = [ADR-0034](0034-wasm-first-carrier.md)（2026-10-15 wasm-first 转向：Creator 权重撤销，Luau 直写通道关闭）；2026-10-18 地位复议：审批事务管线与「模型只有提议权」本体保留；Creator 模式直写前提局部 supersede = ADR-0034 §1（Luau 直写通道关闭）；Decision 校验步的「Luau 编译」由组件校验 + 进口对账替代 = [build-pipeline](../design/build-pipeline.md) D108（实现细则，不改审批契约）；保留审批门接口预留（T10.12 在案），不另立新 ADR）
 - Date: 2026-09-29
 
 ## Context

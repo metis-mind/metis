@@ -1,6 +1,6 @@
 # 0010. Fiber 核心数据结构
 
-- Status: accepted（"fiber-core 纯 crate 切法待定"一项由 [ADR-0019](0019-crate-layout.md) 定案）
+- Status: accepted（"fiber-core 纯 crate 切法待定"一项由 [ADR-0019](0019-crate-layout.md) 定案；2026-10-18 载体面注：[ADR-0034](0034-wasm-first-carrier.md) wasm-first 转向后，错误遏制的 pcall / 独立解释器状态换为 wasm trap / 组件实例 / 宿主 `Result`，fiber 语义本体不变）
 - Date: 2026-09-29
 
 ## Context

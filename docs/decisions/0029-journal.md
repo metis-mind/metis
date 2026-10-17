@@ -1,6 +1,6 @@
 # 0029. Journal 冻结（J1–J6：核心操作/审计日志）与既有 ADR 局部 supersede 批次
 
-- Status: accepted
+- Status: accepted（2026-10-18 局部 supersede：D78 kind 表 `fanout_cancelled` 格 = [ADR-0035](0035-journal-fanout-cancelled-supersede.md)（wasm 载体吸收，W4.2/W4.6）；正文其余不变）
 - Date: 2026-10-13
 
 ## Context

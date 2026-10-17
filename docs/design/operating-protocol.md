@@ -104,6 +104,6 @@ Metis 的开发模式 = 1+N：一个维护者 + N 个 agent，agent 承担绝大
 ## 附录 B 外部关键参考
 
 - 调研实体（本地）：DeepSeek Harness = `/home/duskgrow/project/demo/deepseek-harness`（vendored cordis 源码 = `vendor/cordis`；cordis.js.org 文档站抓不到内容，实现细节以 vendored 源码为准）；兄弟项目 Cadmus = `/home/duskgrow/project/rust/Cadmus`；工程化模板 = `../rust-template`。
-- 上游参考：Harness = `https://github.com/deepseek-ai/deepseek-harness`；Cordis 上游 = `https://github.com/cordiverse/cordis`；论文 PDF = `https://arxiv.org/pdf/2608.25512`（只能 PDF 提取，定理编号可能有 ±1 偏差）；Luau RFC 仓 = `https://github.com/luau-lang/rfcs`。
+- 上游参考：Harness = `https://github.com/deepseek-ai/deepseek-harness`；Cordis 上游 = `https://github.com/cordiverse/cordis`；论文 PDF = `https://arxiv.org/pdf/2608.25512`（只能 PDF 提取，定理编号可能有 ±1 偏差）。
 - 托管面：org `metis-mind` 双仓——`metis`（public）+ `marketplace`（空壳占位）；remote = `git@github.com:metis-mind/metis.git`；git 身份 = `duskgrow <git@duskgrow.dev>`（repo-local）；gh CLI 已认证。
 - 吸收的外部资源：Fenng/Tech-Doc-Style-Chinese（MIT → chinese-doc-style skill）；dualface/ste-zh（MIT → AGENTS.md Reporting 节）；geoffreylitt explain-diff gist（无 license → explain-diff skill）。

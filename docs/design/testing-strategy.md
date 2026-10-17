@@ -34,7 +34,7 @@
 | L0 | 单元 / 快照                   | cargo-nextest + doctest + insta（模板自带）                             | 回归网底                                             |
 | L1 | property-based，纯核心        | proptest / bolero                                                       | keyed diff、epoch 反向闭包、配置合并分层等纯函数内核 |
 | L2 | 基于模型的状态测试 + 故障注入 | proptest state-machine / 自研 harness                                   | fiber 生命周期对偶参考模型；F 类恢复测试（§3.F）     |
-| L3 | fuzz                          | cargo-fuzz / bolero                                                     | 配置解析、loader 协调、Luau ABI 边界                 |
+| L3 | fuzz                          | cargo-fuzz / bolero                                                     | 配置解析、loader 协调、WIT ABI 边界                  |
 | L4 | 形式化三层跳板                | Kani → Verus → Lean（model-first 试点）；hax/Aeneas 直译 = spike 对照组 | 「失败即存在性风险」的小内核（暴露点控制，§2.3）     |
 
 **L4 候选内核**（与 ADR 对应）：fiber 状态机不变量、disposer 栈 LIFO/幂等/异步汇合（[ADR-0003](../decisions/0003-module-require-discipline.md)/[0005](../decisions/0005-vm-topology.md)）、epoch 指纹失效正确性（[ADR-0001](../decisions/0001-inject-runtime-checks.md)）、keyed diff 协调、安装事务回滚（[ADR-0008](../decisions/0008-creator-mode-self-modification.md)）。
@@ -52,7 +52,7 @@ crate 级显式声明两种测试来源：**人写/审测试**（规格属性强
 
 ### 2.3 暴露点控制纪律
 
-验证面的画法（seL4 / Cedar / Verus 页表先例）：**排除项写成显式清单、TCB 枚举到组件**——不写清单 = 绿灯幻觉。fiber 状态机试点的建议边界（实现站细化）：面内 = 状态转移纯函数与不变量；面外 = 调度器与 OS 线程、mlua/Luau C 边界（归 §3.D）、wasmtime、真实时钟与 IO（构造注入纪律天然在界外）、多租户配额策略。
+验证面的画法（seL4 / Cedar / Verus 页表先例）：**排除项写成显式清单、TCB 枚举到组件**——不写清单 = 绿灯幻觉。fiber 状态机试点的建议边界（实现站细化）：面内 = 状态转移纯函数与不变量；面外 = 调度器与 OS 线程、wasmtime 边界（归 §3.D）、真实时钟与 IO（构造注入纪律天然在界外）、多租户配额策略。
 
 ### 2.4 各层运行位置（D1 定夺：快慢双轨）
 
@@ -94,7 +94,7 @@ crate 级显式声明两种测试来源：**人写/审测试**（规格属性强
 | 工具               | 抓什么                                   | 跑在哪                                                                                                                                             |
 | ------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Miri               | unsafe/FFI 边界的 UB                     | **待命条款**：workspace lint `unsafe_code = "forbid"`，本仓无 unsafe 供 Miri 解释；未来某 crate 局部放开 unsafe 须先过 ADR，该 crate 测试必过 Miri |
-| ASan / LSan / TSan | 内存错误、泄漏、数据竞争（C API 交互面） | nightly，按需——Luau C 边界正确性归此 + API 契约测试                                                                                                |
+| ASan / LSan / TSan | 内存错误、泄漏、数据竞争（C API 交互面） | nightly，按需——wasmtime / C API 交互面正确性归此 + API 契约测试                                                                                    |
 | loom / shuttle 💤  | 并发原语全排列交错测试                   | 触发：第一个手写无锁/原子结构出现                                                                                                                  |
 | **Kani**           | 有界模型检查                             | L4 跳板第一级，见 §2.1                                                                                                                             |
 
@@ -162,7 +162,7 @@ flaky 三件套：
 | loom / shuttle                      | 第一个手写无锁/原子结构出现时                                                                                                             |
 | criterion                           | MVP 后出现公认热路径时                                                                                                                    |
 | cargo-vet                           | 依赖数量或 agent 自选依赖频率失控时                                                                                                       |
-| fuzz（L3）全面铺开                  | 配置格式 / Luau ABI 稳定后                                                                                                                |
+| fuzz（L3）全面铺开                  | 配置格式 / WIT ABI 稳定后                                                                                                                 |
 | Verus 试点                          | disposer / epoch 局部内核实现收官后；优先 LLM 证明生成工具链                                                                              |
 | Lean model-first spike              | fiber 状态机实现收官；判据 = §2.1 四条                                                                                                    |
 | DST 全套（虚拟时间快进/脚本化故障） | 事件系统收官后实测到难复现并发 bug；轻量前身 = L2 按 sled/turmoil 配方升级（虚拟时间 + seed 重放）                                        |
