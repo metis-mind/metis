@@ -130,7 +130,7 @@
 
 - **租户 = host 根 fiber 下的独立租户树**（术语 §0.1；子 fiber = 父的 effect，ADR-0010 原样）。**每租户独立实例**：服务注册表、事件总线、部署索引、journal、secrets。
 - **故障域 = 租户树**：单租户启用/运行失败 = 该租户 Failed + host warn 指路，不拖垮舰队。
-- **多租户细化**：fleet 模式下单租户配置（`metis.yml`/`overlay.yml`/`secrets.yml`）解析失败 = 该租户 Failed、其余照常 boot；**单租户模式维持「响亮拒启动」原样**（config-format §C3.2 / §C6.2 D47）。
+- **多租户细化**：fleet 模式下单租户配置（`metis.yml`/`overlay.yml`/`secrets.yml`/`values.yml`）解析失败 = 该租户 Failed、其余照常 boot；**单租户模式维持「响亮拒启动」原样**（config-format §C3.2 / §C6.2 D47）。
 - **预算**：fiber 预算机制树粒度原样（租户 = 天然预算根）；跨租户配额/公平性 = 不立（扩展位，触发器 = 真实多租户争用需求）。
 - **诚实边界**：核心代码 panic = 进程级，多租户不隔离此类失败。
 
@@ -192,10 +192,10 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 ### S3.3 D63 mount API 与能力门 = 立门 `mount: true`
 
 - **API 族**：`ctx.mount(declaration) -> handle`（编排面新方法族）；句柄供 unmount（D64）。参数/返回的 Value 编码细则归 [wit-abi](wit-abi.md) W6 章（T13-l）。
-- **能力门立 `mount: true`**（capabilities map 新键，`sqlite: true`/`process: true` 同形）：mount = 元权限（激活代码运行）——D26 编排面不立门的间接化论证到此断开：间接化管「调用已激活的」，mount 是「激活新的」。fail-closed 缺省（未声明调用 = 运行时响亮指路 manifest，W3 章原样）；零仪式插件无资格（W1 章原样）；审批面三栏并示同栏可见（W9 章原样）。
+- **能力门立 `mount: true`**（capabilities map 新键，`process: true` 同形）：mount = 元权限（激活代码运行）——D26 编排面不立门的间接化论证到此断开：间接化管「调用已激活的」，mount 是「激活新的」。fail-closed 缺省（未声明调用 = 运行时响亮指路 manifest，W3 章原样）；零仪式插件无资格（W1 章原样）；审批面三栏并示同栏可见（W9 章原样）。
 - **淘汰**：不立门走编排面惯例（D26）——对称性在「激活新代码」处断开，严格制定调下显式门更合身。
 - **演进纪律**：capabilities 词汇 additive 增补 → WIT package version 演进（[wit-abi](wit-abi.md) W10 章 = T13-p）；正式进字段面 = [ADR-0028](../decisions/0028-instance-model.md) 批次 #1。
-- **mount 执行 = 标准启用管线**：部署索引解析 → config 合成校验（含秘密引用解析；细则 = D67）→ inject 解析（W9 章三分原样）→ setup。与 boot/热更同一条筋。mount 频率面 = 每会话一次量级（非高频）；mount 消耗（编译 + setup）预算归实现期清单。
+- **mount 执行 = 标准启用管线**：部署索引解析 → config 合成校验（含共享变量解析，含 secret；C6.4 D135 / 细则 = D67）→ inject 解析（W9 章三分原样）→ setup。与 boot/热更同一条筋。mount 频率面 = 每会话一次量级（非高频）；mount 消耗（编译 + setup）预算归实现期清单。
 
 ### S3.4 D64 生命周期 = 父子账本 + 显式 unmount
 
@@ -243,8 +243,8 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 ### S4.1 D67 实例配置 overlay 合成与校验（config-format §C2.9 张力结案）
 
 - **合成 = `config.yml`（base）∪ 声明 `config:`（实例补丁），字段级稀疏合并**——D38 语义原样复用：overlay 提到的字段赢、未提到零意见；声明无 `config:` ≡ `{}`。
-- **校验 = D36 同一管线同一校验器**：manifest schema 校验（缺 required / 类型错 / 多给键 = 响亮）→ 秘密引用解析 → 默认值合成；时机 = mount 时（D63「mount 执行 = 标准启用管线复用」原位——配置合成校验 = 其中一站，无新时机概念）；失败 = 挂载当场响亮报错，该插件不激活。
-- **秘密引用政策零分叉**：overlay 允许写秘密引用——解析管线跟值走，不看声明住哪档（审批档 / 自管档同规则）；写明文 = 校验拒绝（D36 同族）。
+- **校验 = D36 同一管线同一校验器**：manifest schema 校验（缺 required / 类型错 / 多给键 = 响亮）→ 共享变量解析（`$value` 含 secret；C6.4 D135）→ 默认值合成；时机 = mount 时（D63「mount 执行 = 标准启用管线复用」原位——配置合成校验 = 其中一站，无新时机概念）；失败 = 挂载当场响亮报错，该插件不激活。
+- **共享变量政策零分叉**：overlay 允许写 `{ $value: "name" }`（含 secret）——解析管线跟值走，不看声明住哪档（审批档 / 自管档同规则）；秘密写明文 = 校验拒绝（D36 同族）。
 - **快照联动**：合成结果随实例固定（D65 原位）；挂载后 `config.yml` 热更只影响之后的新挂载，运行中实例不动。
 - **淘汰**：① 实例 overlay 全量替代 `config.yml`（实例背全量配置 = 重复税，部署级默认值失效）；② overlay 不校验直接进实例（快照里藏错，严格制不容）；③ 实例配置第三住处/第三档（D62 两档已结案）。
 - **明记代价**：自管档声明（运行时构造，零审批 = D62）可携带秘密引用——「哪个秘密名绑给被挂件」由挂载方代码运行期决定，不进审批 diff（部署级通道里此绑定经 `config.yml` 审批可见）。缓解面：挂载方须持 `mount` 门、被挂件 schema 须声明 `secret: true` 键（审批面可见「可能吃秘密」）、素材 ⊆ 装配单（D61）。收紧路径（秘密引用限审批档声明）登记扩展位，触发器 = 真实滥用担忧。

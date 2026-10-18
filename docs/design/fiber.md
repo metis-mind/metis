@@ -115,5 +115,5 @@ type Disposer = Box<dyn FnOnce() -> BoxFuture<'static, ()> + Send>;
 
 派生待办（登记不决）：
 
-- **跨重启状态政策**：进程死则组件实例全灭——什么状态落盘活下来（落盘 seam 原子写）、agent 自身连续性（进行中的对话、待审批）如何恢复，与 journal 设计强耦合（方向 = **fresh-start**——崩溃恢复复用本节全量 load 路径，journal 不参与状态重建（[journal](journal.md) D75）；落盘活下来 = 插件自建 fs/sql 持久化 + 审批机器文件原子写；agent 连续性归插件层；细则 = journal.md J3 D84–D88：v1 骨架化 + 崩溃自证 `shutdown_clean` + 在飞丢失写实 + 插件持久化/实例复活结案 + 崩溃窗口叙事）。
+- **跨重启状态政策**：进程死则组件实例全灭——什么状态落盘活下来（落盘 seam 原子写）、agent 自身连续性（进行中的对话、待审批）如何恢复，与 journal 设计强耦合（方向 = **fresh-start**——崩溃恢复复用本节全量 load 路径，journal 不参与状态重建（[journal](journal.md) D75）；落盘活下来 = 插件自建 DB（guest crate，库住 private fs）+ 审批机器文件原子写；agent 连续性归插件层；细则 = journal.md J3 D84–D88：v1 骨架化 + 崩溃自证 `shutdown_clean` + 在飞丢失写实 + 插件持久化/实例复活结案 + 崩溃窗口叙事）。
 - **优雅关闭细则**：在飞服务调用与邮箱残留处置已定（[wit-abi](wit-abi.md) W4.5 D97：五段时序关闸→优雅窗口→`dispose`→实例即弃→drain；dispose 细节 = W1.6 D121；对手方即 `Err(Unavailable)`、残留丢弃）；SIGTERM 处理、drain 总预算数值 = 实现期议题（journal 侧义务 = [journal](journal.md) D84/D85——同步写无通道可排，drain 末尾写 `shutdown_clean` + 最终 fsync）。

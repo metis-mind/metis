@@ -2,7 +2,7 @@
 
 > 状态：living design doc——任务 4（配置格式设计）工作站。**已冻结 = [ADR-0027](../decisions/0027-config-format.md)**；保持 living：细则澄清与教学条继续沉淀，语义修订走 ADR-0027 演进纪律。
 > 来源：任务 4。前提文档：[seam-capabilities](seam-capabilities.md)（能力面）、[instance-model](instance-model.md)（实例模型）、[wit-abi](wit-abi.md)（ABI 章）。
-> 相关 ADR：[0027](../decisions/0027-config-format.md)（冻结）/ [0002](../decisions/0002-config-as-pure-data.md) / [0004](../decisions/0004-plugin-forms.md) / [0006](../decisions/0006-config-schema-ssot.md) / [0007](../decisions/0007-yaml-config-subset.md) / [0008](../decisions/0008-creator-mode-self-modification.md) / [0023](../decisions/0023-core-restart-semantics.md) / [0036](../decisions/0036-fs-scope-three-layers.md)。
+> 相关 ADR：[0027](../decisions/0027-config-format.md)（冻结）/ [0002](../decisions/0002-config-as-pure-data.md) / [0004](../decisions/0004-plugin-forms.md) / [0006](../decisions/0006-config-schema-ssot.md) / [0007](../decisions/0007-yaml-config-subset.md) / [0008](../decisions/0008-creator-mode-self-modification.md) / [0023](../decisions/0023-core-restart-semantics.md) / [0036](../decisions/0036-fs-scope-three-layers.md) / [0039](../decisions/0039-fs-capability-two-tier.md) / [0040](../decisions/0040-config-shared-variables.md)。
 > Last reviewed: 2026-10
 
 ---
@@ -49,6 +49,7 @@
   metis.yml                 # 配置树正本（人类手写层；惯例名，--config 可指他处）
   overlay.yml               # agent overlay 层（机器唯一可写的配置树文件，C3 详谈）
   secrets.yml               # secrets store（豁免①；形态与纪律 = D46/D47）
+  values.yml                # 共享变量（非秘密；C6.4 D135）
   lib/                      # 部署级契约包（WIT 包；W7 章 = T13-m）
   journal/                  # journal 段文件（豁免②；细节 = journal.md J4 = D90/D91）
   plugins/
@@ -58,11 +59,10 @@
       plugin.wasm           # 组件产物（文件名 = W1 章 SSOT）
       lib/                  # 随包契约（WIT 包）
       data/                 # 运行期区
-        fs/                 # private scope 根（ctx.fs 挂载点）
-        db.sqlite           # 私有 db（sqlite 能力）
+        fs/                 # private scope 根（ctx.fs 挂载点；插件自带 DB 也住这里）
 ```
 
-- **插件私有数据同居插件目录**：fs 私域根 = `data/fs/`、`db.sqlite` 与其平级——满足能力面「db 不在 fs 私域子树内」。淘汰集中数据根（`data/plugins/<name>/` 分居）：同居让「一个插件的全部」= 一个目录，卸载处置（C7）与备份/迁移粒度顺手。
+- **插件私有数据同居插件目录**：fs 私域根 = `data/fs/`；插件自带 DB（SQLite / redb / sled 等）由插件自己在 private fs 内管理，核心不代持 DB 句柄（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）。淘汰集中数据根（`data/plugins/<name>/` 分居）：同居让「一个插件的全部」= 一个目录，卸载处置（C7）与备份/迁移粒度顺手。
 - **global scope 豁免清单物理落点** = `secrets.yml` + `journal/` 两处（[seam-capabilities](seam-capabilities.md) §5.2 两条豁免）；其余部署根 global 正常可达（维护/调试正道不变）。
 - **版本管理纪律**：部署根可整体入库（部署即代码）；gitignore = `secrets.yml`、`journal/`、`plugins/*/data/`；工具面脚手架生成 `.gitignore`。
 - **契约包无运行期布线文件**：`lib/` 与插件随包 WIT 契约包由 loader 扫描；不存在运行期模块别名文件（跨插件代码共享 = 编译期依赖，[service-registry](service-registry.md) §7）。
@@ -76,10 +76,10 @@ v1 = 单文件 `metis.yml` + overlay 一层，**不立 include 机制**。Cordis
 | 去向                                           | 内容                                                                                                                |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | [seam-capabilities](seam-capabilities.md) §5.2 | private 根物理落点 + 豁免清单具体化；fs = private 隐式 / global 声明（ADR-0039；命名根撤回；单数 workspace 仍不立） |
-| [seam-capabilities](seam-capabilities.md) §5.2 | db 物理位置；卸载保留政策 = §C7.1 D48                                                                               |
+| [seam-capabilities](seam-capabilities.md) §5.2 | 插件自带 DB 住 private fs；卸载保留政策 = §C7.1 D48                                                                 |
 | [service-registry](service-registry.md) §7     | 部署根布局草图 SSOT 移交本节                                                                                        |
 | C3 / C4                                        | overlay 文件形状与补丁语义；`config.yml` 机器写回的注释保留 / 格式稳定纪律                                          |
-| C6 / C7                                        | `secrets.yml` 内部形态与纪律；卸载处置（同居目录的处置粒度）                                                        |
+| C6 / C6.4 / C7                                 | `secrets.yml` 内部形态与纪律；`values.yml` 共享变量（D135）；卸载处置（同居目录的处置粒度）                         |
 | [journal](journal.md) J4                       | `journal/` 段文件布局 / 轮转 / 总量封顶（D90）与生命周期（D91）                                                     |
 | 工具面                                         | `.gitignore` 脚手架                                                                                                 |
 | 扩展位                                         | include 机制（D30）                                                                                                 |
@@ -136,10 +136,10 @@ plugins:
 
 ### C2.6 D36 配置通道 = `config.yml` + 注入签名不变
 
-- **值住处**：`plugins/<name>/config.yml`（部署区，目录顶层）。private scope 根是 `data/fs/`——**private scope 结构性够不到自己的 `config.yml`**；持 `global` 的插件读得到文件，但读到的只是**引用而非真值**（真值住豁免的 secrets store，[seam-capabilities](seam-capabilities.md) §5.2）——任何 scope 下旁路都拿不到秘密真值（`secrets.yml` 与 `journal/` 两条豁免对一切 fs scope 生效），校验与秘密解析只能过注入通道。
-- **`setup` 钩子语义不动**（作者面形态 = W1 章）：核心启用期读 `config.yml` → 按 manifest schema 校验（缺 required/类型错/多给键 = 响亮失败，**插件代码一行未跑**——ADR-0006 前置原样保全）→ 秘密引用解析（W2 D128，写处/解析源 = `config.yml`；写明文 = 校验拒绝；真值只进该插件实例）→ 默认值合成（稀疏覆盖叠加 schema default）→ 冻结表注入。
+- **值住处**：`plugins/<name>/config.yml`（部署区，目录顶层）。private scope 根是 `data/fs/`——**private scope 结构性够不到自己的 `config.yml`**；持 `global` 的插件读得到文件，但读到的只是**引用而非真值**（秘密真值住豁免的 secrets store；非秘密共享引用真值住 `values.yml`，不是豁免、global 可达，[seam-capabilities](seam-capabilities.md) §5 fs 通道条）——任何 scope 下旁路都拿不到秘密真值（`secrets.yml` 与 `journal/` 两条豁免对一切 fs scope 生效），校验与秘密解析只能过注入通道。
+- **`setup` 钩子语义不动**（作者面形态 = W1 章）：核心启用期读 `config.yml` → 按 manifest schema 识别引用形状与 `secret` 标记（缺 required/类型错/多给键 = 响亮失败，**插件代码一行未跑**——ADR-0006 前置原样保全）→ 共享变量解析（C6.4 D135：`{ $value: "name" }` 从 `values.yml` / `secrets.yml` 对应 store 解析；秘密写明文 = 校验拒绝；真值只进该插件实例）→ 最终类型校验 → 默认值合成（稀疏覆盖叠加 schema default）→ 冻结表注入。
 - **变化面**：审批单位 = 插件目录 diff（`config.yml` 与代码同单位，ADR-0008 管线不动）；overlay 收缩为装配补丁层（装/卸/启用/绑定，不再管配置值）；`volatile` 词汇退役（哪些键可热应用 = 作者文档 + handler 自行判断）。
-- **两档分工**：声明式配置（`config.yml` + manifest schema：部署者可写、审批可见、工具面可验）vs 完全自管（无 `config:` 节 = 核心零参与；运行期状态/偏好走 `data/fs` 或 db——判别两问之②，[instance-model](instance-model.md) §0.2）。db/私域自管配置不进审批面；文档引导部署决策走声明式通道。
+- **两档分工**：声明式配置（`config.yml` + manifest schema：部署者可写、审批可见、工具面可验）vs 完全自管（无 `config:` 节 = 核心零参与；运行期状态/偏好走 `data/fs` 或插件自带 DB——判别两问之②，[instance-model](instance-model.md) §0.2）。私域自管配置不进审批面；文档引导部署决策走声明式通道。
 - **休眠件的 `config.yml` 不校验**：不使用的插件不检查；required 缺失 = 启用期响亮失败，报错指路 `config.yml` 路径 + 键名。
 - **无 `config:` 节 ≡ 空 schema**：`config.yml` 存在且有键 = 一切键按「多给键」响亮拒绝（ADR-0004 旧格「配值 → 响亮失败」精神平移；零仪式插件同规则）。
 - **工具面联动**：从 schema 生成 `config.yml` 模板（脚手架）；多插件配置全景聚合查看命令。
@@ -159,18 +159,18 @@ plugins:
 
 ### C2.9 联动登记（C2）
 
-| 去向                                | 内容                                                                                                                                                                                           |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W2 章（T13-i）                      | **已兑现（2026-10-19）** = wit-abi W2 D125–D133：manifest 字段全集 / 身份 = 目录名 / config schema / 秘密引用 / fs 两档；entry 启用禁用 = D32；配置树边界、秘密解析点、setup config 来源 = D36 |
-| W1 章（T13-h）                      | 零仪式插件平移为无 manifest 目录插件（D35）——**已兑现 = wit-abi W1.8 D123**                                                                                                                    |
-| W9 章（T13-o）                      | 部署索引覆盖（目录扫描全量、含未装配件与解析失败政策）与缺失三分行三收窄（= 休眠件；未装配件走同族响亮）= D34                                                                                  |
-| C3/C4                               | overlay 装配补丁语义、keyed diff 装配面协调、D37 机制展开、部署 `lib/` 契约重对账时机 = D38–D43                                                                                                |
-| C5                                  | fs 两档（private 隐式 / global 声明；命名根撤回）；env 不立收紧；cwd 缺省 = 家目录（D44/D45 + ADR-0039）                                                                                       |
-| [instance-model](instance-model.md) | per-实例/preset 实例级配置通道 = D67（base ∪ 声明 overlay 字段级合并 + D36 管线复用）；isolate/重命名同批复审 = D69                                                                            |
-| 任务 9（marketplace）               | 包内容 vs 部署区/运行期区三分随包形态定稿（D35）；升级后配置 vs 新 schema 对账报告                                                                                                             |
-| 工具面                              | `config.yml` 模板脚手架；配置全景聚合；未装配件提示（D34）；key 合法目录名校验（D31）                                                                                                          |
-| 扩展位                              | fs watch 实时感知（D37）；仅重命名的「首个真实撞名需求」触发器存活                                                                                                                             |
-| 实现期清单                          | `config.yml` 读取/校验/秘密解析/默认值合成管线（D36）；gitignore 脚手架（D29）；部署索引目录扫描（D34）                                                                                        |
+| 去向                                | 内容                                                                                                                                                                                                          |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W2 章（T13-i）                      | **已兑现（2026-10-19）** = wit-abi W2 D125–D133：manifest 字段全集 / 身份 = 目录名 / config schema / 共享变量引用（`$value`）/ fs 两档；entry 启用禁用 = D32；配置树边界、秘密解析点、setup config 来源 = D36 |
+| W1 章（T13-h）                      | 零仪式插件平移为无 manifest 目录插件（D35）——**已兑现 = wit-abi W1.8 D123**                                                                                                                                   |
+| W9 章（T13-o）                      | 部署索引覆盖（目录扫描全量、含未装配件与解析失败政策）与缺失三分行三收窄（= 休眠件；未装配件走同族响亮）= D34                                                                                                 |
+| C3/C4                               | overlay 装配补丁语义、keyed diff 装配面协调、D37 机制展开、部署 `lib/` 契约重对账时机 = D38–D43                                                                                                               |
+| C5                                  | fs 两档（private 隐式 / global 声明；命名根撤回）；env 不立收紧；cwd 缺省 = 家目录（D44/D45 + ADR-0039）                                                                                                      |
+| [instance-model](instance-model.md) | per-实例/preset 实例级配置通道 = D67（base ∪ 声明 overlay 字段级合并 + D36 管线复用）；isolate/重命名同批复审 = D69                                                                                           |
+| 任务 9（marketplace）               | 包内容 vs 部署区/运行期区三分随包形态定稿（D35）；升级后配置 vs 新 schema 对账报告                                                                                                                            |
+| 工具面                              | `config.yml` 模板脚手架；配置全景聚合；未装配件提示（D34）；key 合法目录名校验（D31）                                                                                                                         |
+| 扩展位                              | fs watch 实时感知（D37）；仅重命名的「首个真实撞名需求」触发器存活                                                                                                                                            |
+| 实现期清单                          | `config.yml` 读取/校验/共享变量解析/默认值合成管线（D36/D135）；gitignore 脚手架（D29）；部署索引目录扫描（D34）                                                                                              |
 
 ## C3 补丁分层
 
@@ -295,7 +295,7 @@ on_config(new_config):
 ### C5.1 fs scope = 两档（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）
 
 - **private**：`plugins/<name>/data/fs/` 以 WASI preopen 授予；**隐式读写**，不声明、不可收窄；逃逸防护 = 运行时结构保证，自研两段式解析对 private 退役。
-- **global**：减法语义（用户世界 − `secrets.yml` / `journal/` 两条豁免），preopen 表达不了 → host-mediated 自研逃逸舱；manifest 声明 `fs.global`（[wit-abi](wit-abi.md) W2.5 D129），缺省 = 无 global；TOCTOU 硬化与路径解析留在宿主实现。
+- **global**：减法语义（用户世界 − `secrets.yml` / `journal/` 两条豁免），preopen 表达不了 → host-mediated 自研逃逸舱；manifest 声明 `fs: read|write`（语义 = global；[wit-abi](wit-abi.md) W2.5 D129），缺省 = 无 global；TOCTOU 硬化与路径解析留在宿主实现。
 - **命名根不立**：原 ADR-0036 的「manifest 声明 + 部署者绑定」中间档撤回（ADR-0039）——插件可能服务多个 project，静态绑定一次配不齐；需要用户世界访问走 global。
 - **单数 workspace 仍不立**：理由 = 「这个部署的工作区是哪个目录」对通用部署无答案（core agent-agnostic 同族）；真要多目录，单根版本来就半残。
 - **审批面**：private 不进门；global 最高档（碰用户文件 = 要么信要么不信）；无中间档；偏执部署走 OS 级沙箱——与 process 外墙同一答案。
@@ -307,7 +307,7 @@ on_config(new_config):
 - **env = 继承核心 env + 覆盖，不立收紧层**（W3 章「env 收紧政策归任务 4」结案 = 不立）：
   - 收紧挡不住同 OS 用户 `/proc/<pid>/environ` 读取——立了是假边界（严格制厌恶的模糊处理）；
   - secrets 不住 env（泄露面结构上小，既定）；
-  - process 审批权重已按 ⊇ `global: write` + 任意域 http 展示（[seam-capabilities](seam-capabilities.md) §5.2 既定）。
+  - process 审批权重已按 ⊇ `fs: write`（global 写档）+ 任意域 http 展示（[seam-capabilities](seam-capabilities.md) §5 fs 通道条既定）。
   - 配套：审批/Creator 文档写明「子进程继承核心环境变量、secrets 不住 env」纪律。触发器 = 多租户/托管形态（core 高权、插件降权）到来时重议，与 OS 级沙箱外墙同批。
   - 淘汰：部署级 deny 清单（blocklist 永恒不完整 + 可绕过 = 假安全感）；默认清空 + 允许清单（无 PATH/HOME，ergonomics 死亡）。
 - **cwd 政策**：缺省 = **用户家目录**（落选缺省 = 私域：子进程是任意代码、不受私域边界约束，拿私域当 cwd 只给出假 confinement 暗示；家目录 = 用户世界直觉缺省）；家目录不可解析（HOME/USERPROFILE 未设、服务账户）= **响亮报错**指路显式传 `cwd`（严格制：不猜、不静默退档）；显式 cwd = 任意绝对路径（非边界写实：cwd 不构成 confinement，与支配关系同源）；相对 cwd → 相对家目录解析（与缺省同一解析基，零特例）；cwd 不存在 = spawn 自然失败（`process.spawn_failed`），不预检。
@@ -324,11 +324,11 @@ on_config(new_config):
 | Creator/审批文档                                    | process 环境纪律（子进程继承核心 env、secrets 不住 env）；插件域默认工作目录走 `config.yml` 引导                                              |
 | 扩展位                                              | env 收紧触发器（多租户/托管形态）                                                                                                             |
 
-## C6 secrets store 内部形态与纪律
+## C6 secrets store 与共享变量
 
 ### C6.0 边界与前提
 
-本题定 secrets store 的内部形态与运行纪律（W2 章「store 细节归任务 4」兑现）。既定地基（只承接不重审）：引用式秘密机制（W2 章——schema 标 `secret: true` → 只许写 `{ secret: "name" }` 引用、写明文 = 校验响亮拒绝、真值只进属主实例、人类手写层机器永不写）；物理落点 = 部署根 `secrets.yml`（D29）；两条豁免 carve-out（[seam-capabilities](seam-capabilities.md) §5.2：一切 fs scope 读写同禁）；轮转感知 = 显式 reload / boot（D37）。
+本题定 secrets store 与共享变量的内部形态与运行纪律（W2 章「store 细节归任务 4」兑现；共享变量 = C6.4 D135）。既定地基（只承接不重审）：引用式秘密机制（W2 章——schema 标 `secret: true` → 只许写 `{ $value: "name" }` 引用、写明文 = 校验响亮拒绝、真值只进属主实例、人类手写层机器永不写）；物理落点 = 部署根 `secrets.yml`（D29）；共享变量（含非秘密值）= C6.4 D135；两条豁免 carve-out（[seam-capabilities](seam-capabilities.md) §5.2：一切 fs scope 读写同禁）；轮转感知 = 显式 reload / boot（D37）。
 
 ### C6.1 D46 `secrets.yml` 内部形态
 
@@ -341,7 +341,7 @@ backup-ssh-key: |
 ```
 
 - **形状 = 扁平 map `name: value`，值仅限字符串**；多行字符串 = PEM 类钥匙正例。结构化秘密（keypair 等）= 拆多个名字；嵌套 map/数组值 = 响亮拒绝（受限子集校验兜底，ADR-0007）。
-- **名字 = 部署级共享命名空间**：`{ secret: "openai-prod" }` 引用全局解析；无 per-plugin 隔离（名字是部署者词汇，撞名 = 同值，无害）。
+- **名字 = 部署级共享命名空间**：`{ $value: "openai-prod" }` 引用全局解析；无 per-plugin 隔离（多插件引用同名 = 同值，无害；同一名字同时出现在 `values.yml` 与 `secrets.yml` = 响亮，C6.4）。
 - **文件缺席 ≡ 空 store**；引用查无 = 启用期响亮失败（W2 章既定路径原样）。
 - **淘汰静态加密 at rest**：主密钥住处无解（住 env → `/proc` 同源泄露；住文件 → 鸡生蛋）；v1 = 明文 + 权限锁 + gitignore（W2 章承诺原样兑现）；触发器 = 托管/合规需求，届时外挂 KMS/age 类形态再审。
 
@@ -349,20 +349,38 @@ backup-ssh-key: |
 
 - **权限锁落档**：boot 检查 `secrets.yml` 权限；POSIX 下 group/other 可读 → **host warn 一条 + 继续，不拒启动**（容器/orchestrator 挂载的 secret 常是 0644 root-owned，拒启动太脆；warn = W9 章人读面精神）；工具面脚手架生成时 chmod 0600；Windows ACL best-effort 归实现期。
 - **加载 = boot 一次性读入内存**（core 自持 map）；解析点 = 启用期 config 管线（D36 既定）。
-- **轮转感知 = 显式 reload / boot**（D37 既定，本条落位）：reload 重读 `secrets.yml` → 重跑受影响插件 config 管线 → 结构不等 → D42 通道（`on_config` / 重挂载）。引用不变值轮换对运行中插件零感知直到 reload——写实。
+- **轮转感知 = 显式 reload / boot**（D37 既定，本条落位）：reload 重读 `secrets.yml`（共享非秘密值见 C6.4）→ 重跑受影响插件 config 管线 → 结构不等 → D42 通道（`on_config` / 重挂载）。引用不变值轮换对运行中插件零感知直到 reload——写实。
 - **机器永不写**（ADR-0007 人类手写层延伸，W2 章既定）；agent 无提议秘密变更的通道（审批单位 = 插件目录 diff），不立。
 - **解析失败两分**：boot 读到坏文件（YAML 解析失败 / 受限子集校验拒绝）= **响亮拒启动**、指路文件与行号（D39 同族：读不出不猜着跑——静默置空会让一切引用炸成「查无」，误导排查）；显式 reload 读到坏文件 = **拒绝本次 reload、运行中实例持旧 map 不动** + 响亮 surface（D42「校验失败 = 拒绝变更」在 secrets 面的平移）。fleet 多租户模式下 boot 读到坏文件 = 该租户 Failed、其余照常（D39 细化，[instance-model](instance-model.md) §S2.3 D58）；单租户模式维持拒启动原样。
 - **联动**：秘密值按身份注册脱敏管线 = [journal](journal.md) D89（append 前统一精确匹配扫 + `redacted` 字段 + `redaction_applied` 紧随条目 + 短秘密护栏）；journal 加密密钥形态/住处——**消解**（生成型秘密加密随 replay 不立消解 = journal.md D75——无生成型秘密落盘则加密议题消失）。
 
+### C6.4 D135 共享变量（`values.yml` + `secrets.yml` 统一引用）
+
+**D135 定案：共享变量覆盖 secret 与非 secret；一条 `{ $value: "name" }` 引用，schema 的 `secret` 标记选 store。**
+
+- 两个 store = `values.yml`（非秘密，git 追踪，人类手写，扁平 map `name → Value`）与 `secrets.yml`（C6.1，秘密，值仅字符串）。
+- 统一命名空间：同名同时出现在两个 store = 响亮；文件缺席 ≡ 空 store；引用查无 = 响亮。
+- `{ $value: "name" }` = 整值引用；`$` 前缀键保留给引用标签，字面量位置使用 = 响亮；嵌套字段引用 = 扩展位。
+- `secret: true` 键：键存在时必须写引用且必须解析自 `secrets.yml`；明文 / 解析自 `values.yml` = 响亮。`required: false` 时键可缺席（缺席 = 无值，不做引用检查）；`required: true` 时缺席 = 响亮。
+- 非 secret 键：字面量合法；引用必须解析自 `values.yml`；引用一个只存在于 `secrets.yml` 的名字 = 响亮（防秘密流入未声明 secret 的键）。
+- `default` 是字面量；`{ $value }` 写在 `default` = 响亮。
+- 解析后的值再按该插件 schema 做最终类型校验；秘密值仅字符串，`type` 限 `string` / `any`（[wit-abi](wit-abi.md) W2.4 D128）。
+- 管线：识别引用形状与 `secret` 标记 → 从对应 store 解析 → 最终类型校验 → 默认值合成 → 冻结；插件代码一行未跑。
+- `values.yml` 加载 = boot 一次性读入内存 map；reload 原子替换；变更感知 = boot / 显式 reload（无 fs watch，D37）。
+- `values.yml` 解析失败：单租户 boot = 响亮拒启动；fleet 模式 = 该租户 Failed、其余照常；显式 reload = 拒绝本次 reload、运行中实例持旧 map 不动。单插件名字查无 / 类型不符 = 该插件启用期响亮，兄弟不受影响。
+- `values.yml` 人类手写、机器永不写（v1）；agent 提议共享值变更 = 扩展位。`secrets.yml` 纪律 = C6.2 原样。
+- 审批面：`config.yml` 的引用名进插件目录 diff；`values.yml` 进部署根 git diff；`secrets.yml` 不进审批（人类手写层）。
+
 ### C6.3 联动登记（C6）
 
-| 去向                  | 内容                                                                                                                        |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| W2 章（T13-i）        | **已兑现（2026-10-19）** = wit-abi W2 D128：秘密引用 = `{ secret: "name" }`、写明文拒绝、引用查无响亮；store 细节 = D46/D47 |
-| [journal](journal.md) | 秘密值身份注册脱敏管线 = D89；journal 加密密钥形态/住处——消解（replay 不立 = D75）                                          |
-| 工具面                | 脚手架生成 `secrets.yml` 时 chmod 0600；权限提示                                                                            |
-| 实现期清单            | boot 权限检查 warn；secrets 内存 map 与 reload 重读管线；解析失败两分（boot 拒启动 / reload 持旧，D47）                     |
-| 扩展位                | 静态加密 at rest（触发器 = 托管/合规需求）                                                                                  |
+| 去向                  | 内容                                                                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| W2 章（T13-i）        | **已兑现（2026-10-19）** = wit-abi W2 D128：秘密引用 = `{ $value: "name" }`（D135）、写明文拒绝、引用查无响亮；store 细节 = D46/D47              |
+| 共享变量（C6.4 D135） | `values.yml` + `secrets.yml` 统一命名空间；`{ $value }` 引用；`secret` 标记选 store；[ADR-0040](../decisions/0040-config-shared-variables.md)    |
+| [journal](journal.md) | 秘密值身份注册脱敏管线 = D89；journal 加密密钥形态/住处——消解（replay 不立 = D75）                                                               |
+| 工具面                | 脚手架生成 `secrets.yml` 时 chmod 0600；权限提示；`values.yml` 模板（可选）                                                                      |
+| 实现期清单            | boot 权限检查 warn；secrets 内存 map 与 reload 重读管线；解析失败两分（boot 拒启动 / reload 持旧，D47）；`values.yml` 读取与共享引用解析（D135） |
+| 扩展位                | 静态加密 at rest（触发器 = 托管/合规需求）                                                                                                       |
 
 ## C7 数据生命周期：卸载处置与残迹政策
 
@@ -377,15 +395,15 @@ backup-ssh-key: |
   - **purge**：目录整体移除（含 `config.yml` + `data/`）。
 - **档位选择归部署者**（卸载动作发起时选定；工具面旗标 / 审批面展示位）。**agent 提议卸载固定 keep 档**——删数据不进 agent 提议面（与 D47「agent 无提议秘密变更通道」同族：破坏性动作的提议权不交机器）；要全删 = 部署者自己动手。
 - **残迹的事后 purge** = 工具面 purge（命令名归 T10.12）/ 手工 `rm -rf`（部署者专属；残迹经 D49 索引可见，不会遗忘）。
-- **缺省保留的理由**：`db.sqlite` 装着持久意图（schedule 插件的提醒记录、memory 的记忆库——W2 章原则 1「意图数据持真相」），`config.yml` 是部署者手写/审批产物；「卸载」的语义 = 不再参与运行，不是历史蒸发——**删数据是显式动作，不是移除代码的副作用**。与 D35 升级保留同向：禁用（休眠）→ 卸载（移除代码）→ purge（删数据）逐级加强。
-- **淘汰**：全删唯一档（误卸 = 持久意图永久丢失）；「留 config 删 data」分界（db 里的持久意图恰恰不可再生，分界不一致反难记）。
+- **缺省保留的理由**：插件自带 DB（在 private fs 内）装着持久意图（schedule 插件的提醒记录、memory 的记忆库——W2 章原则 1「意图数据持真相」），`config.yml` 是部署者手写/审批产物；「卸载」的语义 = 不再参与运行，不是历史蒸发——**删数据是显式动作，不是移除代码的副作用**。与 D35 升级保留同向：禁用（休眠）→ 卸载（移除代码）→ purge（删数据）逐级加强。
+- **淘汰**：全删唯一档（误卸 = 持久意图永久丢失）；「留 config 删 data」分界（插件自带 DB 里的持久意图恰恰不可再生，分界不一致反难记）。
 
 ### C7.2 D49 残迹目录的索引与扫描交互
 
 - **残迹定义**：目录内无 manifest 且无入口文件（无包内容），但有 `config.yml` 或 `data/` 残留。部署索引标记「残迹」状态——不立此状态则按 D34 政策误归「解析失败」（索引标损坏 + host warn 一条，每 boot 白吵）。
 - **运行期不吵**（同 D34 未装配件政策）；`metis check` 提示级列出残迹 + purge 指路。
 - **inject 面无特殊 casing**：残迹无 manifest 不提供任何 provides；依赖方走「查无」同族响亮（W9 章）；实现期可在报错措辞层加残迹指路（「该 key 曾由残迹目录提供」），不立机制。
-- **同名重装 = 复活**：包内容落回残迹目录，`config.yml` + `data/` 自然接上（name = 身份，D31）；同名新插件继承旧数据 = 工具面/审批面提示「目录含前任残迹」（展示位，不立核心机制）。新插件 schema 与残留 `config.yml` 不符 = 启用期校验响亮（D36 管线原样）；db schema 演化 = 插件自家事（sqlite 私有 db 既定）。
+- **同名重装 = 复活**：包内容落回残迹目录，`config.yml` + `data/` 自然接上（name = 身份，D31）；同名新插件继承旧数据 = 工具面/审批面提示「目录含前任残迹」（展示位，不立核心机制）。新插件 schema 与残留 `config.yml` 不符 = 启用期校验响亮（D36 管线原样）；db schema 演化 = 插件自家事（库住 private fs）。
 - **空目录**（无包内容、无 config、无 data）：索引不收录（纯噪音源）。
 - **残迹的 `config.yml` 不校验**（无 schema 可校，同 D36 休眠件政策）。
 
@@ -414,7 +432,7 @@ backup-ssh-key: |
 ### C8.2 D51 一等 cron 复审：结案 = 维持不立
 
 - **复审结论 = 维持不立**（v1 = config 键约定，不立 manifest 一等 `schedule` 字段）：原始淘汰理由不随配置格式变化动摇——一等字段 = 第三台调度机器（与梯度一易失 timer、梯度二持久调度插件重叠），且「多久跑一次」是部署政策不该由作者写死进包。config 键约定在 `config.yml` 时代完整保留（schema 校验/默认值/审批 diff 全在原位，D36）；写码期教具 = 硬编码间隔告警（journal D84 v1 骨架化后 `timer_scheduled` 条目不立）。
-- **梯度二持久调度 = 插件层议题**：schedule 插件立项归默认插件集批次（四件套原则已备）；持久意图载体 = sqlite，与 manifest 字段无关。
+- **梯度二持久调度 = 插件层议题**：schedule 插件立项归默认插件集批次（四件套原则已备）；持久意图载体 = 插件自带 DB（private fs 内），与 manifest 字段无关。
 - **触发器**：schedule 插件立项时出现 config 键表达不了的声明式调度需求 → 走 WIT package version additive 通道（W10 章）重议。
 
 ### C8.3 联动登记（C8）

@@ -1,6 +1,6 @@
 # 0036. fs scope 三层（E4 固化）：private preopen / 命名根 / global 自研
 
-- Status: accepted（Decision 第 2 条「命名根」局部 supersede = [ADR-0039](0039-fs-capability-two-tier.md)，2026-10-19；正文冻结）
+- Status: accepted（Decision 第 2 条「命名根」局部 supersede = [ADR-0039](0039-fs-capability-two-tier.md)，2026-10-19；Consequences 能力集枚举中的 sqlite 项同批局部 supersede = ADR-0039（sqlite 撤回）；正文冻结）
 - Date: 2026-10-18
 
 ## Context

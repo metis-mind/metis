@@ -153,7 +153,7 @@ world plugin {
 **D123 定案：零仪式 = 无 manifest 的目录 + 同一固定 world。**
 
 - 物理形态：`plugins/<name>/plugin.wasm`（缺省名；零仪式无 manifest，故不可改名），无 `manifest.yml`。经 `metis build` 产出的零仪式源码包带合成的最小 manifest（[build-pipeline](build-pipeline.md) D108），不改变本节 ABI 面。
-- ABI 面不变：三个生命周期导出恒在场（SDK 默认补全）；config = 空 map；无 config schema、无能力声明面；private fs 结构性授予读写（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）；global / http / sqlite / process / mount 等效应能力 fail-closed；imports 仍按固定 world 对账；无 provide/inject；不可 mount（config-format D35；[instance-model](instance-model.md) D63）。
+- ABI 面不变：三个生命周期导出恒在场（SDK 默认补全）；config = 空 map；无 config schema、无能力声明面；private fs 结构性授予读写（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）；global / http / process / mount 等效应能力 fail-closed；imports 仍按固定 world 对账；无 provide/inject；不可 mount（config-format D35；[instance-model](instance-model.md) D63）。
 - 兼容判定：无 manifest 即无 package version 声明面；零仪式组件只在结构匹配宿主当前 world 时被接受（world 不匹配 = 安装错误）。ABI 版本演进后，旧零仪式包须加 manifest 声明版本（W2/W10）。
 - 手写组件的导出集必须匹配 world；缺导出 = 安装期错误，不因零仪式放宽。
 - 成长路径：加 `manifest.yml`，组件文件不动；能力面按 manifest 声明启用。
@@ -287,35 +287,36 @@ config:
 
 - 条目字段 = 封闭集；未知字段响亮。
 - `type` **必填**，取值 = 瘦身形状 DSL 表达式（W7 定语法与词汇；要任意值就写 `any`）。
-- `required` 缺省 `false`；`default` 为 Value；`secret` 缺省 `false`。`volatile` 已退役（config-format D36/D37）。
+- `required` 缺省 `false`；`default` 为字面量 Value（`{ $value: ... }` 写在 `default` = 响亮）；`secret` 缺省 `false`。`volatile` 已退役（config-format D36/D37）。
 - 冲突组合响亮：`required: true` + `default`；`secret: true` + `default`；`secret: true` 且 `type` 非 `string` / `any`（secrets store 值仅字符串，[config-format](config-format.md) C6.1 D46）。
-- 秘密值只许写 `{ secret: "name" }` 引用；写明文 = 校验响亮拒绝；引用查无 = 启用期响亮。引用语法与 store 细节 SSOT = config-format C6。
-- 管线顺序不变：读 `config.yml` → schema 校验（缺 required / 类型错 / 多给键 = 响亮）→ 秘密解析 → 默认值合成 → 冻结 → TLV → `setup`；插件代码一行未跑（config-format D36；W1.3 D118）。
+- 共享变量引用 = `{ $value: "name" }`，覆盖 secret 与非 secret（config-format C6.4 D135；[ADR-0040](../decisions/0040-config-shared-variables.md)）。
+  - `secret: true` 键：键存在时必须是 `{ $value: "name" }` 且解析自 `secrets.yml`；写明文 / 解析自 `values.yml` = 响亮。`required: false` 时键可缺席（缺席 = 无值，不做引用检查）；`required: true` 时缺席 = 响亮。
+  - 非 secret 键：字面量合法；写 `{ $value: "name" }` 时必须解析自 `values.yml`；引用只存在于 `secrets.yml` 的名字 = 响亮。
+  - 引用查无 = 响亮；两 store 同名 = 响亮。
+- 管线：读 `config.yml` → schema 识别引用形状与 `secret` 标记（缺 required / 类型错 / 多给键 = 响亮）→ 共享变量解析 → 最终类型校验 → 默认值合成 → 冻结 → TLV → `setup`；插件代码一行未跑（config-format D36/D135；W1.3 D118）。
 - `config` 缺省 ≡ 空 schema；此时 `config.yml` 出现任何键 = 多给键响亮。
 - 一等 `schedule` / cron 字段维持不立（config-format C8.2 D51）；周期意图 = config 键约定。
 - 嵌套字段级 `secret` 标记 = 扩展位（v1 只标顶层键）。
 
 ### W2.5 D129 `capabilities`
 
-**D129 定案：`capabilities` = `{ fs, http, sqlite, process, mount }`；private fs 隐式读写；fs 只声明 `global`。**
+**D129 定案：`capabilities` = `{ fs, http, process, mount }`；private fs 隐式读写；`fs` 标量 = global 声明；sqlite 能力撤回。**
 
 ```yaml
 capabilities:
-  fs:
-    global: read
+  fs: read
   http:
     - api.openai.com
     - "*.anthropic.com"
-  sqlite: true
   process: true
   mount: true
 ```
 
-- `capabilities` = map，封闭键 `fs` / `http` / `sqlite` / `process` / `mount`；未知键响亮；节缺省 = 无该能力；fail-closed 不变。
-- `fs` = map，封闭键 `global`（`read` / `write`，write ⊃ read）。**private 不是合法键**：`plugins/<name>/data/fs/` 隐式读写，不声明、不可收窄（W2.6 D130；[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）。`fs` 节缺省 = 无 global；private 仍可用。
+- `capabilities` = map，封闭键 `fs` / `http` / `process` / `mount`；未知键响亮；节缺省 = 无该能力；fail-closed 不变。
+- `fs` = 标量 `read|write`（write ⊃ read），语义 = **global 档**；不写 `global` 子键，也不写 `private`。`fs` 缺省 = 无 global。**private 隐式**：`plugins/<name>/data/fs/` 读写不声明、不可收窄（W2.6 D130；[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）。
 - `http` = host 列表：精确 host + `*.` 任意深度子域（不含 apex，apex 须单列）、不表达端口、https 缺省、明文须 `http://` 显式；SSRF / 跨域重定向 / 最终解析结果判定 = [seam-capabilities](seam-capabilities.md) §5.2 原位。空列表 = 无 host。
-- `sqlite` / `process` / `mount` 值为布尔：`true` = 启用；`false` / 缺省 = 无能力（拒绝）。timer 无门；纯算件无需声明。
-- **sqlite 与 fs 不冲突**：host sqlite 的库住 `plugins/<name>/data/db.sqlite`，private fs 根是 `data/fs/`，preopen 结构性够不到 db。`sqlite: true` 是宿主代持 SQLite 句柄的便利，不是通用文件写权限；插件使用其他 DB（redb / sled / 自带 SQLite 等）时直接在 private fs 内管理，无需 `sqlite` 声明。
+- `process` / `mount` 值为布尔：`true` = 启用；`false` / 缺省 = 无能力（拒绝）。timer 无门；纯算件无需声明。
+- **sqlite 不立**：`sqlite` 键 = 未知字段响亮。宿主不代持 DB 句柄、不提供 SQL 方法族 / `sql.*` 错误族 / `sql_call` / `sql_result` journal kind 的新设计面。插件需要数据库时自带 guest crate（SQLite / redb / sled 等），库文件住 `data/fs/` 内，由插件自己管理 schema、迁移与生命周期；private fs 隐式读写使这条路径无需能力声明。
 - **mount**：`true` = 允许调用 `ctx.mount` 创建子树实例（激活新代码的元权限；[instance-model](instance-model.md) §S3.3 D63；[ADR-0028](../decisions/0028-instance-model.md) 批次 #1）；`false` / 缺省 = 拒绝。它是编排面能力门的唯一例外。
 - 声明是作者意图；运行期门 fail-closed；能力词汇 additive 增补 = WIT package version（W10）。审批面逐条展示；global 最高档。
 
@@ -324,7 +325,7 @@ capabilities:
 **D130 定案：命名根不立；manifest 不设 `roots` 字段，部署根不设 `fs_roots` 绑定节。**
 
 - 原命名根 = ADR-0036 的「manifest 声明逻辑名 + 部署者绑定路径」中间档。撤回理由：插件可能同时服务多个 project，目标目录也可能随运行期变化；静态绑定一次配不齐，中间档的成本（声明 + 绑定 + 校验 + 审批）超过收益（ADR-0039）。
-- fs 收窄为两档：private 隐式读写 + global 声明读写（W2.5 D129）。需要用户世界访问的插件走 `global`；动态 project 目录由插件自己的 config 值承载（config-format D36/D45 同族）。
+- fs 收窄为两档：private 隐式读写 + `fs: read|write` 标量（语义 = global；W2.5 D129）。需要用户世界访问的插件写 `fs`；动态 project 目录由插件自己的 config 值承载（config-format D36/D45 同族）。
 - 代价明记：没有中间档；global 是高信任档，部署者以审批与 OS 级沙箱兜底。workspace / session 语义仍归插件层服务投影，核心不做一一映射。
 - 局部 supersede ADR-0036 Decision 第 2 条 = [ADR-0039](../decisions/0039-fs-capability-two-tier.md)；config-format C5、seam-capabilities §5.2、W1.8 D123 措辞同步。
 
@@ -388,45 +389,47 @@ events:
 
 每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与上述 ADR。
 
-| 机制                                   | 死因                                                                                                                  |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `name` 字段                            | 身份恒 = 目录名（config-format D31；W1.1 D116）；manifest 不承载身份                                                  |
-| `entry` 字段                           | 组件文件名由 `component` 承载（W1.1 D116；W2.3 D127）；无运行期模块入口                                               |
-| `boxes` 字段与双向对账                 | 盒概念消解进插件本体（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）                                        |
-| `abi_rev` 字段                         | WIT package version 承接（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §3）；字段 = `abi`（W2.8 D132）         |
-| `provides.methods` 列表                | 方法集住契约（W7）；固定 world 经 `on-call` 分发（W3）                                                                |
-| 旧 `fs` scope map（两档 → 三层命名根） | 现形态 = private 隐式 + global 声明；命名根撤回（W2.5/W2.6；[ADR-0039](../decisions/0039-fs-capability-two-tier.md)） |
-| `volatile` 词汇                        | config-format D36/D37 退役；热应用 = `on-config` 返回值                                                               |
-| `runtime` 字段                         | 从未立；wasm-first 后无组成可声明（ADR-0034）                                                                         |
-| `min_core` 字段                        | 不立；`abi` + 未知字段「core 版本过旧？」提示兜底（W2.8 D132）                                                        |
-| 一等 `schedule` / cron 字段            | 维持不立（config-format D51）；周期意图 = config 键约定                                                               |
-| require / `.luaurc` / `@lib` / 边账本  | ADR-0003 整篇 supersede = [ADR-0038](../decisions/0038-module-system-require-supersede.md)                            |
+| 机制                                   | 死因                                                                                                                                      |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `name` 字段                            | 身份恒 = 目录名（config-format D31；W1.1 D116）；manifest 不承载身份                                                                      |
+| `entry` 字段                           | 组件文件名由 `component` 承载（W1.1 D116；W2.3 D127）；无运行期模块入口                                                                   |
+| `boxes` 字段与双向对账                 | 盒概念消解进插件本体（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）                                                            |
+| `abi_rev` 字段                         | WIT package version 承接（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §3）；字段 = `abi`（W2.8 D132）                             |
+| `provides.methods` 列表                | 方法集住契约（W7）；固定 world 经 `on-call` 分发（W3）                                                                                    |
+| 旧 `fs` scope map（两档 → 三层命名根） | 现形态 = private 隐式 + `fs: read/write` 标量（global）；命名根撤回（W2.5/W2.6；[ADR-0039](../decisions/0039-fs-capability-two-tier.md)） |
+| `sqlite` 能力 / `data/db.sqlite`       | 宿主代持 DB 无独立价值；插件自带 guest DB crate，库文件住 private fs，schema / 迁移自管（W2.5 D129；ADR-0039）                            |
+| `volatile` 词汇                        | config-format D36/D37 退役；热应用 = `on-config` 返回值                                                                                   |
+| `runtime` 字段                         | 从未立；wasm-first 后无组成可声明（ADR-0034）                                                                                             |
+| `min_core` 字段                        | 不立；`abi` + 未知字段「core 版本过旧？」提示兜底（W2.8 D132）                                                                            |
+| 一等 `schedule` / cron 字段            | 维持不立（config-format D51）；周期意图 = config 键约定                                                                                   |
+| require / `.luaurc` / `@lib` / 边账本  | ADR-0003 整篇 supersede = [ADR-0038](../decisions/0038-module-system-require-supersede.md)                                                |
 
 **语义平移保留**：插件的自述与意图（description / version / config schema / capabilities / provides / inject / events）仍唯一住 manifest；配置值仍唯一住 `config.yml`；身份仍 = 目录名；声明 ≠ 观察仍成立（W2.9 D133）。
 
 ### W2.12 联动登记汇总（章末）
 
-| 去向            | 内容                                                                                                                                                                                                                             |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W1（T13-h）     | `component` 缺省 `plugin.wasm`（D116）；零仪式 ABI 面（D123）措辞按 ADR-0039 更新：private fs 隐式，效应能力仍 fail-closed                                                                                                       |
-| W3（T13-j）     | ctx.fs = private（隐式读写）/ global（声明）；无命名根；`global` 能力门在运行期强制                                                                                                                                              |
-| W5（T13-k）     | 生命周期返回的 `error` 类型；manifest 校验错误是宿主侧错误，不经 guest 错误通道                                                                                                                                                  |
-| W7（T13-m）     | `type:` 表达式语法与词汇；契约包格式 / 三来源合并；`provides.contract` 与 `@N`；作者自定义服务 / 事件 schema 的住处                                                                                                              |
-| W8（T13-n）     | 事件名语义、`internal/` 规则、事件形状在契约中的写法；manifest 只列名字                                                                                                                                                          |
-| W9（T13-o）     | inject / provides / events 对账；能力门（含 `mount` 例外）；import 清单 ⊆ SDK 词汇表                                                                                                                                             |
-| W10（T13-p）    | `abi` 的数值与比较；manifest 字段集 / 能力词汇 additive 演进纪律                                                                                                                                                                 |
-| config-format   | D36 配置管线按 `config` schema 消费；秘密引用 = `{ secret: "name" }`；fs 两档（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)；ADR-0036 命名根格局部 supersede）；共享值机制 = config-format 增补批（新 ADR，遗留登记） |
-| build-pipeline  | D108 合成最小 manifest = `version` + `abi`（无 `name`）；脚手架按 W2 字段集生成；组件文件名 = D116                                                                                                                               |
-| plugin-sdk      | S6 能力白名单 = manifest `capabilities` 声明源；编译期组合 world 维持扩展位（W2 已落地后仍不启用）                                                                                                                               |
-| instance-model  | `mount: true` 能力键与 `ctx.mount` 方法族（ADR-0028 批次 #1）                                                                                                                                                                    |
-| ADR-0003        | 整篇 supersede = [ADR-0038](../decisions/0038-module-system-require-supersede.md)（D134）                                                                                                                                        |
-| ADR-0036        | Decision 第 2 条「命名根」局部 supersede = [ADR-0039](../decisions/0039-fs-capability-two-tier.md)（D130）                                                                                                                       |
-| ADR-0025 / 0027 | Status 行记 fs 两档链：ADR-0025 §5.2 两档 → ADR-0036 三层 → ADR-0039 两档（private 隐式 / global 声明）；ADR-0027 D44 两档语义由 ADR-0039 定型                                                                                   |
-| T10.12          | 安装期 manifest 解析 / 未知字段 / 类型校验；world 与 start 校验；包内容复制                                                                                                                                                      |
-| T10.14          | 作者面 trait / 宏；`Value` 手动面；能力声明消费                                                                                                                                                                                  |
-| T10.15          | 脚手架 manifest 骨架；合成最小 manifest；构建期 manifest 校验                                                                                                                                                                    |
-| 实现期清单      | manifest 校验器（三面同一实现）；JSON Schema 工件生成；部署索引解析登记                                                                                                                                                          |
-| 扩展位          | 配置共享值（`values.yml` + `{ $value: "name" }`，非秘密，config-format 增补批/新 ADR）；嵌套字段 `secret`；编译期组合 world；自由 `build.command`；marketplace 元数据                                                            |
+| 去向            | 内容                                                                                                                                                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1（T13-h）     | `component` 缺省 `plugin.wasm`（D116）；零仪式 ABI 面（D123）措辞按 ADR-0039 更新：private fs 隐式，效应能力仍 fail-closed                                                                                                  |
+| W3（T13-j）     | ctx.fs = private（隐式读写）/ global（`fs: read/write` 声明）；无命名根；global 能力门在运行期强制；DB = guest crate + private fs（无宿主 sqlite）                                                                          |
+| W5（T13-k）     | 生命周期返回的 `error` 类型；manifest 校验错误是宿主侧错误，不经 guest 错误通道                                                                                                                                             |
+| W7（T13-m）     | `type:` 表达式语法与词汇；契约包格式 / 三来源合并；`provides.contract` 与 `@N`；作者自定义服务 / 事件 schema 的住处                                                                                                         |
+| W8（T13-n）     | 事件名语义、`internal/` 规则、事件形状在契约中的写法；manifest 只列名字                                                                                                                                                     |
+| W9（T13-o）     | inject / provides / events 对账；能力门（含 `mount` 例外）；import 清单 ⊆ SDK 词汇表                                                                                                                                        |
+| W10（T13-p）    | `abi` 的数值与比较；manifest 字段集 / 能力词汇 additive 演进纪律                                                                                                                                                            |
+| config-format   | D36 配置管线按 `config` schema 消费；共享变量 = `{ $value: "name" }`（含 secret；C6.4 D135 / [ADR-0040](../decisions/0040-config-shared-variables.md)）；fs 两档（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)） |
+| build-pipeline  | D108 合成最小 manifest = `version` + `abi`（无 `name`）；脚手架按 W2 字段集生成；组件文件名 = D116                                                                                                                          |
+| plugin-sdk      | S6 能力白名单 = manifest `capabilities` 声明源；编译期组合 world 维持扩展位（W2 已落地后仍不启用）                                                                                                                          |
+| instance-model  | `mount: true` 能力键与 `ctx.mount` 方法族（ADR-0028 批次 #1）                                                                                                                                                               |
+| ADR-0003        | 整篇 supersede = [ADR-0038](../decisions/0038-module-system-require-supersede.md)（D134）                                                                                                                                   |
+| ADR-0036        | Decision 第 2 条「命名根」局部 supersede = [ADR-0039](../decisions/0039-fs-capability-two-tier.md)（D130）                                                                                                                  |
+| ADR-0025 / 0027 | Status 行记：ADR-0025 §5 fs 通道条两档 → ADR-0036 三层 → ADR-0039 两档（private 隐式 / `fs` 标量 global），sqlite 项撤回；ADR-0027 D44 与 C1.1 `data/db.sqlite` 行由 ADR-0039 定型/失效                                     |
+| ADR-0040        | 配置共享变量（`values.yml` + `secrets.yml`，`{ $value }` 含 secret）= C6.4 D135；W2 D128 引用语法已同步                                                                                                                     |
+| T10.12          | 安装期 manifest 解析 / 未知字段 / 类型校验；world 与 start 校验；包内容复制                                                                                                                                                 |
+| T10.14          | 作者面 trait / 宏；`Value` 手动面；能力声明消费                                                                                                                                                                             |
+| T10.15          | 脚手架 manifest 骨架；合成最小 manifest；构建期 manifest 校验                                                                                                                                                               |
+| 实现期清单      | manifest 校验器（三面同一实现）；JSON Schema 工件生成；部署索引解析登记；共享变量解析随 T10.8（C6.4 D135）                                                                                                                  |
+| 扩展位          | 嵌套字段 `secret` / 嵌套 `$value` 引用；编译期组合 world；自由 `build.command`；marketplace 元数据                                                                                                                          |
 
 ---
 

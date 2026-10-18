@@ -5,7 +5,7 @@
 > 前提文档：[seam-capabilities](seam-capabilities.md) §5.3 / [fiber](fiber.md) §10 / [config-format](config-format.md)（D29/D50）/ [instance-model](instance-model.md)（D60/D72/D73）。
 > 调研依据：[journal-replay-research](../research/journal-replay-research.md)（point-in-time 报告；其 §7 映射的 replay 面经本任务方向重定后不再采用——见 D75）。
 > **方向重定**：核心**不立 replay 引擎**——崩溃恢复 = fresh-start（[ADR-0023](../decisions/0023-core-restart-semantics.md) 同路径），journal = 核心操作/审计日志，replay = 延期扩展位（重开触发器 = D92，2026-10-13 J6 收官）。§A6.7 草案的 replay 面（★ 族轴 / D7.2 生成型秘密加密 / 概念地基「重启 = 重放」「b = 立身之本」）随之推翻或消解，正式 supersede——**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #1/#2**（2026-10-13）；D7.3 格式纪律（JSONL + 格式版本字段 + Int 字符串惯例）不受影响，继续有效。
-> **范围重定（2026-10-12 用户拍板，D84）**：journal v1 = **写死族骨架**——能力使用族其余（http/fs/sql/timer/stream）、内部流量族、聚合摘要族与 `core.audit` 档位面整体不立；写死骨架（生命周期 + 错误现场 + 控制 + `process_*`）不动。动因：崩溃恢复不需要 journal（fresh-start 既定），v1 无逐调用审计的紧迫消费者，骨架实现成本 ≈ 零。被撤面全文留档 = 扩展位「可配审计层」预制方案（触发器 = 首个真实审计需求或安全事件）。
+> **范围重定（2026-10-12 用户拍板，D84）**：journal v1 = **写死族骨架**——能力使用族其余（http/fs/timer/stream）、内部流量族、聚合摘要族与 `core.audit` 档位面整体不立；写死骨架（生命周期 + 错误现场 + 控制 + `process_*`）不动。动因：崩溃恢复不需要 journal（fresh-start 既定），v1 无逐调用审计的紧迫消费者，骨架实现成本 ≈ 零。被撤面全文留档 = 扩展位「可配审计层」预制方案（触发器 = 首个真实审计需求或安全事件）。
 > **载体吸收（2026-10-18）**：D78 kind 表 `fanout_cancelled` 格 supersede——fan-out 归 guest 异步设施，宿主无观测点（[wit-abi](wit-abi.md) W4.2/W4.6）；正式面 = [ADR-0035](../decisions/0035-journal-fanout-cancelled-supersede.md)。
 > Last reviewed: 2026-10
 
@@ -28,15 +28,15 @@
 ### J1.1 D75 定位锤：journal = 核心的操作/审计日志
 
 - **定位**：journal = 核心的 append-only 操作/审计日志。消费者三层：**① 核心自己** = 崩溃/故障诊断（飞行记录仪本义：调查，不重建）+ 自审计；**② 插件层** = journal 查询接口（平台能力，J5 设计）；**③ 部署者** = 能力使用审计与调试（ADR-0024 §6 防线 2「藏不住」的兑现面）。（2026-10-12 修订注：② 插件查询面**缓议** = D84 骨架化（J5 转扩展位）；③ 收窄 = 管理动作/错误现场/process 可见，逐调用能力审计不立；「审计档位变化不许弄坏插件功能」随档位面消解。）
-- **三条「不是」**（边界写实）：不是 replay 事实源（replay 引擎不立 = 扩展位）；不是运行日志（tracing/debug 输出 = 人读诊断面，既有边界不动）；不是插件 transcript（会话轨迹 = 插件层经 fs/sql 自建——DSH session log 已验证的形态；查询接口给插件的是审计关联面，不是存储面——**审计档位变化不许弄坏插件功能**）。
-- **崩溃恢复 = fresh-start**：复用 ADR-0023 同一路径（全量 unload + 全量 load），崩溃与干净重启的差别只在在飞工作丢失多少，恢复路径不分叉。在飞邮箱消息崩溃丢失 = 诚实（D11.4/D11.5 同族：at-most-once、拒绝重投——被杀 handler 可能已发出过回复）。插件跨重启连续性 = 插件自己的 fs/sql 持久化（seam 落盘原子写纪律兜底）；待审批状态 = 审批机器文件原子写，不靠 journal。
+- **三条「不是」**（边界写实）：不是 replay 事实源（replay 引擎不立 = 扩展位）；不是运行日志（tracing/debug 输出 = 人读诊断面，既有边界不动）；不是插件 transcript（会话轨迹 = 插件层经 private fs / guest DB 自建——DSH session log 已验证的形态；查询接口给插件的是审计关联面，不是存储面——**审计档位变化不许弄坏插件功能**）。
+- **崩溃恢复 = fresh-start**：复用 ADR-0023 同一路径（全量 unload + 全量 load），崩溃与干净重启的差别只在在飞工作丢失多少，恢复路径不分叉。在飞邮箱消息崩溃丢失 = 诚实（D11.4/D11.5 同族：at-most-once、拒绝重投——被杀 handler 可能已发出过回复）。插件跨重启连续性 = 插件自己的 private fs / guest DB 持久化（seam 落盘原子写纪律兜底）；待审批状态 = 审批机器文件原子写，不靠 journal。
 - **正本退位**：fresh-start 后 journal 不是 system of record（正本 = 部署文件 + 插件私有存储），是派生诊断物——段文件轮转/保留/删除 = 纯运维政策，无完整性枷锁（Akka「不删事件」戒律只对 event-sourcing 正本成立）。journal 数据生命周期细则——**已收官 = D91**（2026-10-13，[config-format](config-format.md) §C7.0 登记位兑现）。
 - **随之消解**（登记落档，各一句理由）：
   - §A6.7 概念地基「重启 = 重放」「b 崩溃恢复 = 核心层立身之本」——推翻为 fresh-start + 诊断；
   - 调研开放问题 1（单双流）——replay 流不存在，「保留期分叉」论据随之消失，单流自明；
   - 调研开放问题 3（fork 前缀物理组织）/ 4（发散比对强度）——replay 不立，消解；
   - M8 host 侧快照——replay 检查点，随 replay 消解；
-  - 私有状态族（fs/sql）无 replay 政策（核心不立 replay）；
+  - 私有状态族（fs / guest DB）无 replay 政策（核心不立 replay）；
   - `nondeterminism_read` 族与 D7.2 生成型秘密加密——不录制时间/随机读取，则无密可泄、加密议题消失；
   - D8.2 在飞预算数值钉版登记、D1.6 免录恢复顺序的「确认」、旧载体面的确定性比对政策——replay 语义需求，消解（调度纯函数性本身 = ABI 既定，不动）。
 - **replay 扩展位**（延期非删除）：replay 的消费者（调试 / eval / 「新代码重跑旧史」验证自我修改 = Fowler bug-fix 重放）真实存在，但在插件/agent 层且非 v1 必需；机器必须长在 host 侧（边界注入点是 host 的，插件无法虚拟化另一个插件的边界）。重开触发器与形态——**已登记 = D92**（2026-10-13，J6 收官）。wasm 盒 IO 全走 host imports = 天然可录制（wasm-research §5.7），届时是红利。
@@ -88,7 +88,7 @@
 
 **消解记录**（随本条落档，各一句理由）：`external_input`（去 agent 化：核心无「session 第一落点」，外部刺激 = 部署文件动作（boot/config 条目）+ 能力族回流）；`fork_created`（fork 退出核心需求集 = §A6.7 概念地基既定）；`session_started`/`session_ended`（D53：核心无 session 概念）；`llm_*`（LLM 调用 = 插件的一次 http，归能力族）；`snapshot_written`（M8 随 replay 消解）；`nondeterminism_read`（D75）；`replay_diverged`（D75）。
 
-**撤销记录**（D84 v1 骨架化，2026-10-12；预制方案留档 = 扩展位「可配审计层」）：能力使用族其余十条（`http_request`/`http_response`/`fs_read`/`fs_write`/`sql_call`/`sql_result`/`timer_scheduled`/`timer_fired`/`stream_opened`/`stream_closed`——v1 无逐调用审计消费者）；内部流量族四条（`message_enqueued`/`dispatch_completed`/`service_call`/`service_result`——同）；聚合摘要族 `window_summary`（载体随可配面消失）；`audit_policy_changed`（`core.audit` 键面不立，无政策可变）。
+**撤销记录**（D84 v1 骨架化，2026-10-12；预制方案留档 = 扩展位「可配审计层」）：能力使用族其余八条（`http_request`/`http_response`/`fs_read`/`fs_write`/`timer_scheduled`/`timer_fired`/`stream_opened`/`stream_closed`——v1 无逐调用审计消费者；`sql_call`/`sql_result` 已随 sqlite 能力撤回永久死亡 = [ADR-0039](../decisions/0039-fs-capability-two-tier.md)）；内部流量族四条（`message_enqueued`/`dispatch_completed`/`service_call`/`service_result`——同）；聚合摘要族 `window_summary`（载体随可配面消失）；`audit_policy_changed`（`core.audit` 键面不立，无政策可变）。
 
 **载体吸收**（2026-10-18，W4.2/W4.6 拍板兑现）：`fanout_cancelled`（handler 结束强制取消子协程）——fan-out 不再是宿主 ABI 原语，等的事重叠 = guest 异步设施原生（`join!`/`select!`），宿主无观测点；该 kind 不立、无替代条目。正式 supersede = [ADR-0035](../decisions/0035-journal-fanout-cancelled-supersede.md)。
 
@@ -128,20 +128,20 @@
 
 本题定可配族键面与默认档（D79/D80）、聚合摘要形态（D81）、写入管线与背压（D82）、flush/fsync 政策（D83）。不归本题：崩溃窗口叙事与跨重启连续性（J3——D83 只供原料）；脱敏管线 / blob 阈值 / 单条目字节上限 / 段文件 / 保留归档 / 写入量实测（J4）；查询接口与人读面（J5）。前提（既定不议）：D75 三层消费者与正本退位；D78 分族与写死/可配分轴；D50 三档枚举与封闭集机制；[ADR-0023](../decisions/0023-core-restart-semantics.md) drain 路径。
 
-### J2.1 D79 键面扩展 = 六键
+### J2.1 D79 键面扩展 = 五键
 
-- **`core.audit` 键面 = `{http, fs, sql, timer, stream, internal}`**：能力使用族五键 + 内部流量族一键 `internal` 统管（`message_enqueued`/`dispatch_completed`/`service_call`/`service_result` 同升同降）。封闭集校验与新族 additive = D33/D50 机制原位。
+- **`core.audit` 键面 = `{http, fs, timer, stream, internal}`**：能力使用族四键 + 内部流量族一键 `internal` 统管（`message_enqueued`/`dispatch_completed`/`service_call`/`service_result` 同升同降）。封闭集校验与新族 additive = D33/D50 机制原位。
 - **写死族无键**：生命周期 / 错误现场 / 控制 / `process_*` 不进键面——没有键就没有拨档面，审计自保（D78 同构论证）在配置层结构性成立。
 - **淘汰**：内部流量拆键（`internal_msg`/`internal_service`）——开窗精度换键面膨胀与部署者心智税；「服务调用低频」的音量论据由「summary 档聚合后本就小」覆盖，无需单开键。
 
-### J2.2 D80 默认档 = 六族全 summary；防线 2 与 D23.3 结案
+### J2.2 D80 默认档 = 五族全 summary；防线 2 与 D23.3 结案
 
 - **分档轴 = 结构有界原则**：音量假设不押「典型负载」（核心 agent-agnostic，爬虫插件 / 轮询循环 / 逐文件处理可把任何族刷成高频），必须在任意负载下成立——**默认面成本 = O（窗口数）**——条目数与单条字节双有界（每窗口每族至多一条；聚合分键基数封顶 = D81，字节不押 J4 上限兜底）；**full 成本 = O（调用数）**（无界，开窗自负）。「按族分频率定档」被淘汰（http/timer/stream「低频」前提不成立）。
-- **默认档：六族全 `summary`**；`off`/`full` 可配照旧（D50 三档机制不动）。
-- **[ADR-0024](../decisions/0024-carrier-layering.md) §6 防线 2 张力结案**：默认面 = 写死族全录 + 六族聚合可见 = **默认不盲**；「每次跨界调用进 journal」精确化 = 聚合级全覆盖 + 逐条可配开（残留写实：fs/sql 的**靶面**（路径/语句）默认仍不见、开窗可见——基数与敏感面权衡见 D81；「可回放」半句随 replay 不立同死——措辞注记**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #6**（2026-10-13））。
+- **默认档：五族全 `summary`**；`off`/`full` 可配照旧（D50 三档机制不动）。
+- **[ADR-0024](../decisions/0024-carrier-layering.md) §6 防线 2 张力结案**：默认面 = 写死族全录 + 五族聚合可见 = **默认不盲**；「每次跨界调用进 journal」精确化 = 聚合级全覆盖 + 逐条可配开（残留写实：fs 的**靶面**（路径）默认仍不见、开窗可见——基数与敏感面权衡见 D81；「可回放」半句随 replay 不立同死——措辞注记**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #6**（2026-10-13））。
 - **D23.3 审计写实结案**：internal 默认 `summary` → 自由态事件**流向**（谁 emit 了什么名、几个监听、几个错）默认可见；payload **形状**分歧 = 开窗可查（`internal: full`）。强度收敛写实：无契约事件「藏不住」= 流向藏不住、形状开窗见；有契约事件不受影响（`contract_violation` 写死全录原位）。
-- **淘汰**：(b) 维持 D50 缺省 `off`——防线 2 默认失明照旧、D23.3 默认死亡，张力不结案；(c) 六族默认 `full`——音量税压给所有部署者且结构无界；(d) 默认 `off` 纯调试定位——崩溃后诊断不可能预约开窗（飞行记录仪默认失明），审计腿塌缩为「起疑后可开」= 防线 2 措辞重写面更大。**备查变体**：summary 档给 `message_enqueued` 记 payload 形状指纹（键集 + 类型 hash）——每消息 canonical hash 的 CPU 税 + hash 不可读（见分歧不见形状，仍须开窗），v1 不值；登记扩展位候选。
-- **纪律注记**：fs/sql 缺省 `off`→`summary` = 对冻结中 [ADR-0027](../decisions/0027-config-format.md)（§C8.1 缺省档格；living doc D50）的语义修订——实现未落地、无部署可破，按演进纪律归 J6 冻结批次正式 supersede——**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #4**（2026-10-13）；§A6.8 实现期清单「audit 开关默认值 = 实现期配置」一行作废（设计期定案取代）。
+- **淘汰**：(b) 维持 D50 缺省 `off`——防线 2 默认失明照旧、D23.3 默认死亡，张力不结案；(c) 五族默认 `full`——音量税压给所有部署者且结构无界；(d) 默认 `off` 纯调试定位——崩溃后诊断不可能预约开窗（飞行记录仪默认失明），审计腿塌缩为「起疑后可开」= 防线 2 措辞重写面更大。**备查变体**：summary 档给 `message_enqueued` 记 payload 形状指纹（键集 + 类型 hash）——每消息 canonical hash 的 CPU 税 + hash 不可读（见分歧不见形状，仍须开窗），v1 不值；登记扩展位候选。
+- **纪律注记**：fs 缺省 `off`→`summary` = 对冻结中 [ADR-0027](../decisions/0027-config-format.md)（§C8.1 缺省档格；living doc D50）的语义修订——实现未落地、无部署可破，按演进纪律归 J6 冻结批次正式 supersede——**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #4**（2026-10-13）；§A6.8 实现期清单「audit 开关默认值 = 实现期配置」一行作废（设计期定案取代）。
 
 ### J2.3 D81 聚合摘要形态
 
@@ -158,17 +158,16 @@
     "payload": {
         "trigger": { "kind": "event", "name": "user/msg" },
         "fs": { "read": 12, "write": 1, "bytes": 40211 },
-        "sql": { "call": 3, "rows": 128 },
         "service": { "foo.bar": { "call": 2, "err": 0 } }
     }
 }
 ```
 
 - **双锚分工**：`trigger` 内联描述（触发消息的 kind/name 直书）= **常态主锚**——summary/off 档下 `message_enqueued` 不逐条，触发消息无条目可指，锚必须自给；`cause` 指向 `message_enqueued` 条目 = internal=full 档的因果链红利（无则 null）。
-- **分键纪律**：分键只给**低基数高信号**维度——http 按域名、service 按（服务，方法）（配对信息聚合级无损：「POST api.evil.com ×47 共 2.3MB」照样扎眼）；fs/sql **不立路径/语句键**（高基数 + 敏感面大——量级可见、靶面开窗，不对称是有意的）。**分键基数封顶**：每族节超顶折叠进 `other` 桶合计（顶值 = 实现期配置）——单条字节随之结构有界（爬虫单窗口万异域名也封顶），不依赖 J4 字节上限兜底。
+- **分键纪律**：分键只给**低基数高信号**维度——http 按域名、service 按（服务，方法）（配对信息聚合级无损：「POST api.evil.com ×47 共 2.3MB」照样扎眼）；fs **不立路径键**（高基数 + 敏感面大——量级可见、靶面开窗，不对称是有意的）。**分键基数封顶**：每族节超顶折叠进 `other` 桶合计（顶值 = 实现期配置）——单条字节随之结构有界（爬虫单窗口万异域名也封顶），不依赖 J4 字节上限兜底。
 - **内部流量族 summary 载体 = `dispatch_completed` 增强**：**每消息一条**（router 视角，非每监听器）——`{msg: {kind, name}, from, listeners, err, enqueued, ms}`（`from` = 发射方 fiber，host 源 = null——「谁 emit 了什么名」的「谁」有着）；监听器级错误细节由 `listener_error`（写死族）兜底，不重复记账；`message_enqueued` 在 summary 档不逐条写，扇出计数折进 `enqueued`；`full` 档 = 四 kind 全逐条（`message_enqueued` 带 payload = D78「降档时摘要化」的反面）。每消息一条 = 消息驱动系统的**音量地板**（再低丢因果链；在 O（窗口数）原则内）。
 - **高频族整形 = 档位语义本身**：summary 聚合折叠高频调用；full 开窗撞高频由背压吸收（D82）。不立采样——审计要完备或诚实缺口，采样两边都不是。
-- **淘汰**：按族分 kind（`fs_summary`/`sql_summary`/…）——kind 表 +5~6 膨胀税，换 jq 少打一个字段。
+- **淘汰**：按族分 kind（`fs_summary`/…）——kind 表膨胀税，换 jq 少打一个字段。
 
 ### J2.4 D82 写入管线与背压
 
@@ -192,10 +191,10 @@
 
 | 去向                            | 内容                                                                                                                                                                                  |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| config-format §C8.0/§C8.1/§C8.3 | 键面六键 + 默认档 + 聚合形态修订注（D79/D80/D81）；D50「缺省 off」语义修订归 J6 批次登记（本 change 已同步；**吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #4**，2026-10-13） |
+| config-format §C8.0/§C8.1/§C8.3 | 键面五键 + 默认档 + 聚合形态修订注（D79/D80/D81）；D50「缺省 off」语义修订归 J6 批次登记（本 change 已同步；**吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #4**，2026-10-13） |
 | fiber §10                       | 优雅关闭 journal 侧义务 = D83                                                                                                                                                         |
 | ADR-0024 §6                     | 防线 2 措辞精确化（聚合级全覆盖 + 逐条可配开；「可回放」半句随 replay 不立同死）——**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #6**（2026-10-13；次日 D84 收窄版为准）    |
-| ADR-0027 §C8.1                  | fs/sql 缺省 `off`→`summary` 语义修订（living doc D50 格）——**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #4**（2026-10-13；次日 D84 再修订 = 键面不立）                    |
+| ADR-0027 §C8.1                  | fs 缺省 `off`→`summary` 语义修订（living doc D50 格）——**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #4**（2026-10-13；次日 D84 再修订 = 键面不立）                        |
 | J3                              | 崩溃窗口叙事原料 = D83 崩溃窗口写实                                                                                                                                                   |
 | J4                              | **已收官**（2026-10-13，D89–D91）：段文件 = D90；单条目字节上限 / blob 阈值 / 写入量实测 = 消解落档（J4.0；`window_summary` 与 full 档条目随可配面撤销 = D84）                        |
 | 实现期清单                      | journal append 管线落地（writer + 有界通道 + 丢弃制 + 分级 sync = D82/D83 定案）；通道容量与 flush 阈值数值                                                                           |
@@ -214,7 +213,7 @@
 - **写入模型塌缩**：骨架低频 → intercept 点同步构造 + 序列化 + append + **逐条 fsync** 一步完成；无通道、无 writer 任务、无背压（D82/D83 大部撤销；存活 = 写失败降级续跑政策 + drain 排干义务）。`journal_gap` 收窄 = 写失败恢复标记。错误风暴写实：同步 fsync 的节流落在写入路径上（肇事者首当其冲，同租户其他 fiber 的写同排队——骨架正常面低频可承受；实测刺痛再批量化，不预埋）。
 - **防线 2 结案改写**（取代 D80 结案）：v1 默认面 = 管理动作（boot/挂载/配置提交）+ 错误现场 + process spawn 可见；**能力调用细节（读哪些文件、联系哪些域名）v1 不立记录面**。不一致写实：`curl` 外泄可见（process）、`ctx.http` 外泄不可见。ADR-0024 §6「每次跨界调用进 journal」措辞 supersede——**已吸收 = [ADR-0029](../decisions/0029-journal.md) 批次 #6**（2026-10-13）。
 - **D23.3 审计写实死亡**：内部流量族不立 → 自由态事件流向/形状均无记录面；静态面存活（analyze #7 非正式共享词汇警告原位）。
-- **扩展位登记**：**可配审计层** = D79–D83 全文即预制方案（六键 + 三档 + `window_summary` + 背压管线）；触发器 = 首个真实审计需求或安全事件。
+- **扩展位登记**：**可配审计层** = D79–D83 全文即预制方案（五键 + 三档 + `window_summary` + 背压管线）；触发器 = 首个真实审计需求或安全事件。
 - **淘汰**：C 全砍（mount/process 的「藏不住」记录一并死，ADR-0024 信任模型抽腿）；保留 http 域名记录单点（ad hoc 例外破族轴纯洁性，扩展位可回）。
 
 ### J3.2 D85 崩溃自证：`shutdown_clean` + `previous_run`
@@ -237,9 +236,9 @@
 
 ### J3.4 D87 插件持久化与实例复活结案（核心零新机制；2026-10-12 用户拍板）
 
-- **插件跨重启状态 = 插件自建 fs/sql**（private scope 目录 + 原子写 + sqlite 内建三件套）——核心机制已够，不立任何状态托管。「日志持真相、定时器为易失投影」四件套模式指导 = Creator/SDK 文档议题（登记）。
+- **插件跨重启状态 = 插件自建 DB**（guest crate，库住 private fs 内）+ 原子写——核心机制已够，不立任何状态托管。「日志持真相、定时器为易失投影」四件套模式指导 = Creator/SDK 文档议题（登记）。
 - **实例复活写实**（补实例模型空档）：**实例不自动复活**——mount 声明 = 文件背书（D62 审批档住挂载方 `config.yml`），boot 全量 load 后挂载方插件 setup 重跑 = 重新 `ctx.mount`，天然幂等；D65 快照语义原位（复活的新挂载拿新快照）；运行时构造的自管档声明不复活（易失物，挂载方自行重建）。
-- **agent 连续性结案**：进行中的对话 = session 类插件 transcript 自建（fs/sql）；核心不提供任何连续性信号。
+- **agent 连续性结案**：进行中的对话 = session 类插件 transcript 自建（private fs / guest DB）；核心不提供任何连续性信号。
 
 ### J3.5 D88 崩溃窗口叙事定稿 + 撕裂尾行政策
 
@@ -273,7 +272,7 @@
 
 - **扫面 = 一切条目 append 前统一过扫**（payload Value 树序列化前遍历全部字符串值）：不单列 per-kind 清单——骨架低频 + 注册集小，成本 ≈ 零；清单 = 维护面与漏网面。「骨架脱敏面 = process 参数/错误消息」（D78 原表述）的读本 = 秘密实际能渗的两个口子（argv/command 直书、错误消息内嵌值），统一扫结构覆盖之；config 面无密可泄（配置树只许写引用、写明文 = 校验响亮拒绝 = D46 防呆）。map 的键不扫（键 = 结构字段名，非值）。
 - **匹配纪律**：注册集 = secrets load/reload 管线按身份注册的秘密值（§A2.5 既定兑现；每租户一份——秘密只进属主租户 VM，扫描集天然租户隔离）；**全值精确匹配、大小写敏感、无模式匹配**；串内子串替换（同一字符串多处命中全替换）；多秘密值互相包含时**长者先替**（防部分遮蔽）。
-- **替换形态**：命中处替换为 `[redacted:<身份名>]`（身份名非秘密——`config.yml` 本就明文引用 `{ secret: "<名>" }`）；条目 `redacted` 字段形状钉死 = `[{path, policy}]`（path = 相对 payload 根的 jq 风路径，如 `argv[1]`；同路径多命中合并为一条）。
+- **替换形态**：命中处替换为 `[redacted:<身份名>]`（身份名非秘密——`config.yml` 本就明文引用 `{ $value: "<名>" }`）；条目 `redacted` 字段形状钉死 = `[{path, policy}]`（path = 相对 payload 根的 jq 风路径，如 `argv[1]`；同路径多命中合并为一条）。
 - **策略版本 = 注册集内容 hash**（身份+值对排序后 sha256 截断 12 hex）：同身份换值也变版——审计可见「哪代秘密在泄」（轮换前后泄漏条目的 policy 值不同）。
 - **`redaction_applied` 发射 = 紧随肇事条目写一条**：payload = `{policy, hits}`（同条目多处命中合计 = D78「聚合条目，非每命中一条」的精确兑现），`cause` = 肇事条目 seq。淘汰内存计数 + reload/drain 冲刷（引入崩溃丢计数窗口，诚实面反而变差；骨架低频下紧随写成本可忽略）。窗口写实：紧随两条各有 fsync，两条之间崩溃 = 肇事条目 `redacted` 字段仍在、计数条目可缺——`redacted` = 耐用真相，计数条目 = 便利聚合。
 - **短秘密护栏**：值长 < N（N = 实现期配置）不注册进扫描集 + host warn 一条（注册时点一条，D25.1 节奏同族）——否则短值会把无辜文本大面积擦除。代价明写：被护栏挡下的短秘密若真渗入条目 = **明文落盘**（host warn 已披露该身份不在保）。

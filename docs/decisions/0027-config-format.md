@@ -1,6 +1,6 @@
 # 0027. 配置格式冻结（C1–C9）与既有 ADR 局部 supersede 批次
 
-- Status: accepted（任务 5（实例模型）批次已吸收 = [ADR-0028](0028-instance-model.md) 批次 #6/#7（2026-10-12：`--config` 扩展 = `--fleet-dir` 多租户 + 解析失败 fleet 细化 + secrets 同族传播；D31/D32 触发器句兑现记录 = 复审维持不立）；任务 6（journal）批次已吸收 = [ADR-0029](0029-journal.md) 批次 #4（2026-10-13：C8 节 `core.audit` 键面/三档 supersede = 不立——可配审计面撤销，`core:` 节容器与封闭集/additive 机制原位；Consequences 任务 6 行结案）；2026-10-18 局部 supersede：D44 fs scope 两档格 = [ADR-0036](0036-fs-scope-three-layers.md)（三层；单数 workspace 仍不立）；2026-10-19 再收窄：ADR-0036 Decision 第 2 条命名根局部 supersede = [ADR-0039](0039-fs-capability-two-tier.md)（现形态 = private 隐式 / global 声明；单数 workspace 仍不立），其余不变）
+- Status: accepted（任务 5（实例模型）批次已吸收 = [ADR-0028](0028-instance-model.md) 批次 #6/#7（2026-10-12：`--config` 扩展 = `--fleet-dir` 多租户 + 解析失败 fleet 细化 + secrets 同族传播；D31/D32 触发器句兑现记录 = 复审维持不立）；任务 6（journal）批次已吸收 = [ADR-0029](0029-journal.md) 批次 #4（2026-10-13：C8 节 `core.audit` 键面/三档 supersede = 不立——可配审计面撤销，`core:` 节容器与封闭集/additive 机制原位；Consequences 任务 6 行结案）；2026-10-18 局部 supersede：D44 fs scope 两档格 = [ADR-0036](0036-fs-scope-three-layers.md)（三层；单数 workspace 仍不立）；2026-10-19 再收窄：ADR-0036 Decision 第 2 条命名根局部 supersede = [ADR-0039](0039-fs-capability-two-tier.md)（现形态 = private 隐式 / `fs` 标量 global；单数 workspace 仍不立）；C1.1 `data/db.sqlite` 行失效 = ADR-0039（sqlite 能力撤回）；C1.1 布局 additive（新增 `values.yml`）+ C2.6 管线 + C6 引用语法修订（`{ secret }` → `{ $value }`）= [ADR-0040](0040-config-shared-variables.md)（统一引用，含 secret）；其余不变）
 - Date: 2026-10-11
 
 ## Context

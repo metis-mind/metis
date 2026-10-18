@@ -43,7 +43,7 @@
 | 位置          | 跟踪                                                                                                      | 忽略                                                     |
 | ------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | 源码工程      | `Cargo.toml`、`Cargo.lock`、`src/`、`manifest.yml`、`rust-toolchain.toml`、`.cargo/config.toml`、`README` | `target/`、`.metis/`、`dist/`、编辑器临时文件            |
-| 部署根        | `metis.yml`、`overlay.yml`、`plugins/<name>/manifest.yml`、组件 wasm、`config.yml`                        | `secrets.yml`、`journal/`、`plugins/*/data/`（D29 既定） |
+| 部署根        | `metis.yml`、`overlay.yml`、`values.yml`、`plugins/<name>/manifest.yml`、组件 wasm、`config.yml`          | `secrets.yml`、`journal/`、`plugins/*/data/`（D29 既定） |
 | 临时 dev 部署 | 不入 git                                                                                                  | `.metis/dev/` 整个目录                                   |
 
 - 部署根的组件 wasm 默认入库（部署即代码，可审计）；marketplace 模式可只记版本 / hash，安装时拉取。这个选择归部署者，构建管线不强制。

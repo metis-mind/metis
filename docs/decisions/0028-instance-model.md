@@ -1,6 +1,6 @@
 # 0028. 实例模型冻结（S1–S5）与既有 ADR 局部 supersede 批次
 
-- Status: accepted（S4 节 service_call 格「replay 政策不动」半句失效注 + Consequences 任务 6 行结案——**已吸收 = [ADR-0029](0029-journal.md) 批次 #5**（2026-10-13：replay 不立 + 内部流量族撤销；「跨实例调用结构性不存在」与扩展位重开句原位））
+- Status: accepted（S4 节 service_call 格「replay 政策不动」半句失效注 + Consequences 任务 6 行结案——**已吸收 = [ADR-0029](0029-journal.md) 批次 #5**（2026-10-13：replay 不立 + 内部流量族撤销；「跨实例调用结构性不存在」与扩展位重开句原位）；fleet 配置文件清单 + `values.yml` = [ADR-0040](0040-config-shared-variables.md)（2026-10-19））
 - Date: 2026-10-12
 
 ## Context
