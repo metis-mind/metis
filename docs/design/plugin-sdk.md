@@ -20,11 +20,11 @@
 
 淘汰项 = Spin/Extism 谱系的自由函数宏（每导出点一个 fn）：实例状态被推给全局变量，与实例模型和 W4 同实例重入（共享堆，D93）结构性冲突——Zed 的 `static mut EXTENSION` 全局单例被先例调研点名为同一坑（[sdk-precedent-survey](../research/sdk-precedent-survey.md) §2.6）。先例地基：Zed `Extension` trait 全默认方法（唯一必需项 = `new()`）、默认值分「未实现即错」与「空即合理」两语义档位；proxy-wasm 全默认钩子族 + 只覆写所需。
 
-不归本节：钩子族清单填实 = [wit-abi](wit-abi.md) W1（setup/dispose 形态）/ W3（ctx 与 on_call）/ W8（on_event 与静态声明）三章。薄插件仪式感地板（ADR-0034 风险 W2）分工：作者手写面 = `lib.rs` 单文件 + manifest 声明；crate-type/target/钉版依赖藏进脚手架模板，归 T13-e / T10.15。
+不归本节：钩子族清单填实 = [wit-abi](wit-abi.md) W1（setup/dispose/on-config 形态 = D118）/ W3（ctx 与 on_call）/ W8（on_event 与静态声明）三章。薄插件仪式感地板（ADR-0034 风险 W2）分工：作者手写面 = `lib.rs` 单文件 + manifest 声明；crate-type/target/钉版依赖藏进脚手架模板，归 T13-e / T10.15。
 
 ## S2 D99 绑定生成位置 = Zed 式（generate!/export! 住 SDK crate 内）（2026-10-17 定案，T13-d 拍板）
 
-wit-bindgen 的 `generate!` / `export!` 与 Guest impl 全住 `metis-plugin` crate 内；`#[metis::plugin]` 挂 `impl Plugin` 块，展开 = 实例工厂注册 + 入口 glue；作者 crate 零生成物。WIT SSOT 目录随 SDK crate（建议 = `crates/metis-plugin/wit/`，物理位置待 W1 章收官确认），宿主 `wasmtime::component::bindgen!` 消费同一目录树（Zed 先例 = 同一 WIT 目录树两视角：guest 只对最新快照生成，宿主对全快照生成并按版本分发）。
+wit-bindgen 的 `generate!` / `export!` 与 Guest impl 全住 `metis-plugin` crate 内；`#[metis::plugin]` 挂 `impl Plugin` 块，展开 = 实例工厂注册 + 入口 glue；作者 crate 零生成物。WIT SSOT 目录随 SDK crate = `crates/metis-plugin/wit/`（[wit-abi](wit-abi.md) W1.2 D117 已确认）；宿主 `wasmtime::component::bindgen!` 消费同一目录树（Zed 先例 = 同一 WIT 目录树两视角：guest 只对最新快照生成，宿主对全快照生成并按版本分发）。
 
 淘汰项 = Spin 式（WIT vendor 在宏 crate 内，`generate!` 推迟到用户 crate 展开）：其收益（作者可见生成类型做 escape hatch）在 TLV 主线边界（E1①/E2① 拍板：`list<u8>` 进 / `result<list<u8>, list<u8>>` 出）下无对象——canonical ABI 面极小且固定，作者永不接触生成的 WIT 类型；代价 = 每插件重复展开 + WIT 路径双写风险。附带收益：作者 crate 编译管线无生成步骤，增量构建地板（[wasm-first-design-review](../research/wasm-first-design-review.md) B9 实测 0.22–0.29 s）不劣化。
 
@@ -71,17 +71,17 @@ ADR-0034 §4「world 固定，能力白名单由 manifest 声明对账，作者�
 
 ## 联动登记汇总（章末）
 
-| 去向           | 登记内容                                                                                           |
-| -------------- | -------------------------------------------------------------------------------------------------- |
-| W1 章（T13-h） | WIT 目录物理位置确认（S2 建议 `crates/metis-plugin/wit/`）；setup/dispose 形态填实 S1 生命周期钩子 |
-| W2 章（T13-i） | manifest 能力声明节 = S6 白名单声明源；编译期组合 world 扩展位的前提                               |
-| W3 章（T13-j） | ctx import 接口集具体化 S6 映射三原则；能力生效层细化；escape hatch 标注                           |
-| W5 章（T13-k） | 错误底层承载落定（S5 作者面投影不变）                                                              |
-| W7 章（T13-m） | 瘦身形状 DSL 解析器 = S7 `types!()` 输入                                                           |
-| W8 章（T13-n） | 事件静态声明 → S1 catch-all 的强类型演进位                                                         |
-| T10.13         | metis-codec = Value/TLV 双 target 依赖（S3/S7）                                                    |
-| T10.14         | S1–S7 实现站；D11 声明随站                                                                         |
-| T13-e/T10.15   | 薄插件地板承接（S1）：脚手架模板藏 crate-type/target/钉版依赖                                      |
+| 去向           | 登记内容                                                                                                                          |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| W1 章（T13-h） | **已兑现（2026-10-18）**：WIT 目录 = `crates/metis-plugin/wit/`（D117）；生命周期钩子 = `setup` / `on-config` / `dispose`（D118） |
+| W2 章（T13-i） | manifest 能力声明节 = S6 白名单声明源；编译期组合 world 扩展位的前提                                                              |
+| W3 章（T13-j） | ctx import 接口集具体化 S6 映射三原则；能力生效层细化；escape hatch 标注                                                          |
+| W5 章（T13-k） | 错误底层承载落定（S5 作者面投影不变）                                                                                             |
+| W7 章（T13-m） | 瘦身形状 DSL 解析器 = S7 `types!()` 输入                                                                                          |
+| W8 章（T13-n） | 事件静态声明 → S1 catch-all 的强类型演进位                                                                                        |
+| T10.13         | metis-codec = Value/TLV 双 target 依赖（S3/S7）                                                                                   |
+| T10.14         | S1–S7 实现站；D11 声明随站                                                                                                        |
+| T13-e/T10.15   | 薄插件地板承接（S1）：脚手架模板藏 crate-type/target/钉版依赖                                                                     |
 
 ## 扩展位登记（五条）
 

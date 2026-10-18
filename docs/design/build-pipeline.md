@@ -64,7 +64,7 @@
 - 宿主运行命令（`metis run` / `metis serve`）的形态与归属在 T10.9/T10.12 开工时定；本文件不定义。
 - 旧 `metis sdk` 组不保留：`analyze` 随 [wasm-first-design-review](../research/wasm-first-design-review.md) A8 消亡；`types` 已归编译期宏（[plugin-sdk](plugin-sdk.md) D104）；`new/check` 的职责迁到顶层命令。
 - v1 一个源码工程一个插件；Cargo workspace 多插件 = 扩展位（触发器 = 首个真实多插件工程需求）。
-- 可部署包内的组件文件名与包布局的 SSOT = [wit-abi](wit-abi.md) W1（T13-h）；W1 落地前用实现期常量，T10.15 开工时对齐。
+- 可部署包内的组件文件名与包布局的 SSOT = [wit-abi](wit-abi.md) W1（**已定 = D116**：缺省 `plugin.wasm`，manifest 可指定）。
 
 ## 3. D107 dev 进程拓扑（2026-10-18 定案）
 
@@ -81,14 +81,14 @@
 
 - **适配器选择**：按工程标记识别——`Cargo.toml` → Rust 适配器；后续语言各加内置适配器（jco / TinyGo / componentize-py 等），由 metis 统一实现。manifest 的自由 `build.command` = 扩展位（触发器 = 真实自定义工具链需求；启用时必须标记「不可缓存 / 不可远端复现」）。
 - **Rust 调用**：`cargo build --profile metis --target wasm32-wasip2 --locked`（profile 定义 = D112；首次无 lockfile 可先生成，`dist` 级构建要求 lockfile 已提交）；环境变量与 `RUSTFLAGS` 由构建管线显式控制，不继承作者的随机环境。
-- **可部署包**：`dist/<name>/` = `manifest.yml` + 组件 wasm（+ 可选 `build-info` 诊断文件）；安装事务只消费这个目录。组件文件名与包布局以 W1 为准。
-- **manifest-less 源码**：D35 的零仪式形态保留——源码可以没有 `manifest.yml`；构建时合成最小 manifest（name = crate 名、version = 0.1.0、无能力声明），包内始终有 manifest。这样部署根形态统一，零仪式只作用于源码侧。
+- **构建输出目录**：`dist/<name>/` = `manifest.yml` + 组件 wasm + `lib/`（可选）+ 可选 `build-info` 诊断 sidecar；安装事务只消费可安装子集（manifest + 组件 + `lib/`，过滤 `build-info`）。组件文件名与包布局以 W1 为准。
+- **manifest-less 源码**：D35 的零仪式形态保留——源码可以没有 `manifest.yml`；构建时合成最小 manifest（name = crate 名、version = 0.1.0、无能力声明）。`metis build` 产出的包内始终有 manifest（部署根形态统一）；部署根仍接受手工放置的无 manifest 零仪式包（[wit-abi](wit-abi.md) W1.8 D123）。
 - **SDK 依赖来源**：v1 脚手架生成指向 metis 检出目录的 path 依赖（`metis new --sdk-path <metis-checkout>`，默认按 metis 二进制位置推断），并在生成时写入 SDK 版本与 WIT 文件 hash；发布/分发形态（crates.io / git 依赖）随 marketplace 立项，触发 = 首个外部作者或分发需求。
 - **校验阶段**（构建与安装之间，失败即停）：
   1. 校验 SSOT = 进程内 `wasmparser`（固定 feature 集合）；`wasm-tools` 只作 WIT 提取 / 调试，版本钉定，不参与安装判定；
   2. 组件 import 清单机械提取 → 与 SDK 封闭词汇表、manifest 能力声明对账（design-review B1）；
   3. export / world 与 manifest 的 ABI 声明一致；WIT package version ≤ 宿主 ABI 版本（比较语义归 W10）；
-  4. 资源上限（初始/最大内存、表、组件大小）与禁用特性（threads / shared memory / cm-threading）检查；**v1 拒绝 start 函数**（start 在实例化时先于任何能力门执行，若 SDK 产物必需，实现期以 W1 spike 重裁）；
+  4. 资源上限（初始/最大内存、表、组件大小）与禁用特性（threads / shared memory / cm-threading）检查；**v1 拒绝 start 函数与命令类导出**（`wasi:cli/run` / `_start`；start 在激活门与加载预算之前执行；政策已定 = [wit-abi](wit-abi.md) W1.7 D122，不再重裁）；
   5. `metis.build` 元数据在场且可解析（D112）；追加前先剥离源码自带的同名 section，校验恰好一条构建产物。
 - **代码归属**：构建管线逻辑住独立库 crate（建议 `crates/metis-build`，T10.15 开工确认）；`metis` 二进制只做 CLI 壳。纯校验 / import 提取住共享 crate（建议新建 `metis-validate`；若最终并入 `metis-component`，依赖方向 = `metis-build` / `metis-loader` → `metis-component`，`metis-component` 不反向依赖构建管线）。运行时 crate 不依赖 `metis-build`。不把 IO / 进程调用塞进 `metis-loader`（纯度边界，[ADR-0019](../decisions/0019-crate-layout.md)）。
 - v1 一个源码工程一个插件；workspace / 多插件构建 = 扩展位（D106）。
@@ -97,7 +97,7 @@
 
 **D109 定案：构建到 staging → 校验 → 调 T10.12 安装事务（含激活/重载边界）→ 失败时旧版本恢复；不触碰运行中实例与旧产物。**
 
-- **顺序**：`metis dev` 把可部署包写入部署根的 staging 区（与包内容同文件系统的临时路径）→ D108 校验 → T10.12 安装事务 → 激活 / 重载（[wit-abi](wit-abi.md) W4.5 D97 的关闸 → 优雅窗口 → 强杀 → drain + 重启用）。**事务边界由 T10.12 开工拍板**：合法形态二选一——① 激活/重载是事务的最后一阶段（新实例 `setup` 成功才提交）；② 事务只提交包内容，激活在外，失败时必须补偿重装备份包并重启旧版本。本文件只冻结结果要求：**系统绝不半重载**，失败后旧版本恢复。
+- **顺序**：`metis dev` 把可部署包写入部署根的 staging 区（与包内容同文件系统的临时路径）→ D108 校验 → T10.12 安装事务 → 激活 / 重载（[wit-abi](wit-abi.md) W4.5 D97 的关闸 → 优雅窗口 → `dispose` → 实例即弃 → drain + 重启用；dispose 细节 = W1.6 D121）。**事务边界由 T10.12 开工拍板**：合法形态二选一——① 激活/重载是事务的最后一阶段（新实例 `setup` 成功才提交）；② 事务只提交包内容，激活在外，失败时必须补偿重装备份包并重启旧版本。本文件只冻结结果要求：**系统绝不半重载**，失败后旧版本恢复。
 - **失败矩阵**：
   - 构建失败 / 校验失败 = **不安装**；旧可部署包与运行中实例原样保留；错误进 stderr（miette 三段式）。
   - 安装事务失败 = 事务回滚到旧包（T10.12 的备份/回滚语义），运行中实例不动。
@@ -170,7 +170,7 @@
 - **BuildAttestation**：`pipeline_version`、artifact digest（完整产物）、`reproduction_digest`（剥离 `metis.build` 后的规范化 digest）、`builder.id`、status、`reproduction` result（未复现 / 单方复现 / 双方复现）；`externalParameters` 只放不可变输入，`resolvedDependencies` 放 manifest / lockfile / rustc / 镜像 digest。
 - **复现定义**：比较 `reproduction_digest`（规范化 = 剥离 `metis.build` section，按 canonical encoding 重算），不是完整产物字节；比较范围 = 可部署包内的组件产物（manifest / package digest 单独记入 `resolvedDependencies`）；完整 artifact digest 用于安装 / 签名。这样两个 builder 的 host 差异不会伪造「未复现」。
 - **发布路径**：产物上传 + 发布者/CI 签名 + 结构校验（D108 的检查面共享）+ 可选重建；未重建或重建不一致标「未复现」，**不阻断安装**（与 ADR-0024 闭源降级一致）。
-- **结构校验**（v1 的本地构建也执行，marketplace 侧复用）：组件合法性、固定 feature 集合、import/export allowlist、ABI 指纹、资源上限、禁用 threads / shared memory / cm-threading、拒绝 start 函数。结构校验不证明无恶意逻辑；运行时能力沙箱仍是最终防线。
+- **结构校验**（v1 的本地构建也执行，marketplace 侧复用）：组件合法性、固定 feature 集合、import/export allowlist、ABI 指纹、资源上限、禁用 threads / shared memory / cm-threading、拒绝 start 函数与命令类导出（`wasi:cli/run` / `_start`；[wit-abi](wit-abi.md) W1.7 D122）。结构校验不证明无恶意逻辑；运行时能力沙箱仍是最终防线。
 - **构建场实现约束**（将来）：microVM / 容器 + 网络拒绝 + 钉版镜像；至少两个独立 builder 才能标「双方复现」。
 - **触发器**：marketplace 接受 source-only 提交 / 需要「已复现」标 / 法规要求。
 
@@ -245,7 +245,7 @@
 | T10.13（metis-codec） | 无直接依赖；若 `metis.build` 将来改用 TLV，形态随 codec                                                                                                                                                                                                                                                                                                                          |
 | T10.12（安装事务）    | D109 调用其安装事务；事务边界（激活在事务内 vs 补偿重装）由 T10.12 开工拍板；D65/D70 挂载联动；所有安装/激活路径共用事务锁；`prepare-new-before-stop` 作为评审输入登记（不归本件）                                                                                                                                                                                               |
 | T10.9 / T10.10        | 部署索引扫描与组件运行时共享 D108 的纯校验 / import 提取面；该面住共享 crate（`metis-component` 或 `metis-validate`），运行时 crate 不依赖 `metis-build`                                                                                                                                                                                                                         |
-| W1 章（T13-h）        | 可部署包的组件文件名与包布局 SSOT；start 函数政策与包形态的最终确认                                                                                                                                                                                                                                                                                                              |
+| W1 章（T13-h）        | **已兑现（2026-10-18）**：可部署包布局与组件文件名 = D116；start / 命令组件拒绝 = D122；WIT 包与 world = D117                                                                                                                                                                                                                                                                    |
 | W2 章（T13-i）        | manifest 形状与脚手架 manifest 骨架的 SSOT；**不引入任意 `build.command`**（D108 约束）                                                                                                                                                                                                                                                                                          |
 | W3 章（T13-j）        | D113 构建服务的传输形态（若走 WIT import）                                                                                                                                                                                                                                                                                                                                       |
 | W10 章（T13-p）       | WIT package version 比较与工具版本纪律；D112 预检消费其比较语义                                                                                                                                                                                                                                                                                                                  |

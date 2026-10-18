@@ -162,7 +162,7 @@ plugins:
 | 去向                                | 内容                                                                                                                |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | W2 章（T13-i）                      | entry 启用/禁用字段形态 = D32；配置树边界、身份规则、秘密解析点、config 键约定、setup config 来源 = D36             |
-| W1 章（T13-h）                      | 零仪式插件平移为无 manifest 目录插件（D35）                                                                         |
+| W1 章（T13-h）                      | 零仪式插件平移为无 manifest 目录插件（D35）——**已兑现 = wit-abi W1.8 D123**                                         |
 | W9 章（T13-o）                      | 部署索引覆盖（目录扫描全量、含未装配件与解析失败政策）与缺失三分行三收窄（= 休眠件；未装配件走同族响亮）= D34       |
 | C3/C4                               | overlay 装配补丁语义、keyed diff 装配面协调、D37 机制展开、部署 `lib/` 契约重对账时机 = D38–D43                     |
 | C5                                  | fs 三层（private / 命名根 / global）；env 不立收紧；cwd 缺省 = 家目录（D44/D45 + ADR-0036）                         |
@@ -247,7 +247,7 @@ plugins:
 - **通道 = 固定 world 的 `on_config` 钩子**（W1 章；作者面 = SDK trait 钩子，默认实现 = 不吸收 → 重挂载，作者覆写即可参与 live-apply；ABI 演进纪律 = WIT package version，归 W10 章）：
 
 ```text
-# 语义示意（作者面签名归 W1/W3 章）
+# 语义示意（ABI 签名 = wit-abi W1.3 D118）
 on_config(new_config):
     if new_config.refresh_interval != current.refresh_interval:
         return false        # 吸收不了 → 核心重挂载
@@ -257,7 +257,7 @@ on_config(new_config):
 
 - **返回协议二元**：`true` = live-apply 成交（插件自负其责把新值用起来）；**其余一切 = 重挂载**——缺 handler / 返回非 `true` / 抛错（抛错附带日志，ADR-0014 fail-open 同族精神：handler 崩了不挡路，退安全缺省）。**不立 transform 返回**（config 以文件为真相，handler 改值 = 第三种 config 风味、文件与运行态漂移）；**不立永久否决**（文件已是真相，插件选择怎么吸收，不能拒绝现实）。
 - **handler 可挂起**（fiber 邮箱回调同族，fuel/epoch 时间盒原样）；全量推送 + 插件自持旧快照对比（淘汰 Cordis volatile 式按路径通知——与 setup 注入同形，零新概念）。
-- **重挂载** = 卸载（[wit-abi](wit-abi.md) W4.5 优雅窗口 + 强杀预算）+ 重启用（新组件实例、新 setup 拿新 config）；提供方重挂载 → 消费者 epoch 重启（ADR-0001/0018 既有机器）。live-apply 的价值正在此：自己吸收 = 消费者零感知。
+- **重挂载** = 卸载（[wit-abi](wit-abi.md) W4.5 五段：关闸 → 优雅窗口 → `dispose` → 实例即弃 → drain；dispose 细节 = W1.6 D121）+ 重启用（新组件实例、新 setup 拿新 config）；提供方重挂载 → 消费者 epoch 重启（ADR-0001/0018 既有机器）。live-apply 的价值正在此：自己吸收 = 消费者零感知。
 - **秘密纪律按构造成立**：handler 住属主实例，解析后真值定向投递属主——不存在广播事件携带真值的泄露面（W2 章「真值只进该插件实例」不破）。
 - **竞态与排队**：handler 在飞或插件 Loading 中又来变更 → **合并取最新**（config 是状态不是事件流，跳过中间态合法）；在飞 handler 返回 `true` 只成交它所见的那一版，不抑制合并后最新版的再次投递（stale 成交不结案）。热更撞 Loading 中 setup = 惯性原则兑现（W1 章：进行中的加载跑完落定再响应）。重挂载后 setup 失败 → Failed 既有路径（W9 章 warn 机器接管可见性）。
 - **观测面不立新事件**：`internal/plugin` 族 + journal（`config_committed`/`config_rejected`）够用；审批 diff 本身 = 变更的第一观测面。
@@ -274,17 +274,17 @@ on_config(new_config):
 
 ### C4.4 联动登记（C4）
 
-| 去向                  | 内容                                                                                                                    |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| W1 章（T13-h）        | 入口契约 additive 扩展 = `on_config`（D42）；ABI 版本归 W10 章                                                          |
-| W7 章（T13-m）        | 部署 `lib/` 重对账时机 = D43；跨部署分发形态仍归任务 9                                                                  |
-| ADR-0016              | `internal/update` 💤 钩子的否决功能以定向 hook 实现（D42）                                                              |
-| ADR-0002              | keyed diff 退役后的协调语义 = D41；volatile 快路径替代 = D42                                                            |
-| ADR-0024              | §5「在途调用排空归插件热更新设计」= 重挂载复用 W4.5 排空路径（D42）                                                     |
-| 任务 9（marketplace） | agent 提议部署根 `lib/` 契约的审批通道（审批单位 = 插件目录 diff 的扩展，D43 登记）                                     |
-| [journal](journal.md) | 配置变更拒绝/应用/重挂载的条目政策 = D78（`config_committed`/`config_rejected`；重挂载由 `fiber_state_changed` 族覆盖） |
-| 实现期工具面          | 显式 reload 命令形态（CLI/控制接口）                                                                                    |
-| 实现期清单            | 生效树 diff 器（D41）；config 管线重入与结构相等比较（D42）；`lib/` 重扫 + 级联（D43，复用 W7 章反向索引）              |
+| 去向                  | 内容                                                                                                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| W1 章（T13-h）        | 入口契约 additive 扩展 = `on_config`（D42）——**已兑现 = wit-abi W1.3 D118**（`on-config: async func(config: list<u8>) -> result<bool, error>`）；ABI 版本归 W10 章 |
+| W7 章（T13-m）        | 部署 `lib/` 重对账时机 = D43；跨部署分发形态仍归任务 9                                                                                                             |
+| ADR-0016              | `internal/update` 💤 钩子的否决功能以定向 hook 实现（D42）                                                                                                         |
+| ADR-0002              | keyed diff 退役后的协调语义 = D41；volatile 快路径替代 = D42                                                                                                       |
+| ADR-0024              | §5「在途调用排空归插件热更新设计」= 重挂载复用 W4.5 排空路径（D42）                                                                                                |
+| 任务 9（marketplace） | agent 提议部署根 `lib/` 契约的审批通道（审批单位 = 插件目录 diff 的扩展，D43 登记）                                                                                |
+| [journal](journal.md) | 配置变更拒绝/应用/重挂载的条目政策 = D78（`config_committed`/`config_rejected`；重挂载由 `fiber_state_changed` 族覆盖）                                            |
+| 实现期工具面          | 显式 reload 命令形态（CLI/控制接口）                                                                                                                               |
+| 实现期清单            | 生效树 diff 器（D41）；config 管线重入与结构相等比较（D42）；`lib/` 重扫 + 级联（D43，复用 W7 章反向索引）                                                         |
 
 ## C5 fs scope 与 process 环境政策（fs 三层 = E4）
 

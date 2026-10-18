@@ -1,6 +1,6 @@
 # 0005. VM 拓扑：每插件实例独立 `lua_State`
 
-- Status: accepted
+- Status: accepted（Consequences 的成本估算条目由 [ADR-0037](0037-component-instance-cost-ledger.md) 局部取代，2026-10-18；Decision 的拓扑本体不变，载体词已由 [ADR-0034](0034-wasm-first-carrier.md) §1 替换）
 - Date: 2026-09-29
 
 ## Context
