@@ -82,11 +82,11 @@
 - **适配器选择**：按工程标记识别——`Cargo.toml` → Rust 适配器；后续语言各加内置适配器（jco / TinyGo / componentize-py 等），由 metis 统一实现。manifest 的自由 `build.command` = 扩展位（触发器 = 真实自定义工具链需求；启用时必须标记「不可缓存 / 不可远端复现」）。
 - **Rust 调用**：`cargo build --profile metis --target wasm32-wasip2 --locked`（profile 定义 = D112；首次无 lockfile 可先生成，`dist` 级构建要求 lockfile 已提交）；环境变量与 `RUSTFLAGS` 由构建管线显式控制，不继承作者的随机环境。
 - **构建输出目录**：`dist/<name>/` = `manifest.yml` + 组件 wasm + `lib/`（可选）+ 可选 `build-info` 诊断 sidecar；安装事务只消费可安装子集（manifest + 组件 + `lib/`，过滤 `build-info`）。组件文件名与包布局以 W1 为准。
-- **manifest-less 源码**：D35 的零仪式形态保留——源码可以没有 `manifest.yml`；构建时合成最小 manifest（name = crate 名、version = 0.1.0、无能力声明）。`metis build` 产出的包内始终有 manifest（部署根形态统一）；部署根仍接受手工放置的无 manifest 零仪式包（[wit-abi](wit-abi.md) W1.8 D123）。
+- **manifest-less 源码**：D35 的零仪式形态保留——源码可以没有 `manifest.yml`；构建时合成最小 manifest（`version: 0.1.0` + `abi: <构建时的 WIT package version>`，无 `name`、无能力声明）；安装目录名 = crate 名 / `dist/<name>`。`metis build` 产出的包内始终有 manifest（部署根形态统一）；部署根仍接受手工放置的无 manifest 零仪式包（[wit-abi](wit-abi.md) W1.8 D123；W2 D132）。
 - **SDK 依赖来源**：v1 脚手架生成指向 metis 检出目录的 path 依赖（`metis new --sdk-path <metis-checkout>`，默认按 metis 二进制位置推断），并在生成时写入 SDK 版本与 WIT 文件 hash；发布/分发形态（crates.io / git 依赖）随 marketplace 立项，触发 = 首个外部作者或分发需求。
 - **校验阶段**（构建与安装之间，失败即停）：
   1. 校验 SSOT = 进程内 `wasmparser`（固定 feature 集合）；`wasm-tools` 只作 WIT 提取 / 调试，版本钉定，不参与安装判定；
-  2. 组件 import 清单机械提取 → 与 SDK 封闭词汇表、manifest 能力声明对账（design-review B1）；
+  2. 组件 import 清单机械提取 → 与 SDK 封闭词汇表对账（import 清单 ⊆ 词汇表，design-review B1）；manifest 能力声明是运行期门，不参与 import 对账（[wit-abi](wit-abi.md) W2.9 D133）；
   3. export / world 与 manifest 的 ABI 声明一致；WIT package version ≤ 宿主 ABI 版本（比较语义归 W10）；
   4. 资源上限（初始/最大内存、表、组件大小）与禁用特性（threads / shared memory / cm-threading）检查；**v1 拒绝 start 函数与命令类导出**（`wasi:cli/run` / `_start`；start 在激活门与加载预算之前执行；政策已定 = [wit-abi](wit-abi.md) W1.7 D122，不再重裁）；
   5. `metis.build` 元数据在场且可解析（D112）；追加前先剥离源码自带的同名 section，校验恰好一条构建产物。
@@ -206,7 +206,7 @@
   Cargo.toml              # crate-type = ["cdylib"]；metis-plugin 精确钉版；[profile.metis] inherits = "release"
   Cargo.lock              # 首次构建生成
   src/lib.rs              # struct + impl Plugin 骨架（一个示例钩子）
-  manifest.yml            # 最小骨架；字段形状以 W2（T13-i）为准
+  manifest.yml            # 最小骨架；字段形状 = wit-abi W2 D125–D134
   rust-toolchain.toml     # channel + targets = ["wasm32-wasip2"]，版本由 metis 构建常量生成
   .cargo/config.toml      # [build] target = "wasm32-wasip2"
   .gitignore              # target/、.metis/、dist/
@@ -246,7 +246,7 @@
 | T10.12（安装事务）    | D109 调用其安装事务；事务边界（激活在事务内 vs 补偿重装）由 T10.12 开工拍板；D65/D70 挂载联动；所有安装/激活路径共用事务锁；`prepare-new-before-stop` 作为评审输入登记（不归本件）                                                                                                                                                                                               |
 | T10.9 / T10.10        | 部署索引扫描与组件运行时共享 D108 的纯校验 / import 提取面；该面住共享 crate（`metis-component` 或 `metis-validate`），运行时 crate 不依赖 `metis-build`                                                                                                                                                                                                                         |
 | W1 章（T13-h）        | **已兑现（2026-10-18）**：可部署包布局与组件文件名 = D116；start / 命令组件拒绝 = D122；WIT 包与 world = D117                                                                                                                                                                                                                                                                    |
-| W2 章（T13-i）        | manifest 形状与脚手架 manifest 骨架的 SSOT；**不引入任意 `build.command`**（D108 约束）                                                                                                                                                                                                                                                                                          |
+| W2 章（T13-i）        | **已兑现（2026-10-19）= wit-abi W2 D125–D134**：manifest 形状与脚手架骨架的 SSOT；合成最小 manifest = `version` + `abi`（无 `name`）；**不引入任意 `build.command`**（D108 约束）                                                                                                                                                                                                |
 | W3 章（T13-j）        | D113 构建服务的传输形态（若走 WIT import）                                                                                                                                                                                                                                                                                                                                       |
 | W10 章（T13-p）       | WIT package version 比较与工具版本纪律；D112 预检消费其比较语义                                                                                                                                                                                                                                                                                                                  |
 | T13-f                 | 清写交接（2026-10-18）：[config-format](config-format.md) D29/D35 的旧入口与布线文件已改为组件布局，[seam-capabilities](seam-capabilities.md) 已按 wasm 能力面重写；命令面 = 本文件 D106 的 `metis new/check/build/dev`。D35 = 源码侧 manifest 可选，包内始终合成最小 manifest                                                                                                   |

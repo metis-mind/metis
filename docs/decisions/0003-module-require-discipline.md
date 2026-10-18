@@ -1,6 +1,6 @@
 # 0003. 模块系统与 require 纪律
 
-- Status: accepted
+- Status: superseded by [ADR-0038](0038-module-system-require-supersede.md)（2026-10-19；wasm-first 后运行期模块系统失去对象）
 - Date: 2026-09-29
 
 ## Context

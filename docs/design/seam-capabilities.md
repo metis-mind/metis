@@ -1,8 +1,8 @@
 # Metis — 接缝能力集设计（宿主能力 × 出区通道 × 能力门）
 
 > 状态：living design doc——能力集语义本体已冻结 = [ADR-0025](../decisions/0025-seam-capabilities.md)；载体形态随 wasm-first 转向重写（[ADR-0034](../decisions/0034-wasm-first-carrier.md)）。本文档保持 living：细则澄清继续沉淀于此；语义变更走 ADR-0025 演进纪律。
-> 前提：插件唯一载体 = wasm 组件（[ADR-0034](../decisions/0034-wasm-first-carrier.md)）；fs 三层 = [ADR-0036](../decisions/0036-fs-scope-three-layers.md)（局部 supersede ADR-0025 §5.2 两档格）；接口数据三分法 = W6/W7 章；ABI 形态 = [wit-abi](wit-abi.md)；作者面 = [plugin-sdk](plugin-sdk.md)。
-> 相关 ADR：[0007](../decisions/0007-yaml-config-subset.md) / [0011](../decisions/0011-actor-execution-model.md) / [0013](../decisions/0013-context-scope.md) / [0018](../decisions/0018-service-registry.md) / [0023](../decisions/0023-core-restart-semantics.md) / [0024](../decisions/0024-carrier-layering.md) / [0025](../decisions/0025-seam-capabilities.md) / [0029](../decisions/0029-journal.md) / [0034](../decisions/0034-wasm-first-carrier.md) / [0036](../decisions/0036-fs-scope-three-layers.md)。
+> 前提：插件唯一载体 = wasm 组件（[ADR-0034](../decisions/0034-wasm-first-carrier.md)）；fs 两档 = [ADR-0039](../decisions/0039-fs-capability-two-tier.md)（private 隐式 / global 声明；局部 supersede ADR-0036 命名根）；接口数据三分法 = W6/W7 章；ABI 形态 = [wit-abi](wit-abi.md)；作者面 = [plugin-sdk](plugin-sdk.md)。
+> 相关 ADR：[0007](../decisions/0007-yaml-config-subset.md) / [0011](../decisions/0011-actor-execution-model.md) / [0013](../decisions/0013-context-scope.md) / [0018](../decisions/0018-service-registry.md) / [0023](../decisions/0023-core-restart-semantics.md) / [0024](../decisions/0024-carrier-layering.md) / [0025](../decisions/0025-seam-capabilities.md) / [0029](../decisions/0029-journal.md) / [0034](../decisions/0034-wasm-first-carrier.md) / [0036](../decisions/0036-fs-scope-three-layers.md) / [0039](../decisions/0039-fs-capability-two-tier.md)。
 > Last reviewed: 2026-10
 
 ---
@@ -83,7 +83,7 @@ guest 的非确定性来源只剩宿主授予的少数 import；宿主不注入�
 
 | 件      | 形态                        | 说明                                                                                                                     |
 | ------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| fs      | 句柄 + 流式                 | 三层 scope 见 §5.2；原子写 = 临时文件 + rename（[ADR-0023](../decisions/0023-core-restart-semantics.md) 落盘要求的落点） |
+| fs      | 句柄 + 流式                 | 两档 scope 见 §5.2；原子写 = 临时文件 + rename（[ADR-0023](../decisions/0023-core-restart-semantics.md) 落盘要求的落点） |
 | http    | 请求 / 响应 + 流式          | 强制超时；透明解压；域名白名单；SSRF 硬化（§5.2）                                                                        |
 | sqlite  | 句柄 + 分页                 | 每插件私有 db；参数化查询；事务 = 扩展位；分页参数 = 实现期配置                                                          |
 | timer   | `after` / `every` / `sleep` | 注册为 fiber 的一笔 effect，卸载随 LIFO drain 自动取消；**无能力门**，`every` 设最小间隔政策（数值实现期）               |
@@ -94,7 +94,7 @@ guest 的非确定性来源只剩宿主授予的少数 import；宿主不注入�
 | 件                 | 形态        | 说明                                                                                                                                                                                        |
 | ------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | clocks / random    | WASI 标准件 | 直接复用；宿主控制实现（§1）                                                                                                                                                                |
-| filesystem preopen | WASI 标准件 | private 与命名根两层由 preopen 承载（§5.2）                                                                                                                                                 |
+| filesystem preopen | WASI 标准件 | private 由 preopen 承载；global 走 host-mediated 自研逃逸舱（§5.2）                                                                                                                         |
 | crypto             | host import | v1 = sha256 / sha512 + hmac + `crypto.random`（CSPRNG）+ AES-GCM；hash 配流式形态；md5 / sha1 / 签名族 / xxhash 登记扩展位。留在核心的论据 = AES/SHA 指令缺口的硬件约束（ADR-0024 §4 站位） |
 | git                | 扩展位维持  | 领域相关 + 重依赖 + 低频；真实场景走 guest 包或外部服务                                                                                                                                     |
 
@@ -108,10 +108,10 @@ guest 的非确定性来源只剩宿主授予的少数 import；宿主不注入�
 
 ### 5.2 通道逐项
 
-- **fs：三层 scope。**
-  - **private**：`plugins/<name>/data/fs/` 以 WASI preopen 授予，guest 在 preopen 内用常规文件 API；逃逸防护 = 运行时结构保证，自研两段式解析对 private 退役。
-  - **命名根**：manifest 声明 + 部署者绑定，preopen 承载；读 / 写分档按声明授予。命名根 = 原 workspace 绑定需求的诚实形态——per-name 绑定，不做单数工作区语义。绑定校验拒绝任何包含 `secrets.yml` 或 `journal/` 的根（两条豁免对一切 scope 生效）。
-  - **global**：减法语义（用户世界 − `secrets.yml` + `journal/` 两条豁免），preopen 表达不了减法 → host-mediated 自研逃逸舱；TOCTOU 硬化与路径解析留在宿主实现。
+- **fs：两档 scope（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）。**
+  - **private**：`plugins/<name>/data/fs/` 以 WASI preopen 授予，**隐式读写**，不声明、不可收窄；guest 在 preopen 内用常规文件 API；逃逸防护 = 运行时结构保证，自研两段式解析对 private 退役。
+  - **global**：减法语义（用户世界 − `secrets.yml` + `journal/` 两条豁免），preopen 表达不了减法 → host-mediated 自研逃逸舱；manifest 声明 `fs.global`（形状 = [wit-abi](wit-abi.md) W2.5 D129），缺省 = 无 global；TOCTOU 硬化与路径解析留在宿主实现。
+  - **命名根不立**：原「manifest 声明 + 部署者绑定」中间档撤回（ADR-0039）——插件可能服务多个 project，静态绑定一次配不齐；需要用户世界访问走 global。
   - 写 = 临时文件 + rename 原子写。workspace / session 语义归插件层服务投影，核心不做一一映射。
 - **http**：`ctx.http.request` 形态（作者面由 SDK 映射）。透明解压；**强制超时**（不允许无 deadline 请求）；响应默认进内存带预算，大 body / SSE 走流式；域名白名单、跨域重定向须重新对账（open-redirect 旁路）、SSRF = 解析结果非全局单播即拒（含 v6）+ 白名单显式授予内网 + 最终解析结果判定钉住；明文 http 须 `http://` 显式标记。
 - **timer**：`ctx.timer.after` / `every` / `sleep`。注册为 fiber 的一笔 effect、卸载随 LIFO drain 自动取消（无孤儿）；**无能力门，但 `every` 设最小间隔政策**（机制在此，数值实现期配置）；cron 形态 = 维持不立（[config-format](config-format.md) §C8.2 D51）；sleep = 挂起当前任务、宿主直接唤醒。
@@ -145,14 +145,14 @@ journal kind 表 SSOT = [journal](journal.md) D78；v1 = 写死族骨架（D84�
 
 ### 6.1 WIT ABI 章回填
 
-| 章                  | 回填                                                                                                                          |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| W2（T13-i）manifest | `capabilities` 字段面 = `{ fs, http, sqlite, process, mount }`；timer 无门；纯算件无需声明                                    |
-| W3（T13-j）ctx      | ctx 效应方法面 = fs / http / timer / sql / process；编排面 = 事件 / 服务调用 / `mount` / `unmount`                            |
-| W5（T13-k）错误     | 能力失败的 `result` 形态；unavailable / method_missing / timeout / business 四格                                              |
-| W6（T13-l）边界     | 递归 Value 的 TLV 线编码；流式句柄族；resource 句柄生命周期                                                                   |
-| W9（T13-o）能力门   | 进口对账机械化（组件 import 清单 ⊆ SDK 封闭词汇表）+ 运行期 fail-closed；编排面不立能力门的既有立场，唯一例外 = `mount: true` |
-| W10（T13-p）版本    | 能力词汇 additive 增补 → WIT package version 演进（原 `abi_rev` 纪律的承接）                                                  |
+| 章                  | 回填                                                                                                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W2（T13-i）manifest | **已兑现（2026-10-19）= wit-abi W2 D129**：`capabilities` 字段面 = `{ fs, http, sqlite, process, mount }`；`fs` 只声明 `global`（private 隐式）；timer 无门；纯算件无需声明 |
+| W3（T13-j）ctx      | ctx 效应方法面 = fs / http / timer / sql / process；`fs` = private（隐式）/ global（声明）；编排面 = 事件 / 服务调用 / `mount` / `unmount`                                  |
+| W5（T13-k）错误     | 能力失败的 `result` 形态；unavailable / method_missing / timeout / business 四格                                                                                            |
+| W6（T13-l）边界     | 递归 Value 的 TLV 线编码；流式句柄族；resource 句柄生命周期                                                                                                                 |
+| W9（T13-o）能力门   | 进口对账机械化（组件 import 清单 ⊆ SDK 封闭词汇表）+ 运行期 fail-closed；编排面不立能力门的既有立场，唯一例外 = `mount: true`                                               |
+| W10（T13-p）版本    | 能力词汇 additive 增补 → WIT package version 演进（原 `abi_rev` 纪律的承接）                                                                                                |
 
 ### 6.2 实现期登记
 

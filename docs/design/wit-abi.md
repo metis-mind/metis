@@ -2,7 +2,7 @@
 
 > 状态：living design doc——2026-10-15 开章（[ADR-0034](../decisions/0034-wasm-first-carrier.md) wasm-first 转向同批）。W 系列章节随设计批逐章收官，章末联动登记汇总惯例同前。各章状态见目录表。
 > 前提：插件唯一载体 = wasm 组件（[ADR-0034](../decisions/0034-wasm-first-carrier.md)）；接缝能力集 = [seam-capabilities](seam-capabilities.md)；遏制四约束 = [ADR-0005](../decisions/0005-vm-topology.md)；边界拷贝语义四层 = [wasm-research](../research/wasm-research.md) 补遗 5 §5.4。
-> 拍板锚（2026-10-16 两轮）：接口数据三分法 / E4 fs 三层——SSOT = 台账 T13 状态行，议题背景 = [wasm-first-design-review](../research/wasm-first-design-review.md) §6/§7；W 各章收官时吸收进正文，此行随吸收删除（E3 并发投递 已吸收 = §W4，2026-10-17；三分法①/TLV 边界已吸收 = §W1.3，2026-10-18；E4 fs 三层待 W3/W9 吸收）。
+> 拍板锚（2026-10-16 两轮）：接口数据三分法 / E4 fs（现两档：private 隐式 / global 声明）——SSOT = 台账 T13 状态行，议题背景 = [wasm-first-design-review](../research/wasm-first-design-review.md) §6/§7；W 各章收官时吸收进正文，此行随吸收删除（E3 并发投递 已吸收 = §W4，2026-10-17；三分法①/TLV 边界已吸收 = §W1.3，2026-10-18；E4 fs 已吸收 = §W2.5/W2.6 + ADR-0039（private 隐式 / global 声明，命名根撤回，2026-10-19））。
 > Last reviewed: 2026-10
 
 ---
@@ -25,7 +25,7 @@
 | 章  | 题                                                                                                   | 前身（A 系列 = 语义平移源） | 状态                       |
 | --- | ---------------------------------------------------------------------------------------------------- | --------------------------- | -------------------------- |
 | W1  | 插件包形态与入口契约（包布局 / world 定义 / 生命周期导出）                                           | A1                          | ✅ 2026-10-18（D116–D124） |
-| W2  | manifest 格式                                                                                        | A2                          | 未开始                     |
+| W2  | manifest 格式                                                                                        | A2                          | ✅ 2026-10-19（D125–D134） |
 | W3  | ctx 形态：WIT import 接口集与 SDK 映射（作者不见 WASI/WIT = ADR-0034 §4）                            | A3                          | 未开始                     |
 | W4  | async 与交错语义（组件模型 async 映射；S1/S2 spike 双 PASS 托底 = 补遗 6/7）                         | A4                          | ✅ 2026-10-17              |
 | W5  | 错误与 result 习语（`result<T,E>` 原生）                                                             | A5                          | 未开始                     |
@@ -64,7 +64,7 @@
 **D116 定案：可部署包 = `manifest.yml`（可选）+ 一个组件文件（缺省 `plugin.wasm`，可由 manifest 指定）+ `lib/`（可选，随包契约，格式归 W7）。**
 
 - 部署根插件目录 `plugins/<name>/` 分三区（[config-format](config-format.md) D29/D35）：包内容区 = `manifest.yml` + 组件文件 + `lib/`（随包契约）；部署区 = `config.yml`；运行期区 = `data/`。部署级契约包 `lib/` 另住部署根，与插件内随包 `lib/` 同名不同层。
-- 组件文件名缺省 `plugin.wasm`；manifest 可给包内相对路径指定其他文件名（字段名与形状 = W2）。指定值必须是包根下的单个相对路径分量（不进入 `lib/` / `data/`，不含 `..`、绝对路径、符号链接与大小写折叠碰撞），且目标必须是 wasm 组件（`.wasm` 扩展或组件 magic 校验；非组件 = 安装错误）。一个包只有一个插件组件：包内容区（不含 `lib/` 与 `data/`）内除被指名的组件外若还有 `.wasm` = 安装期响亮错误；未指定时 `plugin.wasm` 必须存在，其他 `.wasm` 同理。
+- 组件文件名缺省 `plugin.wasm`；manifest 可给包内相对路径指定其他文件名（字段名与形状 = W2 D127）。指定值必须是包根下的单个相对路径分量（不进入 `lib/` / `data/`，不含 `..`、绝对路径、符号链接与大小写折叠碰撞），且目标必须是 wasm 组件（`.wasm` 扩展或组件 magic 校验；非组件 = 安装错误）。一个包只有一个插件组件：包内容区（不含 `lib/` 与 `data/`）内除被指名的组件外若还有 `.wasm` = 安装期响亮错误；未指定时 `plugin.wasm` 必须存在，其他 `.wasm` 同理。
 - 组件文件以外的未知文件：保留、不解释、不加载（作者笔记、README 等）；安装期校验包内容的大小与文件数上限（SSOT = T10.12，构建预检复用同一常量）；升级时随包内容整体替换（D35）；卸载按目录整体处置（config-format C7）。
 - 构建产物 `dist/<name>/` 与部署根可安装子集同构（[build-pipeline](build-pipeline.md) D108）：`manifest.yml` + 组件文件 + `lib/`（可选）；可选 `build-info.json` = 诊断 sidecar，不安装。`metis build` 对无 manifest 源码合成最小 manifest（D108/D35）；部署根仍接受手工放置的无 manifest 零仪式包（W1.8）。
 - 插件身份 = 目录名；manifest 不承载身份（config-format D31；W2）。
@@ -153,7 +153,7 @@ world plugin {
 **D123 定案：零仪式 = 无 manifest 的目录 + 同一固定 world。**
 
 - 物理形态：`plugins/<name>/plugin.wasm`（缺省名；零仪式无 manifest，故不可改名），无 `manifest.yml`。经 `metis build` 产出的零仪式源码包带合成的最小 manifest（[build-pipeline](build-pipeline.md) D108），不改变本节 ABI 面。
-- ABI 面不变：三个生命周期导出恒在场（SDK 默认补全）；config = 空 map；无 config schema、无能力门资格（imports 仍按固定 world 对账，效应能力 fail-closed）、无 provide/inject、不可 mount（config-format D35；[instance-model](instance-model.md) D63）。
+- ABI 面不变：三个生命周期导出恒在场（SDK 默认补全）；config = 空 map；无 config schema、无能力声明面；private fs 结构性授予读写（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）；global / http / sqlite / process / mount 等效应能力 fail-closed；imports 仍按固定 world 对账；无 provide/inject；不可 mount（config-format D35；[instance-model](instance-model.md) D63）。
 - 兼容判定：无 manifest 即无 package version 声明面；零仪式组件只在结构匹配宿主当前 world 时被接受（world 不匹配 = 安装错误）。ABI 版本演进后，旧零仪式包须加 manifest 声明版本（W2/W10）。
 - 手写组件的导出集必须匹配 world；缺导出 = 安装期错误，不因零仪式放宽。
 - 成长路径：加 `manifest.yml`，组件文件不动；能力面按 manifest 声明启用。
@@ -170,40 +170,263 @@ world plugin {
 
 每条一句死因；完整考古见 git 史与归档设计文档。
 
-| 机制                                                           | 死因                                                                                                                                                      |
-| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `plugin()` 糖 / 入口返回 table / 裸函数报错（A1.1）            | 入口形状 = 固定 world 的导出集；作者面糖归 SDK 宏（S1），ABI 无入口返回物                                                                                 |
-| `setup` 返回 disposer 函数（A1.2）                             | 跨组件边界不能传闭包；手动清理独立为 `dispose` 导出（D118/D121）                                                                                          |
-| table 字段集封闭 / `on_config` 作可选字段（A1.1）              | world 导出集封闭；`on-config` 是恒在导出，可选性 = SDK 默认实现；元数据唯一去处 = manifest                                                                |
-| 单文件形态与成长路径搬家（A1.3）                               | 目录单形态已由 D35 定；成长路径 = 加 manifest，组件文件不动（D116/D123）                                                                                  |
-| require 体系 / `.luaurc` / 入口模块缓存 / 循环 require（A1.5） | guest 是编译产物，模块解析在编译期完成；机制无对应物（[ADR-0003](../decisions/0003-module-require-discipline.md) 的 supersede 归 W2/T13-i，已登记未落地） |
-| 加载期「编译入口 chunk」步骤与字节码缓存（A1.5）               | 组件编译 / 实例化由 wasmtime 承担（`.cwasm` 缓存归 T10.10）                                                                                               |
-| `setup(ctx, config)` 的 ABI ctx 参数（A1.1）                   | imports 即 ctx（W3）；ABI 不传能力表（D118）；作者面 `ctx` 句柄保留（SDK 合成）                                                                           |
-| `ctx.on_cleanup(fn)` 注册式多清理扩展位（A1.2）                | guest 语言设施（Drop / 组合清理）自管；宿主效应账本仍在，只是不承载 guest 清理回调                                                                        |
+| 机制                                                           | 死因                                                                                                                                       |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `plugin()` 糖 / 入口返回 table / 裸函数报错（A1.1）            | 入口形状 = 固定 world 的导出集；作者面糖归 SDK 宏（S1），ABI 无入口返回物                                                                  |
+| `setup` 返回 disposer 函数（A1.2）                             | 跨组件边界不能传闭包；手动清理独立为 `dispose` 导出（D118/D121）                                                                           |
+| table 字段集封闭 / `on_config` 作可选字段（A1.1）              | world 导出集封闭；`on-config` 是恒在导出，可选性 = SDK 默认实现；元数据唯一去处 = manifest                                                 |
+| 单文件形态与成长路径搬家（A1.3）                               | 目录单形态已由 D35 定；成长路径 = 加 manifest，组件文件不动（D116/D123）                                                                   |
+| require 体系 / `.luaurc` / 入口模块缓存 / 循环 require（A1.5） | guest 是编译产物，模块解析在编译期完成；机制无对应物（已落地 = [ADR-0038](../decisions/0038-module-system-require-supersede.md)，W2 D134） |
+| 加载期「编译入口 chunk」步骤与字节码缓存（A1.5）               | 组件编译 / 实例化由 wasmtime 承担（`.cwasm` 缓存归 T10.10）                                                                                |
+| `setup(ctx, config)` 的 ABI ctx 参数（A1.1）                   | imports 即 ctx（W3）；ABI 不传能力表（D118）；作者面 `ctx` 句柄保留（SDK 合成）                                                            |
+| `ctx.on_cleanup(fn)` 注册式多清理扩展位（A1.2）                | guest 语言设施（Drop / 组合清理）自管；宿主效应账本仍在，只是不承载 guest 清理回调                                                         |
 
 **语义平移保留**：A1.4 的「setup 里只能等完成不依赖自身邮箱的调用」红线不是消亡项，只是表述换载体（W1.4 D119）。
 
 ### W1.11 联动登记汇总（章末）
 
-| 去向           | 内容                                                                                                        |
-| -------------- | ----------------------------------------------------------------------------------------------------------- |
-| W2（T13-i）    | 组件文件名的 manifest 字段（缺省 `plugin.wasm`，D116）；manifest 元数据唯一去处；零仪式缺省；身份 = 目录名  |
-| W3（T13-j）    | ctx = imports（D118）；作者面签名合成；`on-call` 服务调用导出；生命周期导出与 ctx import 接口集的边界       |
-| W5（T13-k）    | `error` 类型定义；生命周期返回的 `result` 形状已固定（D118）                                                |
-| W7（T13-m）    | 随包契约 `lib/`（包内容区的一部分，D35）；W1 只定 `manifest.yml` + 组件文件 + `lib/` 的包布局边界           |
-| W8（T13-n）    | `on-event` 导出 additive 增补到同一 world（D118）                                                           |
-| W10（T13-p）   | package version 的数值与比较、多版本快照、ABI 版本纪律（D117）                                              |
-| T10.10         | 实例化 / Store 限额 / fuel / epoch；加载预算与 dispose 预算的数值；`.cwasm` 缓存                            |
-| T10.12         | 安装期 start / world 校验；包内容复制与未知文件处置；卸载                                                   |
-| T10.14         | SDK 默认实现（`setup` = `Ok(())`、`on-config` = `Ok(false)`、`dispose` = `Ok(())`）；作者面签名；`Ctx` 合成 |
-| T10.15         | 可部署包布局与组件文件名（D116）；预检 start 拒绝（D122）；零仪式源码合成 manifest                          |
-| config-format  | D42 `on_config` 的 ABI 签名已兑现（D118）；D29 `plugin.wasm` 占位已兑现（D116）；D35 零仪式 ABI 面（D123）  |
-| build-pipeline | D106/D108 的组件文件名 / 包布局指针已兑现（D116）；D108 start 政策已确认（D122）                            |
-| instance-model | D63 零仪式无 mount 资格（D123 原位）                                                                        |
-| plugin-sdk     | S2 WIT 目录确认（D117）；S1 生命周期钩子形态（D118）；`on_config` 归 W1                                     |
-| ADR-0005       | Consequences 成本账局部取代（[ADR-0037](../decisions/0037-component-instance-cost-ledger.md)，D124）        |
-| 实现期配置     | 加载总预算（W1.5）；`dispose` 墙钟预算（W1.6）                                                              |
-| 扩展位         | 编译期组合 world（S6 登记，前提 = W2）；多组件包（W1/W2 包布局面）；多 ABI 版本共存（W10）                  |
+| 去向           | 内容                                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| W2（T13-i）    | **已兑现（2026-10-19）**：manifest 字段全集与形状 = D125–D133；模块系统消亡 = D134/ADR-0038；fs 两档 = D129/D130/ADR-0039 |
+| W3（T13-j）    | ctx = imports（D118）；作者面签名合成；`on-call` 服务调用导出；生命周期导出与 ctx import 接口集的边界                     |
+| W5（T13-k）    | `error` 类型定义；生命周期返回的 `result` 形状已固定（D118）                                                              |
+| W7（T13-m）    | 随包契约 `lib/`（包内容区的一部分，D35）；W1 只定 `manifest.yml` + 组件文件 + `lib/` 的包布局边界                         |
+| W8（T13-n）    | `on-event` 导出 additive 增补到同一 world（D118）                                                                         |
+| W10（T13-p）   | package version 的数值与比较、多版本快照、ABI 版本纪律（D117）                                                            |
+| T10.10         | 实例化 / Store 限额 / fuel / epoch；加载预算与 dispose 预算的数值；`.cwasm` 缓存                                          |
+| T10.12         | 安装期 start / world 校验；包内容复制与未知文件处置；卸载                                                                 |
+| T10.14         | SDK 默认实现（`setup` = `Ok(())`、`on-config` = `Ok(false)`、`dispose` = `Ok(())`）；作者面签名；`Ctx` 合成               |
+| T10.15         | 可部署包布局与组件文件名（D116）；预检 start 拒绝（D122）；零仪式源码合成 manifest                                        |
+| config-format  | D42 `on_config` 的 ABI 签名已兑现（D118）；D29 `plugin.wasm` 占位已兑现（D116）；D35 零仪式 ABI 面（D123）                |
+| build-pipeline | D106/D108 的组件文件名 / 包布局指针已兑现（D116）；D108 start 政策已确认（D122）                                          |
+| instance-model | D63 零仪式无 mount 资格（D123 原位）                                                                                      |
+| plugin-sdk     | S2 WIT 目录确认（D117）；S1 生命周期钩子形态（D118）；`on_config` 归 W1                                                   |
+| ADR-0005       | Consequences 成本账局部取代（[ADR-0037](../decisions/0037-component-instance-cost-ledger.md)，D124）                      |
+| 实现期配置     | 加载总预算（W1.5）；`dispose` 墙钟预算（W1.6）                                                                            |
+| 扩展位         | 编译期组合 world（S6 登记，W2 已落地后维持不启用）；多组件包（W1/W2 包布局面）；多 ABI 版本共存（W10）                    |
+
+---
+
+## W2 manifest 格式
+
+### W2.0 边界与前提
+
+本章定 manifest 的物理形态、顶层字段全集与字段形状、校验模型、A2 机制消亡清单。不归本章：组件文件路径校验细则 = W1.1；config 值的落盘与管线 = config-format D36；瘦身形状 DSL 的语法与词汇 = W7；契约包格式与命名空间 = W7；事件静态声明语义 = W8；inject / provides / events 对账与能力门 = W9；ABI 版本比较 = W10；安装事务 = T10.12；工具面 = T10.15。
+
+前提（已定不议）：插件唯一载体 = wasm 组件；身份 = 目录名（W1.1 D116；config-format D31）；manifest 可选（W1.8 D123）；config 值住 `config.yml`（D36）；接口数据三分法（E1①/E2①/E5①）；fs = private 隐式 + global 声明（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)，W2.6 D130）。
+
+| 节    | 议题                               | 状态               |
+| ----- | ---------------------------------- | ------------------ |
+| W2.1  | manifest 形态与边界                | ✅ D125 2026-10-19 |
+| W2.2  | 顶层字段全集与身份                 | ✅ D126 2026-10-19 |
+| W2.3  | `component` 字段                   | ✅ D127 2026-10-19 |
+| W2.4  | `config` schema                    | ✅ D128 2026-10-19 |
+| W2.5  | `capabilities`                     | ✅ D129 2026-10-19 |
+| W2.6  | 命名根撤回                         | ✅ D130 2026-10-19 |
+| W2.7  | `provides` / `inject` / `events`   | ✅ D131 2026-10-19 |
+| W2.8  | `abi` / `version` / `description`  | ✅ D132 2026-10-19 |
+| W2.9  | 校验模型与「声明 ≠ 观察」          | ✅ D133 2026-10-19 |
+| W2.10 | 模块系统消亡（ADR-0003 supersede） | ✅ D134 2026-10-19 |
+| W2.11 | A2 机制消亡清单                    | ✅ 2026-10-19      |
+| W2.12 | 联动登记汇总（章末）               | ✅ 2026-10-19      |
+
+### W2.1 D125 manifest 形态与边界
+
+**D125 定案：`manifest.yml` 住包内容根；受限 YAML 子集；可选；作者意图面，不是配置值仓库。**
+
+- 文件 = 包内容根 `manifest.yml`，UTF-8，[ADR-0007](../decisions/0007-yaml-config-subset.md) 受限 YAML 子集；一包一份；无 manifest = 零仪式插件（W1.8 D123）。
+- 边界：manifest = 插件的自述（作者意图 + 元数据）；配置值住 `config.yml`（[config-format](config-format.md) D36）；装配单住 `metis.yml`（D31/D32）；身份 = 目录名（W1.1 D116）。
+- 未知字段（顶层与嵌套同政策）= 响亮报错，带字段路径 +「core 版本过旧？」提示；重复键 = parser 响亮；空 manifest = 合法（全部缺省）。
+- manifest 永不由机器重写；构建合成最小 manifest 是唯一例外（W2.8 D132）。组件 custom section（`metis.build`）只作诊断 / 溯源，不是元数据 SSOT（W1.1；[build-pipeline](build-pipeline.md) D112）。
+- 不立 manifest 自身的版本号；字段集演进随 WIT package version（W10）。
+- 读取时序：安装期解析 / 未知字段与类型校验 / 登记部署索引；语义对账（config 校验、秘密解析、inject / provides / events 对账、能力门）= 启用期（对账时机 = 启用期，W9 章承接；config-format §0.2 同判；W2.9 D133）。
+
+### W2.2 D126 顶层字段全集与身份
+
+**D126 定案：顶层字段 = 封闭集；`name` 不立；身份恒 = 目录名。**
+
+| 字段           | 缺省          | 一句                                             |
+| -------------- | ------------- | ------------------------------------------------ |
+| `description`  | 无            | 审批 / 展示用文本                                |
+| `version`      | 无            | 插件分发版本（semver 约束归任务 9）              |
+| `abi`          | 无            | 组件构建所对的 WIT package version（比较归 W10） |
+| `component`    | `plugin.wasm` | 包内组件文件（形状 = W1.1 D116）                 |
+| `config`       | 无            | config schema（W2.4 D128）                       |
+| `capabilities` | 无            | 能力声明（W2.5 D129）                            |
+| `provides`     | 无            | 服务面（W2.7 D131）                              |
+| `inject`       | 无            | 依赖面（W2.7 D131）                              |
+| `events`       | 无            | 事件声明面（W2.7 D131）                          |
+
+- **`name` 不立**：身份恒 = 目录名（config-format D31；W1.1 D116）；crate 名只决定构建输出目录 / 安装目录名。
+- 不在表内的顶层字段 = 未知字段响亮；嵌套条目同理。新增字段 = WIT package version additive（W10），不另立 manifest 版本机制。
+- 零仪式 = 无 manifest，ABI 面同 W1.8 D123；空 manifest 全缺省合法；成长路径 = 加 `manifest.yml`，组件文件不动。
+- 有意不收：marketplace 元数据（authors / license / repository）归任务 9；`runtime` / `min_core` / `schedule` 不立（W2.11）；自由 `build.command` = build-pipeline D108 扩展位，不启用。
+
+### W2.3 D127 `component` 字段
+
+**D127 定案：`component` = 可选字符串，缺省 `plugin.wasm`；路径与组件形态校验 = W1.1 原位。**
+
+- 取值必须是包根下的单个相对路径分量；不得进入 `lib/` / `data/`，不含 `..`、绝对路径、符号链接与大小写折叠碰撞；目标必须是 wasm 组件（`.wasm` 扩展或组件 magic）。包内容区（不含 `lib/` / `data/`）内除被指名的组件外若还有 `.wasm` = 安装期响亮错误。完整规则 SSOT = W1.1 D116，本节只定字段名与缺省。
+- 构建产物按 manifest 声明的文件名落盘；合成 manifest 使用缺省名（W1.1 D116；W1.8 D123）。
+- 不立 `entry` / 模块入口字段；组件内部模块由 guest 编译期解决（W2.10 D134）。
+
+### W2.4 D128 `config` schema
+
+**D128 定案：`config` = 键 → `{ type, required, default, secret }`；`type` 必填；配置值以 TLV 过边界。**
+
+```yaml
+config:
+  api_key:
+    type: string
+    required: true
+    secret: true
+  refresh_interval:
+    type: integer
+    default: 60
+```
+
+- 条目字段 = 封闭集；未知字段响亮。
+- `type` **必填**，取值 = 瘦身形状 DSL 表达式（W7 定语法与词汇；要任意值就写 `any`）。
+- `required` 缺省 `false`；`default` 为 Value；`secret` 缺省 `false`。`volatile` 已退役（config-format D36/D37）。
+- 冲突组合响亮：`required: true` + `default`；`secret: true` + `default`；`secret: true` 且 `type` 非 `string` / `any`（secrets store 值仅字符串，[config-format](config-format.md) C6.1 D46）。
+- 秘密值只许写 `{ secret: "name" }` 引用；写明文 = 校验响亮拒绝；引用查无 = 启用期响亮。引用语法与 store 细节 SSOT = config-format C6。
+- 管线顺序不变：读 `config.yml` → schema 校验（缺 required / 类型错 / 多给键 = 响亮）→ 秘密解析 → 默认值合成 → 冻结 → TLV → `setup`；插件代码一行未跑（config-format D36；W1.3 D118）。
+- `config` 缺省 ≡ 空 schema；此时 `config.yml` 出现任何键 = 多给键响亮。
+- 一等 `schedule` / cron 字段维持不立（config-format C8.2 D51）；周期意图 = config 键约定。
+- 嵌套字段级 `secret` 标记 = 扩展位（v1 只标顶层键）。
+
+### W2.5 D129 `capabilities`
+
+**D129 定案：`capabilities` = `{ fs, http, sqlite, process, mount }`；private fs 隐式读写；fs 只声明 `global`。**
+
+```yaml
+capabilities:
+  fs:
+    global: read
+  http:
+    - api.openai.com
+    - "*.anthropic.com"
+  sqlite: true
+  process: true
+  mount: true
+```
+
+- `capabilities` = map，封闭键 `fs` / `http` / `sqlite` / `process` / `mount`；未知键响亮；节缺省 = 无该能力；fail-closed 不变。
+- `fs` = map，封闭键 `global`（`read` / `write`，write ⊃ read）。**private 不是合法键**：`plugins/<name>/data/fs/` 隐式读写，不声明、不可收窄（W2.6 D130；[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）。`fs` 节缺省 = 无 global；private 仍可用。
+- `http` = host 列表：精确 host + `*.` 任意深度子域（不含 apex，apex 须单列）、不表达端口、https 缺省、明文须 `http://` 显式；SSRF / 跨域重定向 / 最终解析结果判定 = [seam-capabilities](seam-capabilities.md) §5.2 原位。空列表 = 无 host。
+- `sqlite` / `process` / `mount` 值为布尔：`true` = 启用；`false` / 缺省 = 无能力（拒绝）。timer 无门；纯算件无需声明。
+- **sqlite 与 fs 不冲突**：host sqlite 的库住 `plugins/<name>/data/db.sqlite`，private fs 根是 `data/fs/`，preopen 结构性够不到 db。`sqlite: true` 是宿主代持 SQLite 句柄的便利，不是通用文件写权限；插件使用其他 DB（redb / sled / 自带 SQLite 等）时直接在 private fs 内管理，无需 `sqlite` 声明。
+- **mount**：`true` = 允许调用 `ctx.mount` 创建子树实例（激活新代码的元权限；[instance-model](instance-model.md) §S3.3 D63；[ADR-0028](../decisions/0028-instance-model.md) 批次 #1）；`false` / 缺省 = 拒绝。它是编排面能力门的唯一例外。
+- 声明是作者意图；运行期门 fail-closed；能力词汇 additive 增补 = WIT package version（W10）。审批面逐条展示；global 最高档。
+
+### W2.6 D130 命名根撤回
+
+**D130 定案：命名根不立；manifest 不设 `roots` 字段，部署根不设 `fs_roots` 绑定节。**
+
+- 原命名根 = ADR-0036 的「manifest 声明逻辑名 + 部署者绑定路径」中间档。撤回理由：插件可能同时服务多个 project，目标目录也可能随运行期变化；静态绑定一次配不齐，中间档的成本（声明 + 绑定 + 校验 + 审批）超过收益（ADR-0039）。
+- fs 收窄为两档：private 隐式读写 + global 声明读写（W2.5 D129）。需要用户世界访问的插件走 `global`；动态 project 目录由插件自己的 config 值承载（config-format D36/D45 同族）。
+- 代价明记：没有中间档；global 是高信任档，部署者以审批与 OS 级沙箱兜底。workspace / session 语义仍归插件层服务投影，核心不做一一映射。
+- 局部 supersede ADR-0036 Decision 第 2 条 = [ADR-0039](../decisions/0039-fs-capability-two-tier.md)；config-format C5、seam-capabilities §5.2、W1.8 D123 措辞同步。
+
+### W2.7 D131 `provides` / `inject` / `events`
+
+**D131 定案：provides / inject / events 只承载声明与契约引用；形状住契约包，不写进 manifest。**
+
+```yaml
+provides:
+  memory: {}                 # contract 缺省 = 服务名
+  search:
+    contract: search@2       # 生态契约带 @N（W7）
+inject:
+  required: [llm, memory]
+  optional: [cache]
+events:
+  publish: [some/event]
+  listen: [another/event]
+```
+
+- `provides` = map 服务名 → 条目；条目封闭字段 = `{ contract }`（可选字符串，缺省 = 服务名；`@N` 规则归 W7）；`methods` 字段消亡（方法集 = 契约数据）；`null` ≡ `{}`。
+- `inject` = map，封闭字段 `{ required, optional }`，值为服务名列表；缺省空；required 缺失 = 启用期 Pending / 响亮（W9）；判环 = config-format C9.1 D52。
+- `events` = map，封闭字段 `{ publish, listen }`，值为事件名列表；形状不写在这里，住契约 `types:` / `events:`（W7/W8）；`internal/` 规则归 W8。
+- **作者自定义 schema 的住处 = 契约包**：服务方法集、业务 data 形状、事件形状由契约定义；三来源 = 平台内嵌 / 部署 `lib/` / 插件随包（包内容区 `lib/`，W1.1 D116）；格式与命名空间合并 = W7，事件语义 = W8。manifest 只引用契约名与事件名，不重复声明形状。
+- 无契约也可提供私有服务 / 发事件，但失去形状对账（W9）；同名不同 schema = 启用期响亮；同名同 schema = 可替换实现（seam 三角）。
+- 服务名扁平；`plugin-name/service` 前缀仅约定不强制；撞名判定 = W9。契约治理三层与契约包版本规则 = W7 原位，本章不转抄。
+
+### W2.8 D132 `abi` / `version` / `description`
+
+**D132 定案：`abi` = 可选 WIT package version 声明；`version` = 插件分发版本；`abi_rev` 消亡。**
+
+- `abi` = 可选字符串，组件构建所对的 `metis:plugin` WIT package version（如 `"0.1.0"`）；比较 / 接受条件 = W10。缺省 = 无版本声明；接受条件 = 结构匹配宿主当前 world（与零仪式同规则）。
+- `version` = 插件自身分发版本，可选；v1 不强制 semver（任务 9）；不是身份，与 `abi` 无关。
+- `description` = 可选自由文本。
+- 构建合成最小 manifest = `version: 0.1.0` + `abi: <构建时的 WIT package version>`；不含 `name`；安装目录名取 crate 名 / `dist/<name>`（[build-pipeline](build-pipeline.md) D108 同步）。
+- `abi_rev` 字段消亡；ADR-0028 的「`abi_rev` +1」只作历史措辞，演进纪律由 W10 承接。
+- marketplace 元数据 v1 不收；`min_core` 不立。
+
+### W2.9 D133 校验模型与「声明 ≠ 观察」
+
+**D133 定案：manifest 校验 = 纯数据单一实现、三面暴露；声明是意图，组件结构是事实。**
+
+- 三面暴露：编辑器 JSON Schema 工件（yaml-language-server）→ `metis check` / `metis build` → loader 安装 / 启用期；三面措辞逐字一致（校验器单一实现、多面暴露原则；config-format C3.1 同 parser 同校验器）。
+- 时机两分：安装期 = 解析 + 未知字段 / 类型校验 + 登记部署索引；启用期 = config 校验、秘密解析、inject / provides / events 对账、能力门判定。插件代码在任何校验前均未运行。
+- 声明 ≠ 观察：manifest 承载作者意图（capabilities、required / default / secret、inject / provides / events）；组件 import 清单 = 结构事实；对账 = import 清单 ⊆ SDK 封闭词汇表（design-review B1），**不做**能力自动推断，也不以扫描结果反写 manifest。
+- 元数据唯一去处 = manifest；组件 custom section 只作诊断 / 溯源（W1.1；build-pipeline D112）。
+- 空 manifest 合法、全缺省；错误带字段路径 + typo 提示；YAML 受限子集违规响亮。
+- `metis check` 部署模式另含 config-format C2.4 D34 的未装配件 / 休眠件提示，不属 manifest 校验本体。
+
+### W2.10 D134 模块系统消亡（ADR-0003 supersede）
+
+**D134 定案：ADR-0003 整篇 supersede = [ADR-0038](../decisions/0038-module-system-require-supersede.md)；运行期模块系统无承接物。**
+
+- 死亡：require 包装器、`(importer, specifier)` 依赖边账本、反向传递闭包失效、插件内相对路径 import 规则、跨插件文件 require 的路径逃逸判定、共享 `lib/` 纯代码库、`@lib` 别名、`.luaurc`、模块缓存与循环 require 报错。
+- 存活：跨插件运行期组合只走 inject / events；同一插件内部由 guest 编译期模块系统承担；契约变更级联 = 数据驱动反向索引（config-format D43 / W7）。
+- `lib/` = 契约包（WIT / 数据），扫描进契约命名空间，不被 import 为代码（W1.1 D116；config-format D35）。
+- [ADR-0019](../decisions/0019-crate-layout.md) C3 的 `@lib` 别名与 lib 两层机制同属死亡，正式 supersede 归 W7（T13-m）。
+- W1.10 的 A1.5 考古行更新为「已落地 = ADR-0038」；`luau-abi` 归档正文不动。
+
+### W2.11 A2 机制消亡清单（考古索引）
+
+每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与上述 ADR。
+
+| 机制                                   | 死因                                                                                                                  |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `name` 字段                            | 身份恒 = 目录名（config-format D31；W1.1 D116）；manifest 不承载身份                                                  |
+| `entry` 字段                           | 组件文件名由 `component` 承载（W1.1 D116；W2.3 D127）；无运行期模块入口                                               |
+| `boxes` 字段与双向对账                 | 盒概念消解进插件本体（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）                                        |
+| `abi_rev` 字段                         | WIT package version 承接（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §3）；字段 = `abi`（W2.8 D132）         |
+| `provides.methods` 列表                | 方法集住契约（W7）；固定 world 经 `on-call` 分发（W3）                                                                |
+| 旧 `fs` scope map（两档 → 三层命名根） | 现形态 = private 隐式 + global 声明；命名根撤回（W2.5/W2.6；[ADR-0039](../decisions/0039-fs-capability-two-tier.md)） |
+| `volatile` 词汇                        | config-format D36/D37 退役；热应用 = `on-config` 返回值                                                               |
+| `runtime` 字段                         | 从未立；wasm-first 后无组成可声明（ADR-0034）                                                                         |
+| `min_core` 字段                        | 不立；`abi` + 未知字段「core 版本过旧？」提示兜底（W2.8 D132）                                                        |
+| 一等 `schedule` / cron 字段            | 维持不立（config-format D51）；周期意图 = config 键约定                                                               |
+| require / `.luaurc` / `@lib` / 边账本  | ADR-0003 整篇 supersede = [ADR-0038](../decisions/0038-module-system-require-supersede.md)                            |
+
+**语义平移保留**：插件的自述与意图（description / version / config schema / capabilities / provides / inject / events）仍唯一住 manifest；配置值仍唯一住 `config.yml`；身份仍 = 目录名；声明 ≠ 观察仍成立（W2.9 D133）。
+
+### W2.12 联动登记汇总（章末）
+
+| 去向            | 内容                                                                                                                                                                                                                             |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1（T13-h）     | `component` 缺省 `plugin.wasm`（D116）；零仪式 ABI 面（D123）措辞按 ADR-0039 更新：private fs 隐式，效应能力仍 fail-closed                                                                                                       |
+| W3（T13-j）     | ctx.fs = private（隐式读写）/ global（声明）；无命名根；`global` 能力门在运行期强制                                                                                                                                              |
+| W5（T13-k）     | 生命周期返回的 `error` 类型；manifest 校验错误是宿主侧错误，不经 guest 错误通道                                                                                                                                                  |
+| W7（T13-m）     | `type:` 表达式语法与词汇；契约包格式 / 三来源合并；`provides.contract` 与 `@N`；作者自定义服务 / 事件 schema 的住处                                                                                                              |
+| W8（T13-n）     | 事件名语义、`internal/` 规则、事件形状在契约中的写法；manifest 只列名字                                                                                                                                                          |
+| W9（T13-o）     | inject / provides / events 对账；能力门（含 `mount` 例外）；import 清单 ⊆ SDK 词汇表                                                                                                                                             |
+| W10（T13-p）    | `abi` 的数值与比较；manifest 字段集 / 能力词汇 additive 演进纪律                                                                                                                                                                 |
+| config-format   | D36 配置管线按 `config` schema 消费；秘密引用 = `{ secret: "name" }`；fs 两档（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)；ADR-0036 命名根格局部 supersede）；共享值机制 = config-format 增补批（新 ADR，遗留登记） |
+| build-pipeline  | D108 合成最小 manifest = `version` + `abi`（无 `name`）；脚手架按 W2 字段集生成；组件文件名 = D116                                                                                                                               |
+| plugin-sdk      | S6 能力白名单 = manifest `capabilities` 声明源；编译期组合 world 维持扩展位（W2 已落地后仍不启用）                                                                                                                               |
+| instance-model  | `mount: true` 能力键与 `ctx.mount` 方法族（ADR-0028 批次 #1）                                                                                                                                                                    |
+| ADR-0003        | 整篇 supersede = [ADR-0038](../decisions/0038-module-system-require-supersede.md)（D134）                                                                                                                                        |
+| ADR-0036        | Decision 第 2 条「命名根」局部 supersede = [ADR-0039](../decisions/0039-fs-capability-two-tier.md)（D130）                                                                                                                       |
+| ADR-0025 / 0027 | Status 行记 fs 两档链：ADR-0025 §5.2 两档 → ADR-0036 三层 → ADR-0039 两档（private 隐式 / global 声明）；ADR-0027 D44 两档语义由 ADR-0039 定型                                                                                   |
+| T10.12          | 安装期 manifest 解析 / 未知字段 / 类型校验；world 与 start 校验；包内容复制                                                                                                                                                      |
+| T10.14          | 作者面 trait / 宏；`Value` 手动面；能力声明消费                                                                                                                                                                                  |
+| T10.15          | 脚手架 manifest 骨架；合成最小 manifest；构建期 manifest 校验                                                                                                                                                                    |
+| 实现期清单      | manifest 校验器（三面同一实现）；JSON Schema 工件生成；部署索引解析登记                                                                                                                                                          |
+| 扩展位          | 配置共享值（`values.yml` + `{ $value: "name" }`，非秘密，config-format 增补批/新 ADR）；嵌套字段 `secret`；编译期组合 world；自由 `build.command`；marketplace 元数据                                                            |
 
 ---
 

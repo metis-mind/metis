@@ -49,7 +49,7 @@
 - 托管形态 = **单进程多租户**：一个 server 进程托管多个部署根。用户拍板理由 = 管理统一，不维护多个服务（淘汰本议题初议的「多进程零新机制」推荐——多进程买到的隔离/崩溃边界免费，单进程内由 host 以故障域隔离与统一 status 面补回；跨项目协作走网络不变）。
 - 每租户 = 独立配置树 / `plugins/` 树 / secrets / journal / 审批域；部署根布局（D29）原样适用于每租户。
 - **淘汰**：① 多进程每项目一 server（见上）；② 单树多项目（一套配置管多项目 = 用户明确排除的混乱形态）。
-- **术语注意**：此「项目/租户」与 config-format C5/D44 砍掉的单数 workspace（fs 绑定机制）无关，勿混；命名根按 ADR-0036 复活。
+- **术语注意**：此「项目/租户」与 config-format C5/D44 砍掉的单数 workspace（fs 绑定机制）无关，勿混；命名根随后撤回（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)），fs = private 隐式 / global 声明。
 
 ### S1.3 D55 persona 用例 = 插件层归位
 
@@ -94,16 +94,16 @@
 
 ### S1.6 联动登记（S1）
 
-| 去向                                                                         | 内容                                                                                            |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [config-format](config-format.md) 头部 / §C2.9                               | 前提文档行与「任务 5」指向已同步                                                                |
-| [config-format](config-format.md) §C1.1（D29）                               | `--config` 语义扩展（多租户托管）= D56                                                          |
-| [journal](journal.md)                                                        | 每租户一本（D60）+ 条目不押实例字段（D72）；S1 阶段无新增输入                                   |
-| [wit-abi](wit-abi.md) W2/W8 章（T13-i/T13-n）                                | manifest 身份与事件声明面随章承接；核心无 session 概念（D53）不变                               |
-| [context-events](context-events.md) §6（D7 汇合点行）                        | 汇合登记指向本文件 = D66                                                                        |
-| ADR-0010 / ADR-0013                                                          | 子 fiber = 父 effect = D64；Context parent 链预留 = D68；D7 汇合结案 = D66；D2 半结案 = D69     |
-| [journal-replay-research](../research/journal-replay-research.md) 开放问题 6 | 跨 session 服务调用是否算边界输入 = D73                                                         |
-| 任务 6（journal）                                                            | 租户维度对 journal 物理组织的影响（每租户一本 = D54 推论）= [journal](journal.md) J1（D75/D76） |
+| 去向                                                                         | 内容                                                                                                                      |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [config-format](config-format.md) 头部 / §C2.9                               | 前提文档行与「任务 5」指向已同步                                                                                          |
+| [config-format](config-format.md) §C1.1（D29）                               | `--config` 语义扩展（多租户托管）= D56                                                                                    |
+| [journal](journal.md)                                                        | 每租户一本（D60）+ 条目不押实例字段（D72）；S1 阶段无新增输入                                                             |
+| [wit-abi](wit-abi.md) W2/W8 章（T13-i/T13-n）                                | **W2 已兑现（2026-10-19）**：manifest 身份 = 目录名、不设 `name`（D126）；事件声明面待 W8；核心无 session 概念（D53）不变 |
+| [context-events](context-events.md) §6（D7 汇合点行）                        | 汇合登记指向本文件 = D66                                                                                                  |
+| ADR-0010 / ADR-0013                                                          | 子 fiber = 父 effect = D64；Context parent 链预留 = D68；D7 汇合结案 = D66；D2 半结案 = D69                               |
+| [journal-replay-research](../research/journal-replay-research.md) 开放问题 6 | 跨 session 服务调用是否算边界输入 = D73                                                                                   |
+| 任务 6（journal）                                                            | 租户维度对 journal 物理组织的影响（每租户一本 = D54 推论）= [journal](journal.md) J1（D75/D76）                           |
 
 ## S2 租户托管
 
@@ -225,7 +225,7 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 | ADR-0013                               | 强制复审点 D7 半兑现 = D66；D2 半（isolate/intercept 复审）= D69；Status 行注见 ADR-0028                               |
 | ADR-0010                               | 子 fiber = 父的 effect——实例面兑现 = D64                                                                               |
 | [context-events](context-events.md) §6 | D7 汇合点行指向本文件                                                                                                  |
-| [wit-abi](wit-abi.md) W2 章（T13-i）   | capabilities + `mount` 键 = ADR-0028 批次 #1                                                                           |
+| [wit-abi](wit-abi.md) W2 章（T13-i）   | **已兑现（2026-10-19）**：`capabilities.mount: true` 键 = D129；ADR-0028 批次 #1                                       |
 | [wit-abi](wit-abi.md) W3 章（T13-j）   | `ctx.mount`/`unmount` 方法族与句柄形态                                                                                 |
 | [wit-abi](wit-abi.md) W9 章（T13-o）   | mount 时启用管线复用（inject 三分原样）= D63；编排面能力门立场（mount = 第一个例外）                                   |
 | 种子稿待决 #2/#3/#5                    | 结案 = D62/D65                                                                                                         |
@@ -338,12 +338,12 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 
 ### S5.3 联动登记（S5）
 
-| 去向                                                        | 内容                                                                                 |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [ADR-0028](../decisions/0028-instance-model.md)             | 任务 5 冻结：五站冻结面 + 演进纪律 + 批次 7 条                                       |
-| ADR-0013 / ADR-0017                                         | Status 行结案注                                                                      |
-| [wit-abi](wit-abi.md) W2/W3/W9 章（T13-i/j/o）              | manifest 身份 / ctx 方法族 / 能力门面随章承接（批次 #1/#2/#3/#4/#5）                 |
-| config-format §C1.1 / §C3.2 / §C6.2 / §C2.1 / §C2.2 / §C2.9 | 批次 #6/#7                                                                           |
-| 种子稿待决 #4 / §5 / §6                                     | 全部结案 = D74（机制半 = D69 在先）                                                  |
-| 任务 6                                                      | 输入无新增（每租户一本 = D60、不押实例字段 = D72、跨实例 = 内部流量 = D73 均已登记） |
-| 议题地图                                                    | 五站全收官 ✅（§S1.5）                                                               |
+| 去向                                                        | 内容                                                                                                                             |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| [ADR-0028](../decisions/0028-instance-model.md)             | 任务 5 冻结：五站冻结面 + 演进纪律 + 批次 7 条                                                                                   |
+| ADR-0013 / ADR-0017                                         | Status 行结案注                                                                                                                  |
+| [wit-abi](wit-abi.md) W2/W3/W9 章（T13-i/j/o）              | **W2 已兑现（2026-10-19）**：manifest 身份 = 目录名 + `mount` 键（D126/D129）；ctx 方法族 / 能力门面待 W3/W9（批次 #2/#3/#4/#5） |
+| config-format §C1.1 / §C3.2 / §C6.2 / §C2.1 / §C2.2 / §C2.9 | 批次 #6/#7                                                                                                                       |
+| 种子稿待决 #4 / §5 / §6                                     | 全部结案 = D74（机制半 = D69 在先）                                                                                              |
+| 任务 6                                                      | 输入无新增（每租户一本 = D60、不押实例字段 = D72、跨实例 = 内部流量 = D73 均已登记）                                             |
+| 议题地图                                                    | 五站全收官 ✅（§S1.5）                                                                                                           |
