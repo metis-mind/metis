@@ -112,7 +112,7 @@ crypto 撤回（2026-10-19）= [ADR-0041](../decisions/0041-crypto-capability-wi
 
 - **fs：两档 scope（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）。**
   - **private**：`plugins/<name>/data/fs/` 以 WASI preopen 授予（guest 路径 `/`），**隐式读写**，不声明、不可收窄；**作者面 = SDK 直接包 WASI 0.3 `wasi:filesystem` 的 async 面**（`ctx.plugin_fs()`；同一 preopen，不另造 host-mediated 层；含 `guest_root` 给 crate）；guest crate 用 `std::fs` 同一 preopen。W3 D144（[wit-abi](wit-abi.md)）；安全决定不变。
-  - **global**：减法语义（用户世界 − `secrets.yml` + `journal/` 两条豁免），preopen 表达不了减法 → host-mediated 自研逃逸舱；manifest 声明 `fs: read|write`（语义 = global；形状 = [wit-abi](wit-abi.md) W2.5 D129），缺省 = 无 global；TOCTOU 硬化与路径解析留在宿主实现。
+  - **global**：减法语义（用户世界 − `secrets.yml` + `journal/` 两条豁免），preopen 表达不了减法 → host-mediated 自研逃逸舱；manifest 声明 `fs: read|write`（语义 = global；形状 = [wit-abi](wit-abi.md) W2.5 D129），缺省 = 无 global；路径解析 = 两段式（先词法归一，再物理 canonicalize），两条豁免必须验在 canonicalize 之后（否则 symlink 指向 `secrets.yml` 即绕过）；TOCTOU 硬化 = 实现期清单（global 绝对路径用 open 后 `fstat` 身份复核（dev/ino 对 canonicalized 目标）；`RESOLVE_NO_SYMLINKS` 仅在显式收紧政策时采用，不是等价替代；豁免集本身先 canonicalize 一次），ABI 只冻结两段式语义（考古源 = [luau-abi](luau-abi.md) §A3.6–§A3.10，归档）。
   - **命名根不立**：原「manifest 声明 + 部署者绑定」中间档撤回（ADR-0039）——插件可能服务多个 project，静态绑定一次配不齐；需要用户世界访问走 global。
   - 写 = 临时文件 + rename 原子写。workspace / session 语义归插件层服务投影，核心不做一一映射。
 - **http**：`ctx.http.request` 形态（作者面由 SDK 映射）。透明解压；**强制超时**（不允许无 deadline 请求）；响应默认进内存带预算，大 body / SSE 走流式；域名白名单、跨域重定向须重新对账（open-redirect 旁路）、SSRF = 解析结果非全局单播即拒（含 v6）+ 白名单显式授予内网 + 最终解析结果判定钉住；明文 http 须 `http://` 显式标记。

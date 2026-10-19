@@ -529,7 +529,7 @@ world plugin {
 **D144 定案：`ctx.fs()` = global（声明门 + 绝对路径，host-mediated async）；`ctx.plugin_fs()` = private（隐式 + WASI 0.3 `wasi:filesystem` async over preopen）；两者同一 `Fs` 方法族、全部 async；private 不套宿主中介层，也不是 metis WIT 接口。**
 
 - **private 机制**：`plugins/<name>/data/fs/` 以 WASI preopen 授予（guest 路径 `/`）；**作者面 = SDK 直接包 WASI 0.3 `wasi:filesystem` 的 async 文件面**（`ctx.plugin_fs()`），不另造 host-mediated 层——WASI 0.3 的 filesystem 本身 async，宿主中介是舍近求远。SQLite / redb 等 guest crate 用常规 `std::fs`（std 适配 WASI 0.3）；`ctx.plugin_fs()` 与 `std::fs` 同一 preopen，安全边界由 WASI 结构限界提供，不立第二套 resolver。
-- **global 机制**：[ADR-0039](../decisions/0039-fs-capability-two-tier.md) 的 host-mediated 自研逃逸舱；`capabilities.fs: read / write` 门；绝对路径；两段式解析 + TOCTOU 硬化原位（[seam-capabilities](seam-capabilities.md) §5.2）——preopen 表达不了减法，这一档必须宿主中介。
+- **global 机制**：[ADR-0039](../decisions/0039-fs-capability-two-tier.md) 的 host-mediated 自研逃逸舱；`capabilities.fs: read / write` 门；绝对路径；两段式解析 + TOCTOU 硬化原位（[seam-capabilities](seam-capabilities.md) §5.2；豁免验在 canonicalize 之后）——preopen 表达不了减法，这一档必须宿主中介。
 - **版本前提**：目标 = WASI 0.3（2026-10-19 维护者确认）；`wasm32-wasip3` target / std p3 迁移的工具链落地归 T10.10 / T10.15（ADR-0034 W7 风险面）。S1/S2 spike 的 wasip2 证据只用于 async 语义，不改变 filesystem 的 0.3 async 面。
 - **不提供同步 / 异步两套作者接口**：作者面统一 async；guest crate 的 `std::fs` 是标准库同步 API，底层由 std 适配到 WASI 0.3。
 - **为什么两个访问器而不是一个 `fs`**：两档的安全模型不同——private 是隐式 preopen（结构限界），global 是声明门 + 路径政策（必须宿主中介）；`Fs` 方法族同形，但入口分开让「插件自己的数据目录」与「用户文件系统」在代码里一眼可辨，也让 private 走零中介快路径。

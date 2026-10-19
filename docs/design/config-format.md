@@ -295,7 +295,7 @@ on_config(new_config):
 ### C5.1 fs scope = 两档（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）
 
 - **private**：`plugins/<name>/data/fs/` 以 WASI preopen 授予；**隐式读写**，不声明、不可收窄；逃逸防护 = 运行时结构保证，自研两段式解析对 private 退役。
-- **global**：减法语义（用户世界 − `secrets.yml` / `journal/` 两条豁免），preopen 表达不了 → host-mediated 自研逃逸舱；manifest 声明 `fs: read|write`（语义 = global；[wit-abi](wit-abi.md) W2.5 D129），缺省 = 无 global；TOCTOU 硬化与路径解析留在宿主实现。
+- **global**：减法语义（用户世界 − `secrets.yml` / `journal/` 两条豁免），preopen 表达不了 → host-mediated 自研逃逸舱；manifest 声明 `fs: read|write`（语义 = global；[wit-abi](wit-abi.md) W2.5 D129），缺省 = 无 global；TOCTOU 硬化与路径解析 = [seam-capabilities](seam-capabilities.md) §5.2（两段式解析；豁免验在 canonicalize 之后）。
 - **命名根不立**：原 ADR-0036 的「manifest 声明 + 部署者绑定」中间档撤回（ADR-0039）——插件可能服务多个 project，静态绑定一次配不齐；需要用户世界访问走 global。
 - **单数 workspace 仍不立**：理由 = 「这个部署的工作区是哪个目录」对通用部署无答案（core agent-agnostic 同族）；真要多目录，单根版本来就半残。
 - **审批面**：private 不进门；global 最高档（碰用户文件 = 要么信要么不信）；无中间档；偏执部署走 OS 级沙箱——与 process 外墙同一答案。
