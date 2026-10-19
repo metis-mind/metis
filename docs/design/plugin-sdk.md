@@ -58,7 +58,7 @@ trait 方法全 `async fn`（Rust 原生 async fn in trait）。fanout = guest �
 
 ADR-0034 §4「world 固定，能力白名单由 manifest 声明对账，作者无法越权加 import」与 design-review B1「import 清单机械抠出 → 能力对账 = 集合包含判定」的合成释读：
 
-- world = 单一固定，import 词汇表封闭。「作者无法越权加 import」= 编译期结构事实：SDK 绑定之外无符号可链接；手工添加的进口在启用期对账被机械抠出——B1 集合包含判定的准确含义 = 组件 import 清单 ⊆ SDK 封闭词汇表（防越权加 import），粒度到接口、不到能力实例。
+- world = 单一固定，import 词汇表封闭。「作者无法越权加 import」= 编译期结构事实：SDK 绑定之外无符号可链接；手工添加的进口在安装期结构对账被机械抠出（启用时响亮）——B1 集合包含判定的准确含义 = 组件 import 清单 ⊆ 宿主词汇表（防越权加 import），粒度到接口、不到能力实例（[wit-abi](wit-abi.md) W9 D180–D182）。import 不授权能力：能力使用由 manifest 声明 + 运行期门决定。
 - 能力白名单 = manifest 声明 → 运行期能力门 fail-closed + 启用期对账（信任模型骨架 = design-review C8 存活）；越权调用 = trap（[wit-abi](wit-abi.md) W5 D139），不是 S5 类型化错误——S5 只覆盖已声明但运行期失败的路径。先例 = Spin（声明全在 manifest、SDK 零编译期检查、越权 = 「Destination not allowed」运行期类型化错误）与 Zed（运行期 CapabilityGranter 门控）——两大先例均选运行期门，SDK 面不设编译期能力检查机器。
 
 映射风格三原则（本节定原则，具体接口集归 W3 章 = T13-j；**已兑现 = W3 D142–D154 + W6 D155–D162**，2026-10-19）：① 有生命周期 / 大对象实体 = 句柄 / resource 形态（Spin `key_value::Store::open_default()` 先例；metis = `process-handle` / `mount-handle` / `Blob` / `ByteReader` / `ByteWriter` / `Listener` / `TimerHandle`）；② 无状态服务 = ctx 方法/自由函数（Spin `llm::infer` / `variables::get` 先例；metis = `ctx.fs()` / `ctx.http()` / `ctx.timer()` / `ctx.service()` 等）；③ 原始生成绑定保留 escape hatch 但标注「正常不需使用」（Spin rustdoc 先例；metis = `metis_plugin::raw`）。生效层 = 运行期门（固定 world，宿主 import 实现逐调用 fail-closed；W3 D154）。

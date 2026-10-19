@@ -11,8 +11,8 @@
 **服务 = key + 命名方法集**；调用 `call(key, method, args) → Result`（作者面形态 = [plugin-sdk](plugin-sdk.md) S1/S4，ABI 面 = [wit-abi](wit-abi.md) W3 章）。
 
 - **args/返回值 = 单个 `Value`**（惯例 Map 即命名参数）：跨实例边界一次转换，schema 校验单挂点
-- **方法集入注册表**：调不存在的方法 = host 当场框架错误（不走消息）；同时是 schema 挂点与自省目录数据源
-- **key 命名**：扁平字符串；框架级服务占短名（`llm`/`tools`；实现 = 插件，core 不提供领域服务实现，见 §6 注），插件服务建议 `plugin-name/service` 前缀（约定不强制，与事件命名纪律同构）；重复注册响亮失败 = 命名冲突加载期暴露
+- **方法集入注册表**：有契约服务 = 宿主从契约载入方法集到注册表（W7 D167 / [wit-abi](wit-abi.md) W9 D183）——方法存在性响亮（`service-method-missing`，不走消息）+ schema 挂点 + 自省目录数据源；contractless 服务无方法集，missing method 由 guest catch-all 返回 `business`（W2 D131 已明记的退化）
+- **key 命名**：扁平字符串；框架级服务占短名（`llm`/`tools`；实现 = 插件，core 不提供领域服务实现，见 §6 注），插件服务建议 `plugin-name/service` 前缀（约定不强制，与事件命名纪律同构）；重复注册响亮失败 = 命名冲突启用期暴露（W9 D180）
 - **服务没有「属性」**：跨实例只有方法调用（消息），无共享对象——服务状态是提供方实例私有，访问必经方法（actor 纯化，Cordis 的字段穿透是 Proxy 遗物）
 - **LLM 工具 = 服务方法的投影**：tool registry 插件把 inject 来的方法集翻译成模型 tool schema——插件写的服务自动成为模型可用的工具（schema 化后），无手工翻译层
 - **唯一性（附议）**：**同一作用域内**任何时刻唯一（重复注册响亮）；部署树 = 一个作用域，实例 = 各自作用域（D68）。跨时间可替换（配置变更 + epoch+1）；同时多实现归实例作用域（[ADR-0013](../decisions/0013-context-scope.md) 推迟项已结案：多实现 = 不同实例作用域各一份，isolate 不立字段、语义由实例作用域天然给出；同作用域内唯一性原样，[instance-model](instance-model.md) §S4.2/§S4.3 D68/D69）
@@ -21,7 +21,11 @@
 注册表数据结构（host 侧；v1 = 部署树单级 + 实例作用域）：
 
 ```
-HashMap<ServiceKey, ServiceEntry { provider: FiberId, epoch: u64, methods: Vec<MethodName> }>
+HashMap<ServiceKey, ServiceEntry {
+    provider: FiberId,
+    epoch: u64,
+    methods: Vec<MethodName>,   // 有契约服务 = 宿主从契约载入；contractless = 空（W9 D183）
+}>
 + 反向索引 HashMap<ServiceKey, Set<FiberId>>   // service → dependents
 + ScopeTag（实例作用域标识，[instance-model](instance-model.md) §S4.2 D68）
 ```
@@ -62,6 +66,7 @@ inject:
 
 - **可选依赖精确语义**：静态声明；缺席**不阻塞激活**、调用时缺席返回框架错误；**出现/消失/热更统一重启消费者**（「依赖视图变化 → 重启」一条不变量无例外；惊扰面由反向索引限定 + 拓扑序 + 可选依赖只用于低频服务的纪律收敛）。**复审点**：若 SDK 类型系统能结构性禁掉 setup 期可用性探测（无 setup 探测型插件），可放宽为不重启。
 - **W3 兑现注（2026-10-19）**：provide 观测 = `services.provide(key)` import（setup 内限定；宿主据此保留「声明了没 provide = 激活失败」「provide 了没声明 = 响亮」）；deps 目录 = `services.deps()`（manifest inject 声明集 + required / optional / available）；未声明 inject 的调用 = trap（S3 响亮 × [wit-abi](wit-abi.md) D139）；方法集仍归契约，无契约服务的 missing method = guest catch-all 返回 `business`，宿主只在契约已知时短路 `service-method-missing`（[wit-abi](wit-abi.md) W3 D147）。
+- **W9 兑现注（2026-10-19）**：缺失三分 / 可见集 / 撞名 / 判环 / provide 履行对账 = [wit-abi](wit-abi.md) W9 D180–D185；S1「方法集入注册表」按「有契约服务 = 宿主从契约载入；contractless 无方法集」兑现，提供方不注册方法集（W9 D183）；S2 原子注册、S3 optional 重启、S4 恢复路径不变。
 
 v1 简化：inject 由 manifest 固定，entry 层不覆盖（Cordis 两处可写，我们一处）；同插件多实例的 inject 分化见用户再加。
 
