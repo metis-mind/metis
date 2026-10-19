@@ -1,7 +1,8 @@
 # Luau 工具链验证 spike（2026-10-10）
 
-> 性质：point-in-time 实测报告——为 `../design/luau-abi.md` A10（工具形态与 ABI 版本纪律）的五个验证项跑的事实测试，作该章实测 SSOT 引用。原始测试文件与完整输出在 `scratch/a10-spike/`（gitignored 一次性工程），本报告收录全部结论性数据。
-> 修正纪律：本报告结论为拍摄时点事实；后续工具链版本行为变化以 addendum 追加，不改写本节结论。
+> 状态：📦 已归档（2026-10-20；归档原因 = Luau 载体已由 [ADR-0034](../decisions/0034-wasm-first-carrier.md) wasm-first 转向取代；A 系列机制存亡见 [wit-abi](../design/wit-abi.md) W10.9，本报告无存活内容承接；消费者 [luau-abi](../design/luau-abi.md) 已于 2026-10-15 归档。默认不读，考古除外）。
+> 性质（归档前）：point-in-time 实测报告——为 `../design/luau-abi.md` A10（工具形态与 ABI 版本纪律）的五个验证项跑的事实测试，作该章实测 SSOT 引用。原始测试文件与完整输出在 `scratch/a10-spike/`（gitignored 一次性工程），本报告收录全部结论性数据。
+> 修正纪律：本报告结论为拍摄时点事实；后续工具链版本行为变化以 addendum 追加，不改写本节结论（归档后不再追加）。
 
 ## 环境
 

@@ -110,7 +110,7 @@ graph TD
 - **global 核心数据根可达性复审**（self-review 提出）：若收紧，改 luau-abi §A3.7 一行。
 - **秘密引用限审批档收紧裁量**（D67 明记代价；维护者裁量未做）。
 - **org 级「允许 Actions 开 PR」开关**：org Settings → Actions → General → Workflow permissions 勾开（repo 级随后同开），或 `gh auth refresh -h github.com -s admin:org` 后走 API；未开前 flake-update / toolchain-update 周更在开 PR 一步 403，其余 CI 不受影响。
-- **2026-10-20 深巡检**（doc-lifecycle §5；结构闸绿 / freshness 无过期 / 无 TODO 滞留）：维护者已拍板按 §7 独立 change 执行（2026-10-20）——① T13 压缩 = 已完成（本批）；② `wit-abi.md` 十章 A 系列考古清单 + 联动登记汇总 = 519 行（全文 22%）压为附录/指针，保留 W4.6（ADR-0035 / journal 引用）与扩展位 SSOT 指针；③ `seam-capabilities.md` §6.1 / `plugin-sdk.md` 联动汇总重复 W 章决策，候选改为指针；④ `luau-toolchain-spike.md` 消费者已归档（`luau-abi` / ADR-0026 superseded），候选原地归档 + 地图 `archived` 标注；⑤ T10.1–T10.7 / T10.9 / T10.11–T10.13 共 11 个站行仍以归档 `luau-abi` 为锚之一，候选重指 `wit-abi` W 章；本条与「global 核心数据根可达性复审」的 `luau-abi §A3.7` 指针同批处置。
+- **2026-10-20 深巡检**（doc-lifecycle §5；结构闸绿 / freshness 无过期 / 无 TODO 滞留）：维护者已拍板按 §7 独立 change 执行（2026-10-20）——① T13 压缩 = 已完成（本批）；② `wit-abi.md` 十章 A 系列考古清单 + 联动登记汇总 = 519 行（全文 22%）压为附录/指针，保留 W4.6（ADR-0035 / journal 引用）与扩展位 SSOT 指针；③ `seam-capabilities.md` §6.1 / `plugin-sdk.md` 联动汇总重复 W 章决策，候选改为指针；④ `luau-toolchain-spike.md` = 已完成（本 change：原地归档 + 地图 `archived` 标注）；⑤ T10.1–T10.7 / T10.9 / T10.11–T10.13 共 11 个站行仍以归档 `luau-abi` 为锚之一，候选重指 `wit-abi` W 章；本条与「global 核心数据根可达性复审」的 `luau-abi §A3.7` 指针同批处置。
 
 各类**扩展位/复审触发器**均已在对应 ADR/设计文档内登记（SSOT 原位不动，不迁）。
 
