@@ -1,6 +1,6 @@
 # Metis — WIT ABI 设计（living doc）
 
-> 状态：living design doc——2026-10-15 开章（[ADR-0034](../decisions/0034-wasm-first-carrier.md) wasm-first 转向同批）。W 系列章节随设计批逐章收官，章末联动登记汇总惯例同前。各章状态见目录表。
+> 状态：living design doc——2026-10-15 开章（[ADR-0034](../decisions/0034-wasm-first-carrier.md) wasm-first 转向同批）。W 系列章节随设计批逐章收官；章末联动表已压缩为指针 + 文末附录（2026-10-20）。各章状态见目录表。
 > 前提：插件唯一载体 = wasm 组件（[ADR-0034](../decisions/0034-wasm-first-carrier.md)）；接缝能力集 = [seam-capabilities](seam-capabilities.md)；遏制四约束 = [ADR-0005](../decisions/0005-vm-topology.md)；边界拷贝语义四层 = [wasm-research](../research/wasm-research.md) 补遗 5 §5.4。
 > 拍板继承：接口数据三分法 = §W1.3 / §W6 / §W7；E3 并发投递 = §W4；E4 fs = §W2.5–W2.6 + [ADR-0039](../decisions/0039-fs-capability-two-tier.md)；议题背景 = [wasm-first-design-review](../research/wasm-first-design-review.md) §6/§7；细则 = [ADR-0034](../decisions/0034-wasm-first-carrier.md) 及其后续 0035–0044 + 本文对应章。
 > Last reviewed: 2026-10
@@ -22,18 +22,19 @@
 
 ## 章节目录（W 系列，随设计批逐章开章）
 
-| 章  | 题                                                                                                                                | 前身（A 系列 = 语义平移源） | 状态                       |
-| --- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | -------------------------- |
-| W1  | 插件包形态与入口契约（包布局 / world 定义 / 生命周期导出）                                                                        | A1                          | ✅ 2026-10-18（D116–D124） |
-| W2  | manifest 格式                                                                                                                     | A2                          | ✅ 2026-10-19（D125–D134） |
-| W3  | ctx 形态：WIT import 接口集与 SDK 映射（作者不见 WASI/WIT = ADR-0034 §4）                                                         | A3                          | ✅ 2026-10-19（D142–D154） |
-| W4  | async 与交错语义（组件模型 async 映射；S1/S2 spike 双 PASS 托底 = 补遗 6/7）                                                      | A4                          | ✅ 2026-10-17              |
-| W5  | 错误与 result 习语（`result<T,E>` 原生）                                                                                          | A5                          | ✅ 2026-10-19（D136–D141） |
-| W6  | 边界转换：canonical ABI / 递归 Value 线编码（TLV 主线化 = E1 选项① 拍板）/ resource 句柄族（blob / byte-stream / 双车道 payload） | A6                          | ✅ 2026-10-19（D155–D162） |
-| W7  | 契约与类型来源（① 平台封闭面 = WIT 富类型原生；A7 半消融 = E5 拍板：瘦身形状 DSL 继承 Value 形状面）                              | A7                          | ✅ 2026-10-19（D163–D172） |
-| W8  | 事件静态声明（扁平名 + `internal/` 保留；声明 = 审批面；`on-event` 导出）                                                         | A8                          | ✅ 2026-10-19（D173–D179） |
-| W9  | deps/provide 与能力门（进口对账机械化）                                                                                           | A9                          | ✅ 2026-10-19（D180–D185） |
-| W10 | 工具形态与 ABI 版本纪律（WIT package version 承接 abi_rev）                                                                       | A10                         | ✅ 2026-10-19（D186–D193） |
+| 章   | 题                                                                                                                                | 前身（A 系列 = 语义平移源） | 状态                       |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | -------------------------- |
+| W1   | 插件包形态与入口契约（包布局 / world 定义 / 生命周期导出）                                                                        | A1                          | ✅ 2026-10-18（D116–D124） |
+| W2   | manifest 格式                                                                                                                     | A2                          | ✅ 2026-10-19（D125–D134） |
+| W3   | ctx 形态：WIT import 接口集与 SDK 映射（作者不见 WASI/WIT = ADR-0034 §4）                                                         | A3                          | ✅ 2026-10-19（D142–D154） |
+| W4   | async 与交错语义（组件模型 async 映射；S1/S2 spike 双 PASS 托底 = 补遗 6/7）                                                      | A4                          | ✅ 2026-10-17              |
+| W5   | 错误与 result 习语（`result<T,E>` 原生）                                                                                          | A5                          | ✅ 2026-10-19（D136–D141） |
+| W6   | 边界转换：canonical ABI / 递归 Value 线编码（TLV 主线化 = E1 选项① 拍板）/ resource 句柄族（blob / byte-stream / 双车道 payload） | A6                          | ✅ 2026-10-19（D155–D162） |
+| W7   | 契约与类型来源（① 平台封闭面 = WIT 富类型原生；A7 半消融 = E5 拍板：瘦身形状 DSL 继承 Value 形状面）                              | A7                          | ✅ 2026-10-19（D163–D172） |
+| W8   | 事件静态声明（扁平名 + `internal/` 保留；声明 = 审批面；`on-event` 导出）                                                         | A8                          | ✅ 2026-10-19（D173–D179） |
+| W9   | deps/provide 与能力门（进口对账机械化）                                                                                           | A9                          | ✅ 2026-10-19（D180–D185） |
+| W10  | 工具形态与 ABI 版本纪律（WIT package version 承接 abi_rev）                                                                       | A10                         | ✅ 2026-10-19（D186–D193） |
+| 附录 | 实现期配置与扩展位索引                                                                                                            | —                           | ✅ 2026-10-20              |
 
 ---
 
@@ -174,44 +175,13 @@ world plugin {
 
 ### W1.10 A1 机制消亡清单（考古索引）
 
-每条一句死因；完整考古见 git 史与归档设计文档。
-
-| 机制                                                           | 死因                                                                                                                                       |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `plugin()` 糖 / 入口返回 table / 裸函数报错（A1.1）            | 入口形状 = 固定 world 的导出集；作者面糖归 SDK 宏（S1），ABI 无入口返回物                                                                  |
-| `setup` 返回 disposer 函数（A1.2）                             | 跨组件边界不能传闭包；手动清理独立为 `dispose` 导出（D118/D121）                                                                           |
-| table 字段集封闭 / `on_config` 作可选字段（A1.1）              | world 导出集封闭；`on-config` 是恒在导出，可选性 = SDK 默认实现；元数据唯一去处 = manifest                                                 |
-| 单文件形态与成长路径搬家（A1.3）                               | 目录单形态已由 D35 定；成长路径 = 加 manifest，组件文件不动（D116/D123）                                                                   |
-| require 体系 / `.luaurc` / 入口模块缓存 / 循环 require（A1.5） | guest 是编译产物，模块解析在编译期完成；机制无对应物（已落地 = [ADR-0038](../decisions/0038-module-system-require-supersede.md)，W2 D134） |
-| 加载期「编译入口 chunk」步骤与字节码缓存（A1.5）               | 组件编译 / 实例化由 wasmtime 承担（`.cwasm` 缓存归 T10.10）                                                                                |
-| `setup(ctx, config)` 的 ABI ctx 参数（A1.1）                   | imports 即 ctx（W3）；ABI 不传能力表（D118）；作者面 `ctx` 句柄保留（SDK 合成）                                                            |
-| `ctx.on_cleanup(fn)` 注册式多清理扩展位（A1.2）                | guest 语言设施（Drop / 组合清理）自管；宿主效应账本仍在，只是不承载 guest 清理回调                                                         |
+A1 机制原貌见 [luau-abi](luau-abi.md) §A1；逐项处置见本文各 W 章、[ADR-0034](../decisions/0034-wasm-first-carrier.md) 及其后续 0035–0044、git 史。
 
 **语义平移保留**：A1.4 的「setup 里只能等完成不依赖自身邮箱的调用」红线不是消亡项，只是表述换载体（W1.4 D119）。
 
 ### W1.11 联动登记汇总（章末）
 
-| 去向           | 内容                                                                                                                                                                                                             |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W2（T13-i）    | **已兑现（2026-10-19）**：manifest 字段全集与形状 = D125–D133；模块系统消亡 = D134/ADR-0038；fs 两档 = D129/D130/ADR-0039                                                                                        |
-| W3（T13-j）    | **已兑现（2026-10-19）**：import 集 = W3 D142–D154（W6 增补 `blobs` / `streams` / `payloads`）；作者面 `Ctx` / 句柄 / RAII；`on-call` / `on-timer` 导出；fs 两档 / timer / 投递纪律 / 能力门；world 导出集补两款 |
-| W6（T13-l）    | **已兑现（2026-10-19）= W6 D155–D162**：`on-call` args / 返回 = `payload`（value / blob）；world import 集 += `blobs` / `streams` / `payloads`；`setup` / `on-config` config 保持 TLV                            |
-| W5（T13-k）    | **已兑现（2026-10-19）**：`error` 类型 = W5 D136–D141；生命周期返回的 `result` 形状确认（D118）                                                                                                                  |
-| W7（T13-m）    | **已兑现（2026-10-19）= W7 D163–D172**：随包契约 `lib/`（包内容区的一部分，D35）；W1 只定 `manifest.yml` + 组件文件 + `lib/` 的包布局边界                                                                        |
-| W8（T13-n）    | **已兑现（2026-10-19）= W8 D173–D179**：`on-event` 定形并进入 required 导出集；事件名 / `internal/` / 声明语义 / emit 校验 / 形状生命周期由 W8 承接（D118 的 additive 增补完成）                                 |
-| W9（T13-o）    | **已兑现（2026-10-19）= W9 D180–D185**：安装期结构事实（导出集 / import 词汇表 / 组件文件）与启用期五格分界；W1.1 / W1.3 的「安装错误」按「检出并记录」读（W9.1）                                                |
-| W10（T13-p）   | **已兑现（2026-10-19）= W10 D186–D193**：ABI 面清单；版本载体与三合一接受；bump 纪律；快照布局与多版本共存；首个冻结快照；版本面独立；钉版纪律；工具面判定落点                                                   |
-| T10.10         | 实例化 / Store 限额 / fuel / epoch；加载预算与 dispose 预算的数值；`.cwasm` 缓存                                                                                                                                 |
-| T10.12         | 安装期 start / world 校验；包内容复制与未知文件处置；卸载                                                                                                                                                        |
-| T10.14         | SDK 默认实现（`setup` = `Ok(())`、`on-config` = `Ok(false)`、`dispose` = `Ok(())`、`on-event` = `Ok(None)`）；作者面签名；`Ctx` 合成                                                                             |
-| T10.15         | 可部署包布局与组件文件名（D116）；预检 start 拒绝（D122）；零仪式源码合成 manifest                                                                                                                               |
-| config-format  | D42 `on_config` 的 ABI 签名已兑现（D118）；D29 `plugin.wasm` 占位已兑现（D116）；D35 零仪式 ABI 面（D123）                                                                                                       |
-| build-pipeline | D106/D108 的组件文件名 / 包布局指针已兑现（D116）；D108 start 政策已确认（D122）                                                                                                                                 |
-| instance-model | D63 零仪式无 mount 资格（D123 原位）                                                                                                                                                                             |
-| plugin-sdk     | S2 WIT 目录确认（D117）；S1 生命周期钩子形态（D118）；`on_config` 归 W1                                                                                                                                          |
-| ADR-0005       | Consequences 成本账局部取代（[ADR-0037](../decisions/0037-component-instance-cost-ledger.md)，D124）                                                                                                             |
-| 实现期配置     | 加载总预算（W1.5）；`dispose` 墙钟预算（W1.6）                                                                                                                                                                   |
-| 扩展位         | 编译期组合 world（S6 登记，W2 已落地后维持不启用）；多组件包（W1/W2 包布局面）；多 ABI 版本共存（W10 D189 已兑现）                                                                                               |
+本章联动表已压缩（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）；已兑现项见被链文档 / git 史；T10 义务见 [台账](../backlog.md) T10 站表；实现期配置 / 扩展位见文末附录。
 
 ---
 
@@ -268,7 +238,7 @@ world plugin {
 - **`name` 不立**：身份恒 = 目录名（config-format D31；W1.1 D116）；crate 名只决定构建输出目录 / 安装目录名。
 - 不在表内的顶层字段 = 未知字段响亮；嵌套条目同理。新增字段 = WIT package version additive（W10 D188），不另立 manifest 版本机制。
 - 零仪式 = 无 manifest，ABI 面同 W1.8 D123；空 manifest 全缺省合法；成长路径 = 加 `manifest.yml`，组件文件不动。
-- 有意不收：marketplace 元数据（authors / license / repository）归任务 9；`runtime` / `min_core` / `schedule` 不立（W2.11）；自由 `build.command` = build-pipeline D108 扩展位，不启用。
+- 有意不收：marketplace 元数据（authors / license / repository）归任务 9；`runtime` / `min_core` / `schedule` 不立（W2.8 / config-format D51；`runtime` = ADR-0034）；自由 `build.command` = build-pipeline D108 扩展位，不启用。
 
 ### W2.3 D127 `component` 字段
 
@@ -392,53 +362,17 @@ events:
 - 存活：跨插件运行期组合只走 inject / events；同一插件内部由 guest 编译期模块系统承担；契约变更级联 = 数据驱动反向索引（config-format D43 / W7）。
 - `lib/` = 契约包（`contract.yml` + 文档），扫描进契约命名空间，不被 import 为代码（W1.1 D116；config-format D35；W7 D164 修正载体措辞）。
 - [ADR-0019](../decisions/0019-crate-layout.md) C3 的 `@lib` 别名与 lib 两层机制同属死亡，正式 supersede 归 W7（T13-m）。
-- W1.10 的 A1.5 考古行更新为「已落地 = ADR-0038」；`luau-abi` 归档正文不动。
+- 模块系统消亡的处置 = [ADR-0038](../decisions/0038-module-system-require-supersede.md)（原 A1.5；原貌见 [luau-abi](luau-abi.md) §A1.5）；`luau-abi` 归档正文不动。
 
 ### W2.11 A2 机制消亡清单（考古索引）
 
-每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与上述 ADR。
-
-| 机制                                   | 死因                                                                                                                                      |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `name` 字段                            | 身份恒 = 目录名（config-format D31；W1.1 D116）；manifest 不承载身份                                                                      |
-| `entry` 字段                           | 组件文件名由 `component` 承载（W1.1 D116；W2.3 D127）；无运行期模块入口                                                                   |
-| `boxes` 字段与双向对账                 | 盒概念消解进插件本体（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）                                                            |
-| `abi_rev` 字段                         | WIT package version 承接（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §3）；字段 = `abi`（W2.8 D132）                             |
-| `provides.methods` 列表                | 方法集住契约（W7）；固定 world 经 `on-call` 分发（W3）                                                                                    |
-| 旧 `fs` scope map（两档 → 三层命名根） | 现形态 = private 隐式 + `fs: read/write` 标量（global）；命名根撤回（W2.5/W2.6；[ADR-0039](../decisions/0039-fs-capability-two-tier.md)） |
-| `sqlite` 能力 / `data/db.sqlite`       | 宿主代持 DB 无独立价值；插件自带 guest DB crate，库文件住 private fs，schema / 迁移自管（W2.5 D129；ADR-0039）                            |
-| `volatile` 词汇                        | config-format D36/D37 退役；热应用 = `on-config` 返回值                                                                                   |
-| `runtime` 字段                         | 从未立；wasm-first 后无组成可声明（ADR-0034）                                                                                             |
-| `min_core` 字段                        | 不立；`abi` + 未知字段「core 版本过旧？」提示兜底（W2.8 D132）                                                                            |
-| 一等 `schedule` / cron 字段            | 维持不立（config-format D51）；周期意图 = config 键约定                                                                                   |
-| require / `.luaurc` / `@lib` / 边账本  | ADR-0003 整篇 supersede = [ADR-0038](../decisions/0038-module-system-require-supersede.md)                                                |
+A2 机制原貌见 [luau-abi](luau-abi.md) §A2；逐项处置见本文各 W 章、[ADR-0034](../decisions/0034-wasm-first-carrier.md) 及其后续 0035–0044、git 史。
 
 **语义平移保留**：插件的自述与意图（description / version / config schema / capabilities / provides / inject / events）仍唯一住 manifest；配置值仍唯一住 `config.yml`；身份仍 = 目录名；声明 ≠ 观察仍成立（W2.9 D133）。
 
 ### W2.12 联动登记汇总（章末）
 
-| 去向            | 内容                                                                                                                                                                                                                                 |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| W1（T13-h）     | `component` 缺省 `plugin.wasm`（D116）；零仪式 ABI 面（D123）措辞按 ADR-0039 更新：private fs 隐式，效应能力仍 fail-closed                                                                                                           |
-| W3（T13-j）     | ctx.fs = private（隐式读写）/ global（`fs: read/write` 声明）；无命名根；global 能力门在运行期强制；DB = guest crate + private fs（无宿主 sqlite）                                                                                   |
-| W5（T13-k）     | **已兑现（2026-10-19）**：生命周期返回的 `error` 类型 = W5 D136；manifest 校验错误是宿主侧错误，不经 guest 错误通道（D133）                                                                                                          |
-| W7（T13-m）     | **已兑现（2026-10-19）= W7 D163–D172**：`type:` 表达式语法与词汇（D166）；契约包格式 / 三来源合并（D164/D165）；`provides.contract` 与 `@N`（D165）；作者自定义服务 / 事件 schema 的住处（D167）；作者类型由 `types!()` 生成（D170） |
-| W8（T13-n）     | **已兑现（2026-10-19）= W8 D173–D179**：事件名语义 / `internal/` 规则 / 声明强制程度 / 形状总表 / emit 校验 / `on-event`；manifest 只列名字，形状住契约                                                                              |
-| W9（T13-o）     | **已兑现（2026-10-19）= W9 D180–D185**：inject / provides / events 对账形态；能力门（含 `mount` 例外）；import 清单 ⊆ 宿主词汇表；方法集对账消亡；失败聚合；`metis check` 范围                                                       |
-| W10（T13-p）    | **已兑现（2026-10-19）= W10 D186–D193**：`abi` 的精确声明与三合一接受（D187）；manifest 字段集 / 能力词汇演进 = D188；manifest 版本机制仍不立                                                                                        |
-| config-format   | D36 配置管线按 `config` schema 消费；共享变量 = `{ $value: "name" }`（含 secret；C6.4 D135 / [ADR-0040](../decisions/0040-config-shared-variables.md)）；fs 两档（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）          |
-| build-pipeline  | D108 合成最小 manifest = `version` + `abi`（无 `name`）；脚手架按 W2 字段集生成；组件文件名 = D116                                                                                                                                   |
-| plugin-sdk      | S6 能力白名单 = manifest `capabilities` 声明源；编译期组合 world 维持扩展位（W2 已落地后仍不启用）                                                                                                                                   |
-| instance-model  | `mount: true` 能力键与 `ctx.mount` 方法族（ADR-0028 批次 #1）                                                                                                                                                                        |
-| ADR-0003        | 整篇 supersede = [ADR-0038](../decisions/0038-module-system-require-supersede.md)（D134）                                                                                                                                            |
-| ADR-0036        | Decision 第 2 条「命名根」局部 supersede = [ADR-0039](../decisions/0039-fs-capability-two-tier.md)（D130）                                                                                                                           |
-| ADR-0025 / 0027 | Status 行记：ADR-0025 §5 fs 通道条两档 → ADR-0036 三层 → ADR-0039 两档（private 隐式 / `fs` 标量 global），sqlite 项撤回；ADR-0027 D44 与 C1.1 `data/db.sqlite` 行由 ADR-0039 定型/失效                                              |
-| ADR-0040        | 配置共享变量（`values.yml` + `secrets.yml`，`{ $value }` 含 secret）= C6.4 D135；W2 D128 引用语法已同步                                                                                                                              |
-| T10.12          | 安装期 manifest 解析 / 未知字段 / 类型校验；world 与 start 校验；包内容复制                                                                                                                                                          |
-| T10.14          | 作者面 trait / 宏；`Value` 手动面；能力声明消费                                                                                                                                                                                      |
-| T10.15          | 脚手架 manifest 骨架；合成最小 manifest；构建期 manifest 校验                                                                                                                                                                        |
-| 实现期清单      | manifest 校验器（三面同一实现）；JSON Schema 工件生成；部署索引解析登记；共享变量解析随 T10.8（C6.4 D135）                                                                                                                           |
-| 扩展位          | 嵌套字段 `secret` / 嵌套 `$value` 引用；编译期组合 world；自由 `build.command`；marketplace 元数据                                                                                                                                   |
+本章联动表已压缩（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）；已兑现项见被链文档 / git 史；T10 义务见 [台账](../backlog.md) T10 站表；实现期配置 / 扩展位见文末附录。
 
 ---
 
@@ -800,65 +734,13 @@ interface instance {
 
 ### W3.14 A3 机制消亡清单（考古索引）
 
-每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 ADR-0026（已 superseded）。
-
-| 机制                                              | 死因                                                                         |
-| ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| ctx = 宿主构建的 frozen table / 递归只读 / 无元表 | wasm import 集 + Rust 类型；容器不再由宿主装配                               |
-| userdata 淘汰 / 烘焙方法集                        | WIT resource（process / mount）+ 生成绑定；无运行期方法表                    |
-| `ctx.on` 返回 Luau disposer 函数                  | `Listener` RAII + 宿主 listener 表                                           |
-| `deps` 第三参数                                   | `services.deps` 目录 + `Ctx::service`                                        |
-| `ctx.provide(key, 方法表)`                        | `provide(key)` + `on-call` catch-all；方法集归契约                           |
-| `ctx.exclusive` / `ctx.fanout`                    | guest async / SDK async mutex（W4.2）                                        |
-| `ctx.box` / `box(name)`                           | 盒概念消解（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）         |
-| `ctx.sql` / 私有 db                               | sqlite 撤回（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）       |
-| `ctx.workspace` / 三 scope                        | fs 两档（ADR-0039）                                                          |
-| `ctx.fs` / `ctx.global` 的 Luau 同步 / 两跳形态   | 统一 async `fs` / `ctx.plugin_fs()`（W3.3）                                  |
-| `ctx.http.request` opts table                     | WIT request record（W3.7）                                                   |
-| timer after / every 的宿主调 Luau 闭包            | `on-timer` export + `TimerHandle`（W3.4）                                    |
-| process 冻结表句柄                                | `process-handle` resource（W3.8）                                            |
-| `ctx.mount` 表句柄                                | `mount-handle` resource（W3.9）                                              |
-| int64 / buffer / UTF-8 裂缝                       | WIT s64 / `list<u8>` / `string`                                              |
-| require / `.luaurc` / `@lib`                      | [ADR-0038](../decisions/0038-module-system-require-supersede.md)             |
-| crypto 内建                                       | [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)（guest crate） |
-| 「方法名写错 = 字段不存在当场炸」                 | Rust 编译器 + 运行期 trap                                                    |
-| optional dependency 字段缺席                      | `Option<Service>`                                                            |
-| `ctx.once`                                        | 维持扩展位（组合写法）                                                       |
-| `plugin()` 糖 / 入口 table                        | W1（固定 world + SDK 宏）                                                    |
-| `ctx.on_config` 可选字段                          | W1 `on-config` 导出 + trait 默认实现                                         |
+A3 机制原貌见 [luau-abi](luau-abi.md) §A3；逐项处置见本文各 W 章、[ADR-0034](../decisions/0034-wasm-first-carrier.md) 及其后续 0035–0044、git 史。
 
 **语义平移保留**：编排面扁平 / 效应面命名空间化（A3.2）；接口形状恒定、失败指路 manifest（A3.2 出现规则）；provide setup-only 与激活点原子注册（S2）；`Result` + kind 分支（W5）；timer 两条唤醒路径（sleep 直唤醒 / tick 投递，A3.6）；fs 两档（ADR-0039）；http 政策（seam §5.2）；process 账本与进程组杀（A3.10）；mount 启用管线（D63）；监听快照 / 注册序 / 逐项活性检查（ADR-0014）。
 
 ### W3.15 联动登记汇总（章末）
 
-| 去向              | 内容                                                                                                                                                                                                                                                                                                                                |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W1（T13-h）       | world 导出集补 `on-call` / `on-timer`（W1.3 签名草图同批更新；W8 D177 补 `on-event`）；生命周期三导出不变；`on-call` args / 返回 = `payload`（W6 D160）                                                                                                                                                                             |
-| W2（T13-i）       | 消费 `capabilities.fs/http/process/mount`、`provides/inject/events`、`abi`；无 manifest 改动                                                                                                                                                                                                                                        |
-| W4（T13-c）       | tick 投递走 W4.3 闸门；`emit` await 入队；投递不静默丢弃（W3.11）；W4.3「tick = 普通邮箱消息」增补为「每 timer pending + 合并计数」                                                                                                                                                                                                 |
-| W5（T13-k）       | **已兑现（2026-10-19）**：所有 fallible import = `result<T, error>`；timer 无 Err 面；`fs-invalid-utf8` 保留（ABI bytes-only；SDK `read_text` 产生）；服务调用四态 + 服务路径 core 两格；mount 路径 `core-mount-failed`（mount 启用失败）；未声明能力 = trap；crypto 无错误面（ADR-0041）                                           |
-| W6（T13-l）       | **已兑现（2026-10-19）= W6 D155–D162**：TLV canonical 线格式与拷贝预算；大负载双车道 = `blob`（不可变 / 可跨实例只读）+ `byte-reader` / `byte-writer`（per-instance）；`fs` += `open-read` / `open-write`，`http` += `download`；process chunk 保持 `list<u8>`（不改写）；`payload` 变体（value / blob）；resource 生命周期与失败面 |
-| W7（T13-m）       | **已兑现（2026-10-19）= W7 D163–D172**：服务方法集 = 契约数据（D167）；强类型生成 = `types!()`（D170）；无契约服务的 method-missing 退化保留（D167 / D169）                                                                                                                                                                         |
-| W8（T13-n）       | **已兑现（2026-10-19）= W8 D173–D179**：`on-event(listener-id, name, payload: payload)` 定形并进入 required 导出集；事件名语义 / `internal/` 规则 / 声明面 / emit 校验 / 形状生命周期；`emit` / `on-event` 的 payload = W6 双车道变体                                                                                               |
-| W9（T13-o）       | **已兑现（2026-10-19）= W9 D180–D185**：import 清单 ⊆ 词汇表（含 `blobs` / `streams` / `payloads`）；provide / inject / events 对账；能力门判定（含 mount 例外）；blob 无门 / streams 随属主；WASI 0.3 基线 = clocks + random + filesystem（async）+ std 拖带集（逐条以宿主注册集为准）                                             |
-| W10（T13-p）      | **已兑现（2026-10-19）= W10 D186–D193**：package version 与首个冻结快照（D187 / D190）；import / export 增补纪律（D188）；多版本共存与逐快照词汇表（D189）                                                                                                                                                                          |
-| T10.10            | 宿主 import 注册；wasmtime-wasi 0.3；preopen `/`；`on-call` / `on-timer` / `on-event` 导出调用；blob / reader / writer 资源表与跨 Store 重物化                                                                                                                                                                                      |
-| T10.11            | fs（global host-mediated / private WASI 0.3 async filesystem）/ http / process / timer 实现；crypto 撤回（ADR-0041）；预算 / TOCTOU 硬化；random = wasi:random；`open-read` / `open-write` / `download`；blob 创建 / collect                                                                                                        |
-| T10.12            | 安装期 world 导出校验补 `on-call` / `on-timer` / `on-event`；preopen 授予                                                                                                                                                                                                                                                           |
-| T10.13            | TLV 编解码（payload value 车道、config、mount 声明、business data）；blob / stream 不进 TLV；`ValueRef` / `encoded_len` + `encode_into`；canonical 编码与版本字段                                                                                                                                                                   |
-| T10.14            | `Ctx` / 句柄 / RAII / `metis_plugin::raw`；默认钩子（含 `on_event = Ok(None)`）；`Payload` / `Blob` / `ByteReader` / `ByteWriter` / `Value::Bytes`；WASI 0.3 错误码 → fs kind 映射；CSPRNG = guest crate（`getrandom` / `rand`）；crypto 便利 re-export = feature 扩展位（v1 不做）                                                 |
-| T10.15            | 脚手架不含 crypto；预检 world 导出集与 `wasm32-wasip3` target；`metis check` 的 import 提示                                                                                                                                                                                                                                         |
-| seam-capabilities | §2.1 纯算件判据、§4.2 crypto 撤回、§5.2 fs 两档作者面、§5.3 能力映射、§6.1 W3 行兑现                                                                                                                                                                                                                                                |
-| service-registry  | per-call deadline 作者面 = `call(..., timeout-ms)`；provide 观测保留 S3 对账；deps 目录 = inject 声明集                                                                                                                                                                                                                             |
-| context-events    | 监听登记住宿主 + `Listener` RAII；`emit` await 入队；投递不丢弃                                                                                                                                                                                                                                                                     |
-| instance-model    | `mount` / `unmount` 句柄形态 = `mount-handle` resource；Drop = best-effort 异步 unmount（host log）；`detach()` 放弃 Drop 语义；`core-mount-failed` 映射                                                                                                                                                                            |
-| plugin-sdk        | S6 三原则落地（生命周期实体 = resource、无状态 = ctx 方法、raw escape hatch）；`Ctx` / 句柄映射；crypto = 作者自加 crate                                                                                                                                                                                                            |
-| journal           | 不新增 kind；卸载丢弃可见 = `unload_gate_closed` / `unload_killed`；`process_spawn` / `process_exit` 不变                                                                                                                                                                                                                           |
-| ADR-0041          | crypto 能力撤回（局部 supersede ADR-0025 §4 crypto 项 / ADR-0024 §4 crypto 行结论面）                                                                                                                                                                                                                                               |
-| wasm-research     | 补遗 8：crypto 内建件撤回（ADR-0041）；补遗 9：目标 WASI 0.3（private fs async 面）；技术事实保留                                                                                                                                                                                                                                   |
-| design-review     | 补遗 1：crypto 撤回（ADR-0041）                                                                                                                                                                                                                                                                                                     |
-| 实现期配置        | timer `every` 最小间隔；http 超时 / 预算；fs 读写预算；process 输出预算；message 长度上限；在飞任务预算；private fs 读预算；TLV 条目 / 深度 / 字节；blob 单大小 / 总量；reader / writer 块上限                                                                                                                                      |
-| 扩展位            | 强类型服务方法 / 事件方法（S7）；http 流式上传；fs 流式与 walk / glob（guest 组合）；`ctx.once`；WIT resource 化 listener / timer；instance list / describe；crypto 便利 re-export（feature）；WASI `stream<T>` 采用面；blob 写入型 / 可变跨实例；per-read timeout                                                                  |
+本章联动表已压缩（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）；已兑现项见被链文档 / git 史；T10 义务见 [台账](../backlog.md) T10 站表；实现期配置 / 扩展位见文末附录。
 
 ---
 
@@ -897,7 +779,7 @@ interface instance {
 
 ### W4.2 D94 宿主零同步原语（2026-10-17 定案，E3 拍板吸收）
 
-**D94 定案：宿主不提供任何同步原语。** fan-out = guest 异步设施原生（`futures::join!` 一族；SDK 呈现形态归 T13-d/T10.14），A4 的 `ctx.fanout` ABI 原语消亡——宿主无观测点（journal `fanout_cancelled` 挂载点随之消解，处置登记 = W4.6/W4.7）。互斥 = SDK async mutex 助手（同名互斥、含挂起期间占用的语义在 guest 内兑现），A4 的 `ctx.exclusive` ABI 原语消亡。原子变量无场景 = E3 澄清（单线程执行器，await 间天然原子）。
+**D94 定案：宿主不提供任何同步原语。** fan-out = guest 异步设施原生（`futures::join!` 一族；SDK 呈现形态归 T13-d/T10.14），A4 的 `ctx.fanout` ABI 原语消亡——宿主无观测点（journal `fanout_cancelled` 挂载点随之消解，处置登记 = W4.6 / 文末附录）。互斥 = SDK async mutex 助手（同名互斥、含挂起期间占用的语义在 guest 内兑现），A4 的 `ctx.exclusive` ABI 原语消亡。原子变量无场景 = E3 澄清（单线程执行器，await 间天然原子）。
 
 - **D1.2 三规则重估面归 T10.14**（E3 拍板登记原位）：不嵌套 / 自家人 / 强放——可由 SDK 类型系统表达的部分归类型，余者归 SDK 文档纪律；宿主侧名字注册表与名字条目回收机器整体消亡。
 - **全局互斥不立 = A4 三理由原样平移**：占用中一次普通服务调用即可成圈（死锁从罕见变常态）；manifest 看不见的隐式跨插件契约（与 [ADR-0018](../decisions/0018-service-registry.md) 的 manifest-first 纪律冲突：跨插件关系以 manifest 声明为准）；宿主机制厚度。跨插件协调三归宿不变：属主插件 + 服务调用（manifest 可见可审批）/ 宿主侧配置化策略 / 分布式现实（seam 既定立场：两插件写同一文件靠协议不靠互斥）；原子方法族 = seam 能力面原位（首件 = fs `append`，形态归 W3/W9 章与 T10.11 能力站）。
@@ -909,7 +791,7 @@ interface instance {
 **D95 定案：投递 = 向实例发起新 export 调用；邮箱 + 每实例在飞任务预算闸门；完成永不挡。**
 
 - **worker 语义**：worker 空闲取邮箱消息，经闸门接纳后投递，任务立即起跑；import 完成 = 唤醒源直接唤醒对应 guest 任务，不经邮箱、不经闸门。宿主侧没有「就绪恢复」调度对象——A4 单可调度队列 FIFO（D8.1）的问题形（恢复 vs 新消息的优先级之争、tie-break、两级队列）随载体整体消解；原被否项「完成优先」的饿死分析（流式长读插队致热更等待无界）随之失去对象。热更/卸载不进投递队列（关闸 = 停接纳，W4.5），等待硬上界结论由卸载时序兑现，不再由队列规范兑现。
-- **预算闸门（A4 D8.2 平移）**：预算只挡「邮箱消息 → 投递」的接纳——每实例在飞 async 任务数封顶（数值 = 实现期配置，登记 = W4.7）；预算满 = 新消息留邮箱，背压链 = 邮箱满 → 投递方背压/超时（[context-events](context-events.md) 既有政策）→ 服务调用方 deadline 收场（service-registry S5）。完成永不挡 → 在飞必然收敛 → 预算必然释放；超限政策 = 纯回压不立响亮档（A4 D10.2 拍板原位：回压把瞬态尖峰变成延迟，响亮把它变成用户可见错误——尖峰是常态，错误化 = 误伤）。
+- **预算闸门（A4 D8.2 平移）**：预算只挡「邮箱消息 → 投递」的接纳——每实例在飞 async 任务数封顶（数值 = 实现期配置，登记 = 文末附录）；预算满 = 新消息留邮箱，背压链 = 邮箱满 → 投递方背压/超时（[context-events](context-events.md) 既有政策）→ 服务调用方 deadline 收场（service-registry S5）。完成永不挡 → 在飞必然收敛 → 预算必然释放；超限政策 = 纯回压不立响亮档（A4 D10.2 拍板原位：回压把瞬态尖峰变成延迟，响亮把它变成用户可见错误——尖峰是常态，错误化 = 误伤）。
 - **ADR-0014 兼容注**：单派发者保序承诺（同一监听者收件序 = 派发入邮箱序）= 邮箱层性质，不受重入影响——承诺的是收件序，非处理完成序（A4 既有注平移）。
 - **timer 处置平移（A4 D1.4）**：tick 走同一闸门，但投递形态按 W3 D145 细化——每 timer 一个 pending 标记 + 合并计数（非重叠：上一个 handler 未完结时后续 tick 合并），`on-timer(id, coalesced)` 把合并次数交给作者；**邮箱满不丢、合并可见**。积压面 = 在飞任务数（稳态界 ≈ 到达率 × 平均延迟；每条在飞任务持 guest 栈与捕获态）；兜底 = `every` 最小间隔政策（seam §5.2）+ 写码期教具（W4.4 层二）。
 - **在飞即成本**：高频事件源回调写短；怕自撞 = SDK async mutex（A4「在飞协程」成本条的载体词平移）。
@@ -944,6 +826,8 @@ interface instance {
 
 ### W4.6 A4 机制消亡清单（考古索引）
 
+> 保留明细表：ADR-0035 与 [journal](journal.md) 引用本表的 `fanout_cancelled` 行；其余 A 系列章改为归档指针。
+
 每条一句死因；完整考古见 git 史与归档设计文档。
 
 | 机制                                                                        | 死因                                                                                                                                                                  |
@@ -959,22 +843,7 @@ interface instance {
 
 ### W4.7 联动登记汇总（章末）
 
-| 去向                 | 内容                                                                                                                                                                                                                                                       |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T10.2（fiber-core）  | 实现期配置原位存活（载体词已换）：每实例在飞 async 任务预算（W4.3）+ 优雅窗口与 drain 总预算数值（W4.5）；wait-for 图存活 = W4.4 层三（节点集收窄在案）                                                                                                    |
-| T10.4（事件派发）    | worker 投递/完成模型与闸门位置 = W4.3；ADR-0014 保序兼容注原位；D6 事件吞吐件不变；裸 yield 检测 D9.3 消亡在案（T10 方向变更注）                                                                                                                           |
-| T10.14（插件 SDK）   | exclusive = async mutex 助手 + D1.2 三规则重估面（W4.2）；fan-out 呈现形态（W4.2）；写码期教具三形状（W4.4 层二）；S2 papercuts 7–11 输入（[wasm-research](../research/wasm-research.md) 补遗 7），含 `exports: { default: async }` 绑定约束（papercut 7） |
-| W1 章（入口契约）    | `dispose` 调用位回填（W1.6 D121）；卸载五段 = 关闸 → 优雅窗口 → dispose → 实例即弃 → 宿主 drain                                                                                                                                                            |
-| W3 章（ctx 形态）    | 挂起点的作者面呈现（W4.1）；SDK async 映射输入（W4.1/W4.2）；补遗 6/7 papercuts 分流在案                                                                                                                                                                   |
-| W5 章（错误）        | **已兑现（2026-10-19）**：fail-fast 清单的错误面 = W5 D137/D139——wait-for 圈 = `core-deadlock`；卸载期新注册长寿账 = trap；`service-unavailable` 承接 D11.3                                                                                                |
-| W6 章（边界转换）    | **已兑现（2026-10-19）= W6 D155–D162**：拷贝下限与源快照必须先于挂起（W4.1）；流 `read()` 无界源 = `byte-reader`；不可转换值跨界 = TLV 边界错误；流式 / blob drain 强 close 接 W4.5 D11.2；per-read timeout 维持扩展位                                     |
-| journal.md           | `fanout_cancelled` 处置 = **已兑现 = [ADR-0035](../decisions/0035-journal-fanout-cancelled-supersede.md)**（2026-10-18）；`unload_gate_closed`/`unload_killed` 两族存活（W4.5 语义原位，条目措辞随实现期载体词）                                           |
-| 实现期配置           | 每实例在飞 async 任务预算（W4.3，超限 = 纯回压）；优雅窗口 + drain 总预算（W4.5）；host 侧事件在途投递界（A4 D10.2 原位存活）                                                                                                                              |
-| 扩展位               | exclusive 上报 wait-for 可见性（W4.2，触发器 = 首个死锁调试痛点）；原子方法族其余成员（A4 D1.8 平移，触发器 = 首个真实消费者）；per-read timeout 参数（W4.4 → W6 章面，触发器 = 真实需求）                                                                 |
-| seam-capabilities    | 旧 FAQ（引 `ctx.fanout`/`ctx.exclusive`）与旧「挂起点 = ctx 方法调用处」行 = 已消亡/重定义——**已清写 = T13-f**（2026-10-18）                                                                                                                               |
-| ADR-0011             | 「独立解释器状态」「interrupt 时间盒」两格载体面 partial supersede——**同批落地 = Status 行注**（2026-10-17）                                                                                                                                               |
-| context-events §0/§1 | worker 伪码、三层保险行与服务调用路径行清写——**已清写 = T13-c/T13-f**（2026-10-18）                                                                                                                                                                        |
-| Creator 文档         | 作者契约四条平移（协作式 / 挂起窗口 / 同步全显式 / 在飞即成本，W4.1）+「等的事重叠 = guest async 原生；算的事并行 = 多实例/外部服务」分工条                                                                                                                |
+本章联动表已压缩（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）；已兑现项见被链文档 / git 史；T10 义务见 [台账](../backlog.md) T10 站表；实现期配置 / 扩展位见文末附录。
 
 ---
 
@@ -1149,52 +1018,13 @@ interface errors {
 
 ### W5.7 A5 机制消亡清单（考古索引）
 
-每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 [ADR-0026](../decisions/0026-luau-abi.md)（已 superseded）。
-
-| 机制                                      | 死因                                                                                                           |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| 多返回值 `res, err` 两槽（A5 D12.1）      | WIT `result<T, error>` 原生；Rust `Result` + `?`                                                               |
-| `assert` 升级习语                         | `?` / `expect`；panic = trap = 实例死亡，只保留 fail-fast 姿态                                                 |
-| `nil, nil` = EOF 位                       | 流式 read 的 EOF = `Ok(none)`（W6 D162 已兑现）；非错误                                                        |
-| 「Ok 载荷永不为 nil」纪律                 | WIT 类型无 nil；可选值用 `option<T>` 显式表达                                                                  |
-| err 纯数据表 / frozen 待遇                | WIT record 值语义；无 frozen 概念                                                                              |
-| kind 两级字符串 / 封闭枚举串              | WIT `error-kind` enum；编译器穷尽检查（analyze #10 白拿）                                                      |
-| `sql.*` 错误族                            | sqlite 撤回（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）；DB = guest crate + private fs          |
-| `box.trap`                                | 盒概念消解（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）；插件 trap = 实例死亡 + journal `vm_trap` |
-| `error(v)` 深快照 / 不可转换 carve-out    | `data` = TLV Value（E1①）；不存在任意错误值，也不存在「错误通道自身失败」                                      |
-| uncaught 独立格 / fanout 子任务错误收集   | guest trap = 实例死亡，宿主无收集面（W4.2）；handler Err = business                                            |
-| `return nil, err` 非法升级通道            | `?` 唯一升级通道；无两槽                                                                                       |
-| `retryable` 布尔标识                      | A5 D14.6 从未立；kind 分格 + 契约语义                                                                          |
-| analyze #9 err 槽裸丢弃 / #10 kind 串枚举 | Rust `#[must_use]` 警告 + 穷尽 match；AST lint 管线随载体消亡（design-review A8）                              |
-| V3 两槽关联 narrowing                     | 无两槽；`Result` 类型原生收窄                                                                                  |
+A5 机制原貌见 [luau-abi](luau-abi.md) §A5；逐项处置见本文各 W 章、[ADR-0034](../decisions/0034-wasm-first-carrier.md) 及其后续 0035–0044、git 史。
 
 **语义平移保留**：三条分界判据（D14.1）；kind 定控制流、message 只进日志、data 按族查表；服务四态（ADR-0018 S5）；事件 fail-open（ADR-0014）；契约违反响亮、运行期数据失败 `Err`；不立 retryable。
 
 ### W5.8 联动登记汇总（章末）
 
-| 去向              | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W1（T13-h）       | **已兑现（2026-10-19）**：`error` 类型 = D136；W1.3 生命周期签名确认；`setup` Err / trap = 加载失败（W1.5）；`dispose` Err / trap = 记日志继续（W1.6）                                                                                                                                                                                                                                                                                                                 |
-| W2（T13-i）       | **已兑现（2026-10-19）**：manifest 校验错误 = 宿主侧响亮，不经 guest 错误通道（D133）；生命周期 `error` 类型 = D136                                                                                                                                                                                                                                                                                                                                                    |
-| W3（T13-j）       | **已兑现（2026-10-19）= W3 D142–D154**：所有 fallible import 返回 `result<T, error>`；能力门未声明 = trap（D139）；fs / http / process 错误映射；timer 无 Err 面（tick 合并计数可见）；`mount` 未声明 = trap；服务调用返回 service / business / core 族；`fs-invalid-utf8` **保留**（ABI bytes-only，SDK `read_text` 产生）；`core-mount-failed` 增补（mount 启用失败）；crypto 撤回 = [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)，无 crypto 错误面 |
-| W4（T13-c）       | **已兑现（2026-10-19）**：W4.4 fail-fast 错误面 = D137 / D139——wait-for = `core-deadlock`；卸载期新账 = trap；D11.3 = `service-unavailable`                                                                                                                                                                                                                                                                                                                            |
-| W6（T13-l）       | **已兑现（2026-10-19）= W6 D155–D162**：流式 read EOF = `Ok(none)`（显式，非错误）；reader / writer / blob 错误复用本类型；TLV / blob 预算 / 版本失败 = `core-contract-violation`；business data = TLV；无新增 kind                                                                                                                                                                                                                                                    |
-| W7（T13-m）       | **已兑现（2026-10-19）= W7 D163–D172**：business data 形状 SSOT = 契约 `errors:`（D167）；运行期形状违约 = `core-contract-violation`（D169）；`data` 承载 = TLV（D166）                                                                                                                                                                                                                                                                                                |
-| W8（T13-n）       | **已兑现（2026-10-19）= W8 D173–D179**：listener 错误封套 = 本类型；emit 校验违约 = `core-contract-violation` Err + journal（D139 运行期形状失败格）；`internal/*` 冒用 = trap（`vm_trap`）；不新增错误族                                                                                                                                                                                                                                                              |
-| W9（T13-o）       | **已兑现（2026-10-19）= W9 D180–D185**：能力对账 + 运行期门；未声明能力 = trap；契约运行期校验点 = `core-contract-violation`；manifest 缺省 vs 部署拒绝两界不混                                                                                                                                                                                                                                                                                                        |
-| W10（T13-p）      | **已兑现（2026-10-19）= W10 D186–D193**：`error-kind` 增补 = 新快照（D188）；跨版本按声明绑定、不把新 kind 送入旧版（D189）；无独立错误版本号                                                                                                                                                                                                                                                                                                                          |
-| journal           | 不新增 kind；`listener_error` / `vm_trap` / `contract_violation` / `fs_invalid_path_detail` 原位承接；错误 kind 落盘用 kebab-case 规范名                                                                                                                                                                                                                                                                                                                               |
-| seam-capabilities | §6.1 W5 行兑现：能力失败 `result` 形态 + service 四态；`fs-invalid-path` message 通用化政策                                                                                                                                                                                                                                                                                                                                                                            |
-| plugin-sdk        | **已兑现（2026-10-19）**：D102 三格封套不变；`ErrorKind` 1:1；guest 导出只许 business；`?` 习语                                                                                                                                                                                                                                                                                                                                                                        |
-| service-registry  | ADR-0018 S5 四态 = `service-unavailable` / `service-method-missing` / `service-timeout` + 共享 `business`；core 族不占第五格；调用方可见集合 = 四态 + core 两格（服务调用路径）                                                                                                                                                                                                                                                                                        |
-| T10.10            | trap → 实例 Failed + journal `vm_trap`；在飞调用方 `service-unavailable`                                                                                                                                                                                                                                                                                                                                                                                               |
-| T10.11            | 能力错误映射（fs / http / process）；未声明能力 trap；timer 参数 trap                                                                                                                                                                                                                                                                                                                                                                                                  |
-| T10.13            | business data = TLV Value（`metis-codec`）                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| T10.14            | `Error` / `ErrorKind` 类型与构造器；SDK 文档（服务四态 + 服务路径 core 两格、business-only 导出、message 不分支）                                                                                                                                                                                                                                                                                                                                                      |
-| Creator 文档      | 作者契约五条（W5.6）：`?` / kind 分支 / business-only 导出 / business data 契约形状 / trap 不可捕获；「族 → 建议动作」表按 kind 清单重写                                                                                                                                                                                                                                                                                                                               |
-| 实现期配置        | message 长度上限（宿主侧截断 + journal 注记；登记 T10.10 / T10.11 / T10.14）；core-deadlock 路径同受该上限；business data 预算沿用 W6 / T10.13                                                                                                                                                                                                                                                                                                                         |
-| 扩展位            | 非 business 族的结构化 `data` 不立（将来需要走 package version）；`retryable` 维持不立；per-family data = 扩展位                                                                                                                                                                                                                                                                                                                                                       |
-| ADR               | 不新增；A5 语义继承（ADR-0026 已 superseded）；ADR-0018 S5 四态不动（调用方可见集合 = 四态 + core 两格（服务调用路径），见 W5.2）                                                                                                                                                                                                                                                                                                                                      |
+本章联动表已压缩（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）；已兑现项见被链文档 / git 史；T10 义务见 [台账](../backlog.md) T10 站表；实现期配置 / 扩展位见文末附录。
 
 ---
 
@@ -1432,7 +1262,7 @@ interface services {
 - **预算形状**：TLV 条目数 / 深度 / 总字节；blob 单大小 / 总量；reader / writer 块上限；每实例句柄数。数值 = 实现期配置（T10.10 / T10.11 / T10.13 / T10.14）；W6 不冻结数值。
 - **EOF**：流式 read 统一 `result<option<list<u8>>, error>`；`Ok(none)` = EOF；`Err` = 中途错误；无 `nil, nil` 双槽。
 - **journal**：不新增 kind；blob / stream 内容默认不录；`Bytes` 落盘 = base64 包裹（W6.4）；审计层扩展位若开启，blob 只记元数据 / 引用而不记内容（需新 kind，归扩展位）。
-- **per-read timeout**：维持扩展位（W4.7 登记），触发器 = 真实长读取消需求。
+- **per-read timeout**：维持扩展位（文末附录），触发器 = 真实长读取消需求。
 
 ### W6.9 f2 兑现：ADR-0015/0022 论据换血
 
@@ -1444,54 +1274,13 @@ interface services {
 
 ### W6.10 A6 机制消亡清单（考古索引）
 
-每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 [ADR-0026](../decisions/0026-luau-abi.md)（已 superseded）。
-
-| 机制                                                    | 死因                                                                       |
-| ------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Luau VM 值 / mlua `Value` / 注册表句柄三层辨析          | 组件实例独立线性内存；跨界 = canonical ABI + TLV 字节，无 VM 句柄          |
-| table 深快照 / 元表拒绝 / Array-Map 严格二分            | `Value` 纯数据树 + TLV tag；无 Lua table / 元表                            |
-| `push_int64_exact` / tag=integer 严格匹配 / `123i` 写法 | WIT `s64` + TLV Int tag；严格制保留，载体换                                |
-| `buffer` / `readbytes` / `writebytes` / UTF-8 校验裂缝  | `list<u8>` / `Bytes` 原生；`read_text` UTF-8 校验归 SDK（fs-invalid-utf8） |
-| frozen table 烘焙句柄 / userdata 淘汰                   | WIT resource（process / mount / blob / reader / writer）                   |
-| A6.6 盒线编码 / 盒流式扩展位                            | TLV 主线化（E1①）；大负载 = blob / reader（W6.5）                          |
-| `Value::Bytes` 扩展位                                   | 提正 = ADR-0042（W6.4）                                                    |
-| NaN-box 参照 / 位分配草案 / 32bit 偏移假设              | T10.13 实现期定稿；语义合同在 W6.2                                         |
-| 流式句柄三态 `chunk, err` 两槽                          | `result<option<list<u8>>, error>` 单返回值（W6.8）                         |
-| 盒 trap / 业务错误封套                                  | W5 `error` 类型 + W6.8 失败面                                              |
-| journal 记录格式草案 §A6.7                              | [journal](journal.md) D75–D92（已冻结）                                    |
+A6 机制原貌见 [luau-abi](luau-abi.md) §A6；逐项处置见本文各 W 章、[ADR-0034](../decisions/0034-wasm-first-carrier.md) 及其后续 0035–0044、git 史。
 
 **语义平移保留**：`Value` 纯数据树 + `Send + Sync`；严格 Int / Float 制；调用点快照（wasm 版 = 源 guest 快照 1 次）；`Arc` 共享 + 1 + N 成本结构；拉式流式读 + EOF 显式；大负载 resource；错误复用属主族；Map 确定性迭代序（`BTreeMap`）。
 
 ### W6.11 联动登记汇总（章末）
 
-| 去向              | 内容                                                                                                                                                                                                                                                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| W1（T13-h）       | 生命周期签名不变（config = TLV）；`on-call` / 未来 `on-event` 的参数 / 返回改 `payload`（W6.6）；world import 集 += `blobs` / `streams` / `payloads`                                                                                                                                                               |
-| W2（T13-i）       | manifest 不变；`capabilities` 不变；`events` 声明面不变（W8 已消费 payload 变体）                                                                                                                                                                                                                                  |
-| W3（T13-j）       | import 集 = 9 个功能接口（`events` / `services` / `timer` / `http` / `fs` / `process` / `instance` / `blobs` / `streams`）+ 类型面 `errors` / `fs-types` / `payloads`；`fs` += `open-read` / `open-write`；`http` += `download`；`Ctx` += `Payload` / `Blob` / `ByteReader` / `ByteWriter`；W3.15 的 W6 行本批兑现 |
-| W4（T13-c）       | 拷贝下限利用 W4.1 自由交错（源快照必须先于挂起）；resource 卸载 drain 接 W4.5；不改变调度                                                                                                                                                                                                                          |
-| W5（T13-k）       | 错误封套不变；`error.data` 保持 TLV；流式 EOF / 错误复用属主族；不新增 kind；`core-contract-violation` 承接 TLV / blob 预算失败                                                                                                                                                                                    |
-| W7（T13-m）       | **已兑现（2026-10-19）= W7 D163–D172**：契约形状 = typed decode 的 schema 来源（D167/D170）；`ValueRef<'a>` / `T::decode` 消费同一线格式；blob payload 不做形状校验（D169）；契约包 = `contract.yml` + 文档（D164）                                                                                                |
-| W8（T13-n）       | **已兑现（2026-10-19）= W8 D173–D179**：`on-event` / emit 的 payload = `payload` 变体；listener 返回 `option<payload>`；blob 车道不参与形状校验；链值所有权按 W6 D161；事件名 / `internal/` / 声明语义不变                                                                                                         |
-| W9（T13-o）       | **已兑现（2026-10-19）= W9 D180–D185**：进口对账词汇表 += `blobs` / `streams` / `payloads`；blob 无能力门；reader/writer 走 fs/http 门；跨实例只读 blob = 结构允许，可变资源仍拒                                                                                                                                   |
-| W10（T13-p）      | **已兑现（2026-10-19）= W10 D186–D193**：本批 = 首个发布快照编制（`0.1.0` 未发布，D190）；新增接口 / payload 变体在同一 package version 内落定（D188）；TLV 版本面独立（D191）                                                                                                                                     |
-| T10.10            | 组件运行时：每实例 `ResourceTable`；blob 注册表（`Arc` + 引用计数）；跨 Store 句柄重物化（S3 补遗 10）；blob / reader / writer 析构；预算                                                                                                                                                                          |
-| T10.11            | fs `open-read` / `open-write`（global host-mediated；private 走 WASI 0.3）；http `download`；blob 创建 / collect；预算 / 卸载强 close                                                                                                                                                                              |
-| T10.12            | 安装期 world 导出校验补 `payload`；preopen 授予不变；mount 声明仍 TLV                                                                                                                                                                                                                                              |
-| T10.13            | TLV codec：位分配 / 版本字段 / varint / canonical 编码 / `ValueRef` / `encoded_len` + `encode_into`；blob / stream 不进 TLV；round-trip 基线                                                                                                                                                                       |
-| T10.14            | SDK：`Payload` / `Blob` / `ByteReader` / `ByteWriter` / `Value::Bytes`；typed decode；raw escape hatch；两车道文档                                                                                                                                                                                                 |
-| T10.15            | 脚手架 / `metis check`：world import 集含 `blobs` / `streams` / `payloads`；不生成 crypto                                                                                                                                                                                                                          |
-| journal           | 不新增 kind；blob / stream 内容不录；`Bytes` JSONL = base64 包裹（T10.5）                                                                                                                                                                                                                                          |
-| seam-capabilities | §6.1 W6 行兑现：TLV 线编码 / 大负载 resource / 拷贝预算；能力门不变                                                                                                                                                                                                                                                |
-| instance-model    | mount 声明保持 TLV；blob payload 不改变父子实例所有权；可变资源仍 per-instance                                                                                                                                                                                                                                     |
-| config-format     | config 仍 TLV `Value`；YAML 不产生 `Bytes`                                                                                                                                                                                                                                                                         |
-| plugin-sdk        | 作者面 `Payload` / `Blob` / `ByteReader` / `ByteWriter`；大负载 = blob / reader；`Bytes` = 数据模型内二进制                                                                                                                                                                                                        |
-| ADR-0042          | `Value::Bytes` 提正；局部取代 ADR-0015 / 0022 的扩展位格                                                                                                                                                                                                                                                           |
-| ADR-0043          | 只读 blob 跨实例车道与双车道 payload；安全边界 = 可变资源不跨实例                                                                                                                                                                                                                                                  |
-| wasm-research     | 补遗 10：S3 blob 跨实例 spike **PASS**；补遗 4/5 技术事实原位                                                                                                                                                                                                                                                      |
-| 实现期配置        | TLV 条目 / 深度 / 字节；blob 单大小 / 总量；reader / writer 块上限；每实例句柄数；per-read timeout（扩展位）                                                                                                                                                                                                       |
-| 扩展位            | WASI `stream<T>` 采用面；blob 写 / 可变跨实例；listener / timer resource 化；per-read timeout；`http` 流式上传；schema-aware compact 编码（不立）                                                                                                                                                                  |
-| Creator 文档      | 两车道选择（小 = Value / 大 = blob）；拷贝预算与批量化 / 合并插件建议；blob 只读 / 不可变；`Bytes` 预算纪律                                                                                                                                                                                                        |
+本章联动表已压缩（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）；已兑现项见被链文档 / git 史；T10 义务见 [台账](../backlog.md) T10 站表；实现期配置 / 扩展位见文末附录。
 
 ---
 
@@ -1539,7 +1328,7 @@ interface services {
 - `contract.yml` = 唯一机器数据，YAML 受限子集（[ADR-0007](../decisions/0007-yaml-config-subset.md)）；`README.md` = 人读文档（business data 语义、重试语义等），可选、不设机器闸。
 - 身份 = 目录名；不设 `name:` 字段（与 manifest W2 D126 同纪律；出现 = 未知字段响亮）。契约名可被引用；插件名不是契约名。
 - **编译期期望的载体 = 随包契约**：使用 `types!()` 的插件必须把所用契约放入自己包的 `lib/`（与部署根 `lib/` 同形）；该副本既是作者类型来源，也是运行期「二进制按哪个形状编译」的声明。宿主合并三来源时同名不同形状（两个具体形状不等；`any` 相容规则见 D168）= 启用期响亮并指名双方；破坏性契约变更因此先让陈旧消费者启用失败，而不是静默跑错形状。重启用不能重建二进制——消费者必须重新编译（D171）。动态消费者（不使用 `types!()`）不必随包契约。
-- 平台内嵌契约 = 编入核心二进制的同形数据；源码位置归实现期（T10.3），不下发到部署根。作者开发期使用平台契约时，从同一源码复制到自己的 `lib/`；导出工具 = 扩展位（W7.12）。
+- 平台内嵌契约 = 编入核心二进制的同形数据；源码位置归实现期（T10.3），不下发到部署根。作者开发期使用平台契约时，从同一源码复制到自己的 `lib/`；导出工具 = 扩展位（文末附录）。
 - 契约包不被 import 为代码；跨插件代码共享 = 编译期依赖（[ADR-0038](../decisions/0038-module-system-require-supersede.md) 原位）。
 - **修正前向引用**：[service-registry](service-registry.md) §7 / [config-format](config-format.md) D29 的「契约包 = WIT 包」措辞按本节点修正；「WIT 包加载」保留 = 平台固定 world 的 WIT 加载（T10.3）。
 - 校验管线：`metis check` / `metis build` / loader 安装期共用同一契约校验器（W2 D133 三面暴露纪律；config-format C3.1 同 parser 同校验器）；语义对账在启用期（D168）。
@@ -1585,7 +1374,7 @@ interface services {
 | `Contract.Type` | 引用展开                                                        |
 
 - 删除：`buffer` / `function`（ctx 面已由 WIT 富类型承接；`Value` 不含这二者）；A7 的 ctx 方法签名词汇。
-- `nil` 恢复为合法值；A7「服务返回不得为 nil / 不得含 nil」的禁令死亡（两槽习语随载体消亡，W5.7 已列死）。
+- `nil` 恢复为合法值；A7「服务返回不得为 nil / 不得含 nil」的禁令死亡（两槽习语随载体消亡；原貌见 [luau-abi](luau-abi.md) §A5）。
 - 字符串字面量 = 精确值类型（`"a" | "b"`）；运行期校验 = 字符串全等；`types!()` 投影为枚举（成员名按字面量派生，冲突 = 编译错误；定形归 T10.14）。
 - record 字段的归一化类型含 `nil`（`T?` 或 `T | nil` 同义）= optional：键缺席或键存在但值为 Null 均合法，生成类型同归 `None`；归一化不含 `nil` 且不是 `any` = 必须存在且非 Null。
 - **`any` 吸收**：任何含 `any` 的 union 归一化为 `any`（`nil` 不被吸收——`any | nil` 保持 optional，可缺席或值为 Null）；`any` 字段键必须存在，值可为任意 Value（含 Null）。
@@ -1698,57 +1487,13 @@ events:
 
 ### W7.11 A7 机制消亡清单（考古索引）
 
-每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 [ADR-0026](../decisions/0026-luau-abi.md)（已 superseded）。
-
-| 机制                                          | 死因                                                                                               |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `buffer` 词                                   | ctx 面归 WIT 富类型；`Value` 无 buffer（W6）                                                       |
-| `function` 词                                 | 回调归 guest 语言设施 / WIT resource；`Value` 不含 function                                        |
-| ctx 方法签名表达式                            | 平台 import = WIT 富类型原生（W3）                                                                 |
-| 命名参数列表签名                              | 服务面恒单 args 形状；ctx 面归 WIT                                                                 |
-| 服务返回禁 `nil`                              | 两槽习语随载体消亡；`nil` = 合法 Value（D166）                                                     |
-| `bytes` 不立词                                | [ADR-0042](../decisions/0042-value-bytes.md) 提正；`bytes` 进词汇表（D166）                        |
-| 契约包 `init.luau`                            | 代码不是契约数据；模块系统死亡（[ADR-0038](../decisions/0038-module-system-require-supersede.md)） |
-| 插件根单份 `contract.yml` / `name` ≡ 插件名   | 契约包住 `lib/<name>/`，身份 = 目录名（W1.1 D116；D164）                                           |
-| `name:` 字段                                  | 身份 = 目录名；manifest 同纪律（W2 D126；D164）                                                    |
-| `version:` 平台内嵌禁写                       | 存活（D165）                                                                                       |
-| WIT 生成（盒面）                              | 盒概念死亡（design-review A9）；平台 WIT 手写（W3）                                                |
-| 隐式 contract 缺省 = 服务名                   | contractless 两分（D167；W2 D131 2026-10-19 修订）                                                 |
-| 外部路径 / registry 契约来源                  | 编译期期望必须随包（D164 / D170）；跨部署分发 = 任务 9                                             |
-| `.d.luau` / `export type` 生成                | Luau 工具面消亡；作者类型 = `types!()`（D170）                                                     |
-| 文档骨架生成                                  | 工具扩展位；不属 ABI 面                                                                            |
-| 递归类型引用                                  | A7 已禁（成环 = 响亮）；原位存活（D163 / D166）                                                    |
-| `types:` / `events:` / `methods:` / `errors:` | 存活（D167）；`methods:` / `errors:` 继续服务 Value 形状                                           |
-| `map` / `any`                                 | 存活（Value 形状面；WIT 无对应）                                                                   |
+A7 机制原貌见 [luau-abi](luau-abi.md) §A7；逐项处置见本文各 W 章、[ADR-0034](../decisions/0034-wasm-first-carrier.md) 及其后续 0035–0044、git 史。
 
 **语义平移保留**：类型引用展开 + 规范化比较（D168）；`any` = 诚实宽形状；运行期形状校验（D169）；契约三来源（D165）；按契约名引用、永不按插件名（Seam 三角）；加方法兼容 / 删改破坏（D171）。
 
 ### W7.12 联动登记汇总（章末）
 
-| 去向             | 内容                                                                                                                                                                                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W1（T13-h）      | `lib/` 包布局边界确认（D116）；W1.11 的 W7 行本批兑现                                                                                                                                                                                                   |
-| W2（T13-i）      | `config.type` = 瘦身 DSL（D166）；`provides.contract` 的 `@N` 规则 = D165；`provides.contract` 缺省 = contractless（W2 D131 2026-10-19 修订）；`methods` 字段消亡后的方法集住处 = 契约（D167）；「契约包 = WIT 包」措辞修正（D164）                     |
-| W3（T13-j）      | `on-call` 方法集 = 契约数据；服务 args / returns 形状 = 契约（D167）；事件 payload 形状出处 = 契约 `events:`（W8 定名字语义）                                                                                                                           |
-| W5（T13-k）      | business data 形状 SSOT = 契约 `errors:`；运行期形状违约 = `core-contract-violation`（D169）                                                                                                                                                            |
-| W6（T13-l）      | typed decode 的 schema 来源 = 契约（D170）；TLV 线格式不变；blob payload 不做形状校验（D169）                                                                                                                                                           |
-| W8（T13-n）      | **已兑现（2026-10-19）= W8 D173–D179**：事件名语义 / `internal/` 规则 / 声明面 / `on-event` 最终形状；事件形状总表 = 全部契约 `events:` 派生（D165 / D167）；emit 校验违约 = `core-contract-violation` Err + journal（D169）；形状生命周期与降级 = D179 |
-| W9（T13-o）      | **已兑现（2026-10-19）= W9 D180–D185**：provides / inject / events 对账与能力门；契约引用缺失两分、同名判定、`@N` 校验的判定面（D168）；import 清单 ⊆ 宿主词汇表；方法集 = 契约数据（D183）                                                             |
-| W10（T13-p）     | **已兑现（2026-10-19）= W10 D186–D193**：DSL 词汇 / 产生式演进 = 新快照（D188）；契约版本与 WIT package version 独立（D191）                                                                                                                            |
-| config-format    | D29 `lib/` 行按 D164 修正；D36 配置校验消费 `type:` DSL（D166 / D169）；D43 级联机器复用（D171）                                                                                                                                                        |
-| service-registry | §7「契约包 = WIT 包」按 D164 修正；S6 局部 supersede（D172）；§7 生命周期措辞按 D171 修正（动态消费者级联 / 编译期消费者重编译）；Seam 三角 / 加方法兼容规则存活                                                                                        |
-| plugin-sdk       | S7 `types!()` 覆盖契约四节 + config schema（D170）；S1 / S7 的强类型演进位兑现                                                                                                                                                                          |
-| journal          | `contract_violation` / `event_shape_degraded` 原位承接（D169 / D171）；不新增 kind                                                                                                                                                                      |
-| ADR-0019         | C3 整篇 supersede = [ADR-0044](../decisions/0044-contract-package-type-sources.md)；Status 行记 partial supersede（D172）                                                                                                                               |
-| ADR-0018         | S6 局部 supersede = ADR-0044；Seam 三角与演化规则存活（D172）                                                                                                                                                                                           |
-| ADR-0044         | 契约包与类型来源的新决策记录（D163–D172）                                                                                                                                                                                                               |
-| T10.3            | 契约包解析 / DSL parser / 规范化比较器 / 运行期 walk / 命名空间合并 / 引用展开与环检测 / 记忆化预算；平台 WIT 包加载（W1 D117 / W2 D132）                                                                                                               |
-| T10.9            | 部署索引登记契约包（含休眠件）；`lib/` 变更检测半与反向索引（D168 / D171）                                                                                                                                                                              |
-| T10.14           | `types!()` 实现：契约四节 + config schema 投影；`any` → `Value`；typed decode（D170）                                                                                                                                                                   |
-| T10.15 / T10.14  | 平台 / 生态契约副本获取路径：v1 = metis 检出或手动复制到作者 `lib/`；`metis sdk export` = 工具扩展位；构建 / `metis check` 验证 `types!()` 引用的契约都在包内 `lib/`（D170）                                                                            |
-| T10.7 / T10.12   | provides / inject / events 对账执行；级联重启用执行；安装期契约校验（D168 / D171）                                                                                                                                                                      |
-| 实现期配置       | 引用展开 / 结构相等的记忆化或节点预算；冻结形状图按部署共享（`Arc` / interned ID）；契约字段 / 嵌套深度预算（T10.3）                                                                                                                                    |
-| 扩展位           | 契约 → WIT 投影；per-method / per-event blob 车道声明；blocking-uninstall；嵌套 config 字段 `secret`；README 缺失 lint；构建期服务名 ↔ 契约绑定检查；跨部署契约发现性（任务 9）                                                                         |
+本章联动表已压缩（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）；已兑现项见被链文档 / git 史；T10 义务见 [台账](../backlog.md) T10 站表；实现期配置 / 扩展位见文末附录。
 
 ---
 
@@ -1878,53 +1623,13 @@ export on-event: async func(listener-id: u64, name: string, payload: payload) ->
 
 ### W8.8 A8 机制消亡清单（考古索引）
 
-每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 [ADR-0026](../decisions/0026-luau-abi.md)（已 superseded）。
-
-| 机制                                                                                       | 死因                                                                                                                                            |
-| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| A10 D28.3 事件四项（#4 emit↔publish / #5 on↔listen / #6 动态名拼接 / #7 跨插件同名无契约） | §7 曾预期随 E5 存活；wasm 无源码扫描面，D174 淘汰（[补遗 4](../research/wasm-first-design-review.md)）；声明面降为审批面 + publish 出处静态预演 |
-| listen 期望形状声明 / 事件返回形状字段                                                     | v1 不立（A8 D22.5 原位；返回形状 = 扩展位）                                                                                                     |
-| manifest 内联 `define:` 节                                                                 | 形状唯一住处 = 契约包（W7 D164 / D167）                                                                                                         |
-| 通配语法                                                                                   | A8 从未立（D23.1 原位）                                                                                                                         |
-| 插件目录名 `internal` 保留                                                                 | wasm 期插件名不构成事件命名空间（D178）                                                                                                         |
-| 契约定义 `internal/*` = 一律响亮                                                           | 修正为「仅允许与平台定义规范化相等的复制件」（D175 / D178）                                                                                     |
-| Luau `sdk types` 的 `.d.luau` / `export type` 事件类型生成                                 | `types!()`（W7 D170）                                                                                                                           |
-| 事件 payload = Luau table 深快照 / 契约优先槽位                                            | TLV Value + 总表 walk（W6 / W7）                                                                                                                |
-| 两槽 `res, err` 事件返回                                                                   | `result<option<payload>, error>`（W5 D136）                                                                                                     |
-| `internal/dispatch` 钩子                                                                   | 替换为 tracing（ADR-0016；W8 不复活）                                                                                                           |
-| 运行期全强制 / 能力门式事件白名单                                                          | 明确淘汰（A8 D20.2 理由原位：开放广播、观测类插件听一切）                                                                                       |
-| journal 内部流量族（`message_enqueued` / `dispatch_completed` 等）                         | journal D84 v1 骨架化，事件面只剩违约 / 降级 / 监听错误（非 W8 新增死亡，注明）                                                                 |
+A8 机制原貌见 [luau-abi](luau-abi.md) §A8；逐项处置见本文各 W 章、[ADR-0034](../decisions/0034-wasm-first-carrier.md) 及其后续 0035–0044、git 史。
 
 **语义平移保留**：四派发语义（ADR-0014）；fail-open；`internal/` 保留；声明 = 审批面；名字即绑定；publish 出处两分；`any` 诚实宽形状；emit 按名字校验；事件词汇开放。
 
 ### W8.9 联动登记汇总（章末）
 
-| 去向                     | 内容                                                                                                                                                                                                             |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W1（T13-h）              | **已兑现（2026-10-19）**：`on-event` 进入 required 导出集并补全 world 草图（D177）；W1.11 的 W8 行本批兑现                                                                                                       |
-| W2（T13-i）              | **已兑现（2026-10-19）**：`events` 声明语义（publish 出处 / listen 自由 / `internal/` 规则）；无字段改动                                                                                                         |
-| W3（T13-j）              | **已兑现（2026-10-19）**：`on-event` 最终形状；`listen` 未声明名恒 `Ok`；四派发校验点 = D176；world 导出集补 `on-event`                                                                                          |
-| W5（T13-k）              | **已兑现（2026-10-19）**：listener 错误封套 = D136–D141；非 business listener 错误 = `core-contract-violation`（D138）；emit 形状违约 = `core-contract-violation`（D139）；`internal/*` 冒用 = trap；不新增 kind |
-| W6（T13-l）              | **已兑现（2026-10-19）**：`payload` 双车道；blob 不参与形状校验；`on-event` 返回 `option<payload>`；链值所有权按 D161                                                                                            |
-| W7（T13-m）              | **已兑现（2026-10-19）**：总表 = 契约 `events:` 并集；D168 同名规则；D171 生命周期；D169 事件校验点由 W8 钉死                                                                                                    |
-| W9（T13-o）              | **已兑现（2026-10-19）= W9 D180–D185**：机械化对账 = provides / inject / events（publish 出处缺失两分、`internal/` 规则、import 清单 ⊆ 词汇表）；W8 只定语义                                                     |
-| W10（T13-p）             | **已兑现（2026-10-19）= W10 D186–D193**：`on-event` 导出 / WIT 面演进 = 新快照（D188）；事件名 / 声明面词汇 = manifest 字段集演进纪律（`internal/*` 词汇增补同）                                                 |
-| T10.3                    | 契约解析 / 事件总表合并 / 规范化 / 引用展开 / 记忆化预算                                                                                                                                                         |
-| T10.4                    | 派发器；总表消费；emit 校验；`on-event` 调用与 listener 表；`internal/plugin` / `internal/status` 的 payload 形状与发射点                                                                                        |
-| T10.10 / T10.11          | 宿主 import 实现；`internal/*` 冒用拦截；事件名长度预算                                                                                                                                                          |
-| T10.12                   | 安装期 world 导出校验补 `on-event`                                                                                                                                                                               |
-| T10.14                   | SDK 默认 `on_event`；`Listener` RAII；名称常量 = 扩展位（v1 不立）                                                                                                                                               |
-| T10.15                   | 脚手架 / `metis check` 预检 world 导出集补 `on-event`；不扫代码                                                                                                                                                  |
-| context-events           | §7 W8 兑现注；事件总线 / 派发语义不变                                                                                                                                                                            |
-| instance-model           | D71 事件跨界 / 静态名 + payload 参数化兑现；D72 = 事件面不新增 journal 字段                                                                                                                                      |
-| config-format            | C2.8 listen ≠ 依赖兑现；C8.3 W8 行兑现                                                                                                                                                                           |
-| plugin-sdk               | S1 catch-all / `on_event` 默认实现；W8 行兑现；强类型事件方法 = S7 扩展位                                                                                                                                        |
-| service-registry         | §6 事件形状共享同一契约包兑现                                                                                                                                                                                    |
-| journal                  | 不新增 kind；`listener_error` / `contract_violation` / `event_shape_degraded` 原位                                                                                                                               |
-| 实现期配置               | 事件名长度上限；事件总表节点 / 引用展开预算；事件 payload 的 TLV 深度 / 字节预算（原位）；listener 每实例条目上限（必设，含 host-owned / detach 条目）                                                           |
-| 扩展位                   | 事件返回形状声明；强类型事件方法（S7）；`types!()` 事件名常量；通配（维持不立）；事件审计族（维持不立）                                                                                                          |
-| wasm-first-design-review | 补遗 4：A10 D28.3 #4–#7 事件对账的去向 = D174 淘汰（wasm 无源码扫描面）                                                                                                                                          |
-| ADR                      | 不新增；A8 为归档设计文档（非 ADR）；ADR-0016 机制不变、正文冻结；兑现记录住本章联动行                                                                                                                           |
+本章联动表已压缩（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）；已兑现项见被链文档 / git 史；T10 义务见 [台账](../backlog.md) T10 站表；实现期配置 / 扩展位见文末附录。
 
 ---
 
@@ -2084,54 +1789,13 @@ export on-event: async func(listener-id: u64, name: string, payload: payload) ->
 
 ### W9.12 A9 机制消亡清单（考古索引）
 
-每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 [ADR-0026](../decisions/0026-luau-abi.md)（已 superseded）。
-
-| 机制                                                             | 死因                                                                                                                                                            |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 盒作为独立范畴 / `boxes` 字段 / `ctx.box` 访问器                 | 盒概念消解进插件本体（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）；进口对账改形为全插件词汇表闭包（W9.2）                                          |
-| 盒进口对账（A9 D25.5②）                                          | 改形 = 「盒进口 ⊆ manifest 能力声明」→「组件 import 清单 ⊆ 宿主词汇表」，时机改安装期结构事实（W9.2 / B1）                                                      |
-| 盒双向对账（A9 D25.5①）                                          | 由组件文件校验承接（W1.1 D116：唯一 `.wasm`、目标存在、组件 magic）                                                                                             |
-| 方法集注册与「注册方法集 ⊆ 契约」对账（A9 D25.2 半）             | wasm 化后无提供方侧方法集注册面；方法集 = 契约数据（W9.6 / W3 D147 / W7 D167）                                                                                  |
-| analyze 静态能力漂移 / scope 键↔命名空间 / 盒对账（D28.3 #1–#3） | wasm 无源码扫描面；词汇表闭包 + 运行期门取代（W9.2 / W9.9）                                                                                                     |
-| 运行期「出现规则」响亮指路 manifest（A3.2）                      | 未声明能力调用 = trap（W5 D139；W3 D154）                                                                                                                       |
-| 纯代码插件无能力门资格 / 无 provide-inject（A1.3）               | 零仪式插件（W1.8 D123）：无 manifest = 无声明面，效应 fail-closed；不是「无资格」，是「无声明位」                                                               |
-| 安装期 / 加载期对账措辞（A9 D24.2 平移清单七处）                 | 两段时机（W9.1 D180）；W1.3 的「安装期」按「检出并记录」读                                                                                                      |
-| 事件面四项漂移对账（D28.3 #4–#7）                                | W8 D174 已淘汰；W9.8 只机械化 publish 出处两分                                                                                                                  |
-| 「能力对账 = import → capability 推断」                          | 固定 world 恒链接，import 不能证明能力使用；词汇表闭包 only（W9.2）                                                                                             |
-| `abi_rev` / 能力词汇 `fs` scope map / `sqlite` / 盒流式扩展位    | 非本章新增死亡：`abi` = W2 D132 / W10；fs 两档 = W2 D129 / [ADR-0039](../decisions/0039-fs-capability-two-tier.md)；sqlite 撤回 = ADR-0039；大负载 = W6（注明） |
+A9 机制原貌见 [luau-abi](luau-abi.md) §A9；逐项处置见本文各 W 章、[ADR-0034](../decisions/0034-wasm-first-carrier.md) 及其后续 0035–0044、git 史。
 
 **语义平移保留**：对账时机两段（安装期结构事实 / 启用期跨实体）；inject 三分与 warn 政策；provides 契约两分、`@N`、形状对账；撞名同作用域；required 判环；events publish 出处两分；能力门 fail-closed；编排面无门 + `mount` 例外；审批三栏；声明 ≠ 观察；零仪式插件无声明面。
 
 ### W9.13 联动登记汇总（章末）
 
-| 去向              | 内容                                                                                                                                                                     |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| W1（T13-h）       | **已兑现（2026-10-19）**：world 导出集匹配与结构记录 = W9.1；W1.1 / W1.3 的「安装错误」按「检出并记录」读（W9.1）；零仪式无声明面 = W9.4 / W9.5 / W9.7 / W9.8 的空集情形 |
-| W2（T13-i）       | **已兑现（2026-10-19）**：`capabilities` = 唯一授权；inject / provides / events 对账形态；休眠件 / 未装配件政策；不新增字段                                              |
-| W3（T13-j）       | **已兑现（2026-10-19）**：进口对账粒度 = 接口（D181）；能力门表原位（D154）；`services` / `events` 无门；`mount` 例外；WASI 基线三族（D182）                             |
-| W5（T13-k）       | **已兑现（2026-10-19）**：未声明能力 = trap；形状违约 = `core-contract-violation`；manifest 缺省 vs 部署拒绝两界不混（D139）                                             |
-| W6（T13-l）       | **已兑现（2026-10-19）**：词汇表 += `blobs` / `streams` / `payloads`；blob 无门；reader / writer 随属主（W3 D154）                                                       |
-| W7（T13-m）       | **已兑现（2026-10-19）**：契约引用两分、`@N`、规范化形状、生命周期；方法集 = 契约数据（D183）                                                                            |
-| W8（T13-n）       | **已兑现（2026-10-19）**：publish 出处两分、`internal/*` 规则、listen 不判；本章机械化（W9.8）                                                                           |
-| W4（T13-c）       | **原位**：卸载期新注册 = trap（W4.5）；wait-for 图（W4.4 D96）不属本章；对账判定与投递时序解耦                                                                           |
-| W10（T13-p）      | **已兑现（2026-10-19）= W10 D186–D193**：package version 比较（D187）；词汇表演进（D188）与多版本共存（D189）；WASI 基线不随 package version（D191）                     |
-| T10.3             | 契约解析 / 规范化比较 / 引用展开 / 反向索引                                                                                                                              |
-| T10.7             | 启用管线五格判定；Pending 唤醒；撞名；判环；provide 履行对账                                                                                                             |
-| T10.9             | 部署索引；组件类型解析与 import / export 清单记录；D52 判环预演                                                                                                          |
-| T10.10            | 宿主 import 注册；WASI 0.3 基线注册集（逐条清单 SSOT）；词汇表来源；trap 落点                                                                                            |
-| T10.11            | 能力门实现；`http-policy` Err；未声明调用 trap                                                                                                                           |
-| T10.12            | 安装事务；结构记录；休眠 / 未装配件；world 匹配                                                                                                                          |
-| T10.15            | `metis check` 单插件 / 部署根模式；metis 侧词汇表（SDK 版本）；预检共用实现                                                                                              |
-| config-format     | D34 休眠 / 未装配 / 残迹；D52 判环预演；C2.8 listen ≠ 依赖；C7.2 残迹指路                                                                                                |
-| instance-model    | D63 mount 标准启用管线；D68 可见集 / 撞名 / 判环作用面                                                                                                                   |
-| service-registry  | S2 原子注册与 provide 履行；S3 三分 / optional 重启；S4 恢复；S1 方法集按契约数据兑现                                                                                    |
-| seam-capabilities | §6.1 W9 行兑现：进口对账机械化 + 运行期 fail-closed；编排面无门 + `mount` 例外                                                                                           |
-| journal           | `pending_warn` / `reconcile_failed` / `vm_trap` 原位；不新增 kind（J1.4 D78）                                                                                            |
-| plugin-sdk        | 能力声明消费；`deps()` / `Ctx::service`；无编译期 world 裁剪（S6 扩展位不动）                                                                                            |
-| build-pipeline    | `metis check` 命令面（D106）；预检共用实现；WASI 0.3 target 预检（D112）                                                                                                 |
-| 实现期配置        | 词汇表版本映射；WASI 0.3 基线逐条记录；对账失败清单条数上限                                                                                                              |
-| 扩展位            | 编译期组合 world；能力使用的静态证明（需新声明面）；跨作用域可见性清单                                                                                                   |
-| ADR               | 不新增；A9 为归档设计文档（非 ADR）；ADR-0018 S1「方法集入注册表」按「宿主从契约载入」原样兑现（D183），S2 / S3 机制不变；兑现记录住本章联动行                           |
+本章联动表已压缩（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）；已兑现项见被链文档 / git 史；T10 义务见 [台账](../backlog.md) T10 站表；实现期配置 / 扩展位见文末附录。
 
 ## W10 工具形态与 ABI 版本纪律
 
@@ -2280,53 +1944,50 @@ export on-event: async func(listener-id: u64, name: string, payload: payload) ->
   - 两层同源实现、措辞逐字一致（D133 原则）；`metis check` / `metis build` / loader 共用校验器。
 - **错误形态**：结构化 findings（声明版本 / 支持集 / 结构实际版本 / import 越界条目 / 行动提示），CLI 边界 miette 三段式（code + 说明 + help，如「升级核心或按 0.1.0 重建」）。
 - **`metis check` 的单插件模式**：声明层自完备；结构层需组件产物（源码模式跳过并明示），与 W9.11 的部署级格区分。
-- **A10 D28.3 十四项检查的存亡**：见 W10.9；不扫 guest 源码、不做能力漂移推断（W9.2 原位）。
+- **A10 D28.3 十四项检查的存亡**：逐项处置见 W9.2（#1–#3/#9–#14；analyze 家族另见 W8 D174 / plugin-sdk）、W9.8（#4）、W8 D174（#5–#7）、config-format D52 / W9.11（#8）；原貌见 [luau-abi](luau-abi.md) §A10；不扫 guest 源码、不做能力漂移推断（W9.2 原位）。
 - **实现位置**：判定住共享纯校验面（build-pipeline D108 的 `metis-validate` 或 `metis-component`，T10.15 开工确认）；loader 与构建管线同源消费；运行时 crate 不依赖构建管线。
 
 ### W10.9 A10 机制消亡清单（考古索引）
 
-每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 [ADR-0026](../decisions/0026-luau-abi.md)（已 superseded）。
-
-| 机制                                                                    | 死因                                                                              |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `abi_rev` 单整数 / min 语义                                             | 载体换 WIT package version；声明必须精确（D187 / D188）                           |
-| A10 的「四层防线」工具链                                                | 换 D133 三面暴露 + wasm 结构事实                                                  |
-| `metis sdk` 组 / `sdk box *`                                            | 命令面上移（D106）；盒消亡（ADR-0034 §2）                                         |
-| `sdk analyze` + D28.3 #1–#3 / #5–#7 / #9–#14                            | wasm 无源码扫描面；能力对账 = 词汇表闭包（W9.2）；事件面声明降为审批面（W8 D174） |
-| D28.3 #4 emit↔publish 漂移                                              | 收窄 = publish 出处静态检查（W9.8）                                               |
-| D28.3 #8 判环预检                                                       | 存活 = config-format D52 / W9.11                                                  |
-| `.d.luau` / `export type` / definitions 挂接 / luau-lsp 钉版 / AST 选型 | 换 wit-bindgen + 编译期宏（plugin-sdk S2 / S7）                                   |
-| `.luaurc` / `@lib` / 部署根布线                                         | ADR-0038（模块系统消亡）                                                          |
-| `plugin()` 泛型 declare / 两槽 narrowing / integer 类型器验证           | Rust 类型系统 + `Result` 原生（plugin-sdk S4 / S5）                               |
-| WIT 递归 variant 验证项                                                 | 已成设计输入（递归 Value 走 TLV，W6）                                             |
-| ABI rev sunset / analyze 提示 rev 写低                                  | sunset 改扩展位（D188）；analyze 消亡                                             |
-| Creator 文档的 `abi_rev` 作者指南                                       | 改 `abi` 精确版本指南（T10.14 作者文档，首个外部分发前完成）                      |
+A10 机制原貌见 [luau-abi](luau-abi.md) §A10；逐项处置见本文各 W 章、[ADR-0034](../decisions/0034-wasm-first-carrier.md) 及其后续 0035–0044、git 史。
 
 **语义平移保留**：命令面 `new` / `check`（D106）；判环预检（D52）；publish 出处检查（W9.8）；三面暴露（D133）；快照保留承诺（D188）；钉版纪律（D192）。
 
 ### W10.10 联动登记汇总（章末）
 
-| 去向                                | 内容                                                                                                                                                                                                                                             |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| W1（T13-h）                         | **已兑现（2026-10-19）**：package version 语义与比较 = D187；快照布局 = D189；冻结 = D190；`wit/` 根 + 版本子目录                                                                                                                                |
-| W2（T13-i）                         | **已兑现（2026-10-19）**：`abi` 精确声明与三合一接受（D187）；字段集 / 能力词汇演进 = D188；manifest 版本机制仍不立                                                                                                                              |
-| W3（T13-j）                         | **已兑现（2026-10-19）**：首个冻结快照 = D190；import 词汇表按快照（D189）；WASI 基线独立（D191）                                                                                                                                                |
-| W5（T13-k）                         | **已兑现（2026-10-19）**：新 kind = 新快照（D188）；跨版本按声明绑定，无翻译层（D189）                                                                                                                                                           |
-| W6（T13-l）                         | **已兑现（2026-10-19）**：TLV 版本面独立（D191）；位布局冻结时点 = D190；TLV 变更不自动 bump ABI                                                                                                                                                 |
-| W7（T13-m）                         | **已兑现（2026-10-19）**：DSL 词汇 / 产生式演进 = D188；`@N` 独立（D191）                                                                                                                                                                        |
-| W8（T13-n）                         | **已兑现（2026-10-19）**：事件名规则 / `internal/*` 词汇演进 = D188；`on-event` 面演进 = 新快照                                                                                                                                                  |
-| W9（T13-o）                         | **已兑现（2026-10-19）**：支持集与多版本词汇表（D187 / D189）；WASI 基线不随 package version（D191）                                                                                                                                             |
-| ADR-0025 + 0022/0024/0027/0028/0029 | Status 行局部注：`abi_rev` 载体的历史措辞换为 WIT package version（引 ADR-0034 §3 + 本章 D187–D188）；正文全部不动                                                                                                                               |
-| config-format                       | C4.2 ABI 演进归本章；C5.3 / C8.2 / C9.2 的 W10 行兑现                                                                                                                                                                                            |
-| instance-model                      | S3.3 / S5.2 的 ABI 演进承接兑现                                                                                                                                                                                                                  |
-| journal                             | J6.1 的 ABI 演进通道兑现；journal 版本面独立（D191）                                                                                                                                                                                             |
-| plugin-sdk                          | 钉版纪律（D192）；`types!()` / 宏归属（D193）；SDK semver 诊断面（D191）                                                                                                                                                                         |
-| build-pipeline                      | D108 的版本比较语义 = D187；D112 预检消费同一实现；§14 W10 行兑现；命令面 SSOT（D193）                                                                                                                                                           |
-| seam-capabilities                   | §6.1 W10 行兑现（能力词汇演进 = 新快照）                                                                                                                                                                                                         |
-| service-registry                    | §7 契约包版本面 = W7 D165 / W10 D191；工具链钉版纪律 = W10 D192                                                                                                                                                                                  |
-| T10.9                               | ABI 比较函数消费；部署索引记录结构版本；单插件 / 部署根 check 共用                                                                                                                                                                               |
-| T10.10                              | 开工首件 = `crates/metis-plugin/wit/<version>/` 目录落盘（W1.2 的 SDK crate 位置，SDK 实现归 T10.14）；多版本绑定生成（逐快照）；路由；`CURRENT_ABI` / 支持集常量；`bindgen!` 共存形态（未验证）；冻结前维护 `vocabulary.yml`（WASI 基线版本集） |
-| T10.13                              | TLV 格式版本与位布局；冻结前交付                                                                                                                                                                                                                 |
-| T10.14                              | SDK 只对当前快照生成；脚手架写 SDK 版本 + WIT hash；首次冻结执行 + hash 校验；`abi` 作者指南（首个外部分发前）                                                                                                                                   |
-| T10.15                              | `metis check` ABI 判定；预检共用实现；命令面                                                                                                                                                                                                     |
-| 扩展位                              | snapshot sunset / floor raise；1.0.0 时点；多版本 `bindgen!` 共存形态（实现核对）；预发布版本（不立，重开 = 有预发布消费方）；冻结目录 git 史机器校验（需门禁面 ASK）；快照数增长复审触发器（阈值实现期配置）                                    |
+本章联动表已压缩（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）；已兑现项见被链文档 / git 史；T10 义务见 [台账](../backlog.md) T10 站表；实现期配置 / 扩展位见文末附录。
+
+## 附录：实现期配置与扩展位索引
+
+> 压缩自 W1.11–W10.10 章末联动表（2026-10-20；原文 = `aea2158`:docs/design/wit-abi.md）。T10 站归属 = [台账](../backlog.md) T10 站表（逐站锚点原位，本附录不转抄）；各章「已兑现」联动由被链文档与 git 史承接；ADR 局部 supersede 见各 ADR Status 行。作者文档交付 = T10.14（W4/W5/W6 作者契约条）。
+
+### 实现期配置（主要项，非穷尽；SSOT = 各章 prose）
+
+- 加载 / dispose：加载总预算、`dispose` 墙钟预算（W1.5/W1.6；数值归 T10.10/T10.14）。
+- timer：`every` 最小间隔。
+- http：超时 / 响应预算；流式上传（扩展位）。
+- fs：读 / 写预算；private fs 读预算；per-read timeout（扩展位）。
+- process：输出预算（`stdout-truncated` / `stderr-truncated`）。
+- 消息：message 长度上限（含 core-deadlock 路径）。
+- 并发：每实例在飞 async 任务预算；优雅窗口 + drain 总预算；host 侧事件在途投递界；每父实例子实例数上限（T10.12）。
+- 资源：store 资源上限（内存 / 表 / 组件大小，T10.10）；包内容大小 / 文件数上限（T10.12）；tenant 级 blob 内存预算。
+- 边界：TLV 条目 / 深度 / 字节；blob 单大小 / 总量；reader / writer 块上限；每实例句柄数。
+- 事件：事件名长度上限；事件总表节点 / 引用展开预算；listener 每实例条目上限。
+- 对账：词汇表版本映射；WASI 0.3 基线逐条记录；对账失败清单条数上限。
+- 契约：引用展开 / 结构相等的记忆化或节点预算；契约字段 / 嵌套深度预算。
+- 发布：快照数增长复审阈值 = 实现期配置。
+
+### 扩展位索引
+
+| 主题        | 扩展位                                                                                                                                                                                                                       | 住所                 | 触发器 / 前提                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------- |
+| 类型与契约  | 强类型服务 / 事件方法；`types!()` 事件名常量；事件返回形状声明；`listen` 期望形状声明（v1 不立；重开 = 监听者确有返回形状需求）                                                                                              | plugin-sdk S1/S7；W8 | 首个强类型方法 / 事件名常量 / 返回形状需求                                                        |
+| world 组合  | 编译期组合 world；多组件包；静态能力使用证明；跨作用域可见性清单                                                                                                                                                             | plugin-sdk S6；W9    | W2 落地后重估；需新声明面                                                                         |
+| 流与大对象  | WASI `stream<T>`；blob 写 / 可变跨实例；http 流式上传；fs 流式与 walk/glob；per-read timeout；listener/timer resource 化                                                                                                     | W3/W4/W6             | 真实流式 / 可变大对象 / 生命周期需求；per-read timeout 触发器 = 真实长读取消需求                  |
+| 契约工具    | 契约 → WIT 投影；per-method/per-event blob 车道声明；blocking-uninstall；README 缺失 lint；构建期服务名 ↔ 契约绑定；跨部署契约发现性；`metis sdk export`（平台 / 生态契约副本获取）；文档骨架生成（工具扩展位，不属 ABI 面） | W7；T10.15/T10.14    | 工具 / 细粒度车道 / 部署发现需求；`metis sdk export` 触发器 = 首个外部作者需要平台 / 生态契约副本 |
+| 配置与发布  | 嵌套 `secret` / `$value`；自由 `build.command`；marketplace 元数据；snapshot sunset / floor raise；1.0.0 时点；预发布版本（重开 = 有预发布消费方）；多版本 `bindgen!` 共存；冻结目录 git 史机器校验；快照数增长复审          | W2/W10               | 嵌套秘密 / 发布节奏 / 门禁面 ASK；快照数增长复审阈值 = 实现期配置                                 |
+| 事件与审计  | 事件审计族；通配语法（维持不立）                                                                                                                                                                                             | W8                   | 审计需求（维持不立）                                                                              |
+| 服务与错误  | 非 business 族结构化 `data`；per-family data；`retryable`（维持不立）                                                                                                                                                        | W5                   | 将来走 package version                                                                            |
+| 同步与调度  | exclusive wait-for 可见性上报；原子方法族其余成员；`ctx.once`；instance list/describe                                                                                                                                        | W3/W4                | 首个死锁调试痛点 / 首个真实消费者                                                                 |
+| crypto      | 便利 re-export（feature）                                                                                                                                                                                                    | T10.14 / SDK         | feature 面需求                                                                                    |
+| schema 编码 | schema-aware compact 编码（不立）                                                                                                                                                                                            | W6                   | 线格式膨胀实测                                                                                    |
