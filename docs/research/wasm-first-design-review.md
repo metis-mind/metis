@@ -155,3 +155,7 @@
 ## 补遗 3（2026-10-19）：契约包载体与 W7 定案
 
 §2 A2 的「`lib/` 契约包数据职能转 WIT 包」与 §6 E5 的「config / 服务签名面转 WIT」按本补遗读：W7 定案 = 契约包 = `lib/<name>/contract.yml` + 文档（[wit-abi](../design/wit-abi.md) D164；[ADR-0044](../decisions/0044-contract-package-type-sources.md)）；WIT 只承载平台固定 world。config `type:` 与服务方法 Value 形状保留在瘦身 DSL（D166 / D167）；「转 WIT」的死面 = ABI 级「每方法一 WIT 导出」，被 `on-call(service, method, payload)` 取代（W3 D147）。§2 / §6 的预期面按本补遗读，正文不改写。
+
+## 补遗 4（2026-10-19）：A10 D28.3 #4–#7 事件对账的去向
+
+§7「T10.9」行原写「emit 对账 #4–#7 随 E5」存活。W8 D174 的定案推翻此预期：wasm 组件没有源码扫描面，事件名是运行期字符串（WIT 只传 `string name`），#4 emit↔publish、#5 on↔listen、#6 动态名拼接、#7 跨插件同名无契约四项无机械对账面。事件声明面降为审批面（意图展示），`publish` 出处检查保留为启用期静态判定；#4–#7 不再进 T10.9。A8 列的六项 Luau 专属检查（#1/#2/#9/#10/#11/#14）仍按 §2 A8 消亡。§7 正文不改写。

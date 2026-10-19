@@ -16,13 +16,13 @@
 
 ## S1 D98 作者面骨架 = 实例 struct + Plugin trait（2026-10-17 定案，T13-d 拍板）
 
-作者写 `struct` 持有实例状态 + `impl Plugin`；trait 钩子族（生命周期 setup/dispose、on_event/on_call/on_config）全默认实现，作者只覆写所需钩子。实例状态 = struct 本体，每实例一份，由 setup 构造——与实例模型（[ADR-0028](../decisions/0028-instance-model.md)）一等对齐。按名分发 v1 = catch-all（`on_event(name, payload: Payload)` 形态，W6 D160），按事件/服务生成强类型方法 = 演进位（S7）。最小插件 = 空 struct + 一个覆写方法，约 15–20 行。
+作者写 `struct` 持有实例状态 + `impl Plugin`；trait 钩子族（生命周期 setup/dispose、on_event/on_call/on_config）全默认实现，作者只覆写所需钩子。实例状态 = struct 本体，每实例一份，由 setup 构造——与实例模型（[ADR-0028](../decisions/0028-instance-model.md)）一等对齐。按名分发 v1 = catch-all（`on_event(ctx, name, payload: Payload)` 形态，W6 D160 / W8 D177），按事件/服务生成强类型方法 = 演进位（S7）。最小插件 = 空 struct + 一个覆写方法，约 15–20 行。
 
 **W3 细化（2026-10-19）**：事件兴趣用 `ctx.on(name)` 登记（返回 `Listener` RAII；同名去重 + 引用计数，一个实例一个宿主条目），处理走 `on_event` catch-all；timer 用 `ctx.timer().after/every(ms, handler)` 注册闭包，无 `on_timer` trait 钩子（SDK 的 `on-timer` 导出是内部分发器）。
 
 淘汰项 = Spin/Extism 谱系的自由函数宏（每导出点一个 fn）：实例状态被推给全局变量，与实例模型和 W4 同实例重入（共享堆，D93）结构性冲突——Zed 的 `static mut EXTENSION` 全局单例被先例调研点名为同一坑（[sdk-precedent-survey](../research/sdk-precedent-survey.md) §2.6）。先例地基：Zed `Extension` trait 全默认方法（唯一必需项 = `new()`）、默认值分「未实现即错」与「空即合理」两语义档位；proxy-wasm 全默认钩子族 + 只覆写所需。
 
-不归本节：钩子族清单填实 = [wit-abi](wit-abi.md) W1（setup/dispose/on-config 形态 = D118）/ W3（ctx 与 on_call）/ W8（on_event 与静态声明）三章。薄插件仪式感地板（ADR-0034 风险 W2）分工：作者手写面 = `lib.rs` 单文件 + manifest 声明；crate-type/target/钉版依赖藏进脚手架模板，归 T13-e / T10.15。
+不归本节：钩子族清单填实 = [wit-abi](wit-abi.md) W1（setup/dispose/on-config 形态 = D118）/ W3（ctx 与 on_call）/ W8（on_event 与静态声明；**已兑现（2026-10-19）= W8 D173–D179**）三章。薄插件仪式感地板（ADR-0034 风险 W2）分工：作者手写面 = `lib.rs` 单文件 + manifest 声明；crate-type/target/钉版依赖藏进脚手架模板，归 T13-e / T10.15。
 
 ## S2 D99 绑定生成位置 = Zed 式（generate!/export! 住 SDK crate 内）（2026-10-17 定案，T13-d 拍板）
 
@@ -83,7 +83,7 @@ ADR-0034 §4「world 固定，能力白名单由 manifest 声明对账，作者�
 | W6 章（T13-l） | **已兑现（2026-10-19）= W6 D155–D162**：作者面 `Payload`（value / blob 双车道）/ `Blob` / `ByteReader` / `ByteWriter` / `Value::Bytes`；typed decode 输入；大负载 = blob / reader                                                                                                                                                                                                                                                               |
 | W5 章（T13-k） | **已兑现（2026-10-19）**：错误底层承载 = [wit-abi](wit-abi.md) W5 D136–D141；S5 作者面投影不变（三格封套 + `ErrorKind` 1:1），S5/S6 的 kind 面与越权错误已按 W5 D137/D139 同步                                                                                                                                                                                                                                                                  |
 | W7 章（T13-m） | **已兑现（2026-10-19）= wit-abi W7 D163–D172**：契约包 = `contract.yml` + 文档；`types!()` 覆盖契约四节 + config schema（D170）；`map` / `any` 保留（Value 形状面）                                                                                                                                                                                                                                                                             |
-| W8 章（T13-n） | 事件静态声明 → S1 catch-all 的强类型演进位                                                                                                                                                                                                                                                                                                                                                                                                      |
+| W8 章（T13-n） | **已兑现（2026-10-19）= wit-abi W8 D173–D179**：`on_event` catch-all 定形；SDK 默认 `Ok(None)`；声明面 = 审批面；强类型事件方法维持 S7 扩展位                                                                                                                                                                                                                                                                                                   |
 | T10.13         | metis-codec = Value/TLV 双 target 依赖（S3/S7）                                                                                                                                                                                                                                                                                                                                                                                                 |
 | T10.14         | S1–S7 实现站；D11 声明随站                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | T13-e/T10.15   | 薄插件地板承接（S1）：脚手架模板藏 crate-type/target/钉版依赖                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -96,4 +96,4 @@ ADR-0034 §4「world 固定，能力白名单由 manifest 声明对账，作者�
 | wait-for 可见性上报宿主            | S4    | 首个跨插件死锁定位需求              |
 | no_std / build-std 裁剪            | S3    | 插件二进制体积/冷启动投诉成串       |
 | 编译期模块化组合 world             | S6    | W2 章 manifest 格式落地后重估       |
-| 强类型事件/服务方法生成            | S1/S7 | 随 W7/W8 章进站评估                 |
+| 强类型事件/服务方法生成            | S1/S7 | W7/W8 已兑现；首个强类型方法需求    |

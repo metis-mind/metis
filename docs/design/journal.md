@@ -80,7 +80,7 @@
 | 错误现场 | `listener_error` / `vm_trap`           | fail-open 监听器抛错落点；VM 层异常                                                                                                                                                 | §A5.5 D15.2 + 调研 §7.3      |
 | 错误现场 | `contract_violation`                   | 契约违约合一（提供方返回违约 D19.1 + emit 违约 D22.4）：violation 描述 + 契约指路                                                                                                   | §A7.5/§A8.5                  |
 | 错误现场 | `fs_invalid_path_detail`               | `fs.invalid_path` 完整拒绝原因（插件可见 message 通用化的互补面 = D14.2）                                                                                                           | §A5.5                        |
-| 错误现场 | `event_shape_degraded`                 | 卸载致事件形状定义缺失的降级注记                                                                                                                                                    | §A8.5 D22.6                  |
+| 错误现场 | `event_shape_degraded`                 | 最后一份事件形状定义离场（卸载 / reload）致定义缺失的降级注记（W8 D179）                                                                                                            | §A8.5 D22.6                  |
 | 错误现场 | `pending_warn` / `reconcile_failed`    | D25.1 warn（进 Pending 当场/转 Failed 当场：谁缺哪个 key、提供方、指路两条）；启用期对账失败详情（五格）                                                                            | §A9.2/§A9.4                  |
 | 控制     | `unload_gate_closed` / `unload_killed` | 关闸丢弃清单（邮箱 + 可调度队列残留摘要、服务调用即错计数）；强杀点在飞线程清单                                                                                                     | D11.1/D11.4/D11.5            |
 | 控制     | `redaction_applied`                    | 脱敏策略版本 + 命中计数（聚合条目，非每命中一条；形态——**已收官 = D89**，2026-10-13）                                                                                               | M6 平移                      |
@@ -93,6 +93,8 @@
 **载体吸收**（2026-10-18，W4.2/W4.6 拍板兑现）：`fanout_cancelled`（handler 结束强制取消子协程）——fan-out 不再是宿主 ABI 原语，等的事重叠 = guest 异步设施原生（`join!`/`select!`），宿主无观测点；该 kind 不立、无替代条目。正式 supersede = [ADR-0035](../decisions/0035-journal-fanout-cancelled-supersede.md)。
 
 **W5 确认（2026-10-19）**：错误面不新增 journal kind；[wit-abi](wit-abi.md) W5 D136–D141 的 `listener_error` / `vm_trap` / `contract_violation` / `fs_invalid_path_detail` 原位承接，kind 落盘用 WIT enum 的 kebab-case 规范名。
+
+**W8 确认（2026-10-19）**：事件面不新增 kind；`listener_error` / `contract_violation` / `event_shape_degraded` 原位承接；`internal/*` 冒用 = `vm_trap`（[wit-abi](wit-abi.md) W8 D176）。
 
 **mount/unmount 进 journal 的取舍**（D72 留下的「人读面与 journal 边界」裁定）：进——mount = 激活新代码的元权限动作（[instance-model](instance-model.md) D63），审计面少它 = 防线 2 破窗；成本 = 低频两条。D72 人读面 host 日志不动（人读告警与机读审计两通道并存）。
 

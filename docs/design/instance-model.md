@@ -94,16 +94,16 @@
 
 ### S1.6 联动登记（S1）
 
-| 去向                                                                         | 内容                                                                                                                      |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [config-format](config-format.md) 头部 / §C2.9                               | 前提文档行与「任务 5」指向已同步                                                                                          |
-| [config-format](config-format.md) §C1.1（D29）                               | `--config` 语义扩展（多租户托管）= D56                                                                                    |
-| [journal](journal.md)                                                        | 每租户一本（D60）+ 条目不押实例字段（D72）；S1 阶段无新增输入                                                             |
-| [wit-abi](wit-abi.md) W2/W8 章（T13-i/T13-n）                                | **W2 已兑现（2026-10-19）**：manifest 身份 = 目录名、不设 `name`（D126）；事件声明面待 W8；核心无 session 概念（D53）不变 |
-| [context-events](context-events.md) §6（D7 汇合点行）                        | 汇合登记指向本文件 = D66                                                                                                  |
-| ADR-0010 / ADR-0013                                                          | 子 fiber = 父 effect = D64；Context parent 链预留 = D68；D7 汇合结案 = D66；D2 半结案 = D69                               |
-| [journal-replay-research](../research/journal-replay-research.md) 开放问题 6 | 跨 session 服务调用是否算边界输入 = D73                                                                                   |
-| 任务 6（journal）                                                            | 租户维度对 journal 物理组织的影响（每租户一本 = D54 推论）= [journal](journal.md) J1（D75/D76）                           |
+| 去向                                                                         | 内容                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [config-format](config-format.md) 头部 / §C2.9                               | 前提文档行与「任务 5」指向已同步                                                                                                                                                       |
+| [config-format](config-format.md) §C1.1（D29）                               | `--config` 语义扩展（多租户托管）= D56                                                                                                                                                 |
+| [journal](journal.md)                                                        | 每租户一本（D60）+ 条目不押实例字段（D72）；S1 阶段无新增输入                                                                                                                          |
+| [wit-abi](wit-abi.md) W2/W8 章（T13-i/T13-n）                                | **W2/W8 已兑现（2026-10-19）**：manifest 身份 = 目录名、不设 `name`（D126）；事件声明面 = wit-abi W8 D173–D179（扁平名 / `internal/` / 声明 = 审批面）；核心无 session 概念（D53）不变 |
+| [context-events](context-events.md) §6（D7 汇合点行）                        | 汇合登记指向本文件 = D66                                                                                                                                                               |
+| ADR-0010 / ADR-0013                                                          | 子 fiber = 父 effect = D64；Context parent 链预留 = D68；D7 汇合结案 = D66；D2 半结案 = D69                                                                                            |
+| [journal-replay-research](../research/journal-replay-research.md) 开放问题 6 | 跨 session 服务调用是否算边界输入 = D73                                                                                                                                                |
+| 任务 6（journal）                                                            | 租户维度对 journal 物理组织的影响（每租户一本 = D54 推论）= [journal](journal.md) J1（D75/D76）                                                                                        |
 
 ## S2 租户托管
 
@@ -279,10 +279,10 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 
 ### S4.5 D71 事件跨界 = 不立实例事件作用域
 
-- **事件 = 开放广播，无表可查**（W8 章既定哲学：emit 不保证有人听、观测类插件「听一切」一等用法、listen 面运行期零校验）——「解析边界」在服务面成立（有注册表可查），在事件面无对应物。
+- **事件 = 开放广播，无表可查**（**已兑现 = [wit-abi](wit-abi.md) W8 D173–D179**：emit 不保证有人听、观测类插件「听一切」一等用法、listen 面运行期不强制）——「解析边界」在服务面成立（有注册表可查），在事件面无对应物。
 - **实例内 on/emit 直上租户事件总线**（D58 每租户独立不动）；实例 fiber 的 `internal/plugin` 生命周期事件照常进总线（观测面完整）。
 - **会话/persona 级路由 = payload 参数化 + selector 模式**：W8 章既定引导（静态事件名 + 实例参数进 payload，如 `ctx.emit("session/input", { session_id = ... })`）；可编程路由 = 普通插件（context-events §2.1 既定，host 只供四种硬编码默认策略）。
-- **明记代价**：同租户内跨实例事件**互相可见**——按 payload 字段过滤是监听者自己的责任；信息流入面的审批覆盖 = manifest `events listen` 名单（W9 章审批三栏；实例插件名单随装配单审批面可见，D61 素材约束已保证）。
+- **明记代价**：同租户内跨实例事件**互相可见**——按 payload 字段过滤是监听者自己的责任；信息流入面的审批可见面 = manifest `events listen` 名单（意图展示，不是运行期白名单；`events publish` 出流另列；[wit-abi](wit-abi.md) W8 D174）；实例插件名单随装配单审批面可见（D61 素材约束已保证）。
 - **淘汰**：实例事件命名空间（广播语义被切碎；selector 已提供可编程路由；工具/审计插件跨实例观测被误伤）。
 
 ### S4.6 D72 journal 实例字段结案 + 实例标识
@@ -291,7 +291,7 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 - **实例标识 = 挂载根 fiber id**（结构性存在，零新机制）；实例「名字」= persona 等插件层概念，不进核心词汇表（D53 原样）。
 - **人读面**：mount/unmount 时 host 日志各一条（根 fiber id + 挂载方 + 声明来源指路 + 插件集摘要）——W9 章 warn 哲学同族（管理动作当场可见，不周期重发）。
 - **淘汰**：条目押实例字段（每条目背冗余税，聚合并未因此变易；实例无名字概念可押）。
-- **联动**：journal.md D76/D78 + 本文件 D72；W8 章（T13-n）承接事件声明面。
+- **联动**：journal.md D76/D78 + 本文件 D72；W8 章（T13-n）**已兑现（2026-10-19）= [wit-abi](wit-abi.md) W8 D173–D179**；事件面不新增 journal 字段。
 
 ### S4.7 D73 journal-replay 开放问题 6 结案 = 维持内部流量
 

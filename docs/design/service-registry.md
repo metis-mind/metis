@@ -131,7 +131,7 @@ Provider/Consumer 两角已锁（§2/§3：manifest 双声明 + 只认 key + 无
 > 产品模型注（纠正此前隐含前提）：core = 插件管理与组合机器 + syscall 层组件运行时基底（为满足核心层任务的原语可提供），**不提供任何 agent 领域服务**；llm/tools 等框架级能力的实现是插件（发行可捆绑参考实现，可替换），契约仍必须 `lib/` 契约包。产品模型结论继续有效（载体转向 = [ADR-0034](../decisions/0034-wasm-first-carrier.md)）。
 
 2. **载体形态**：契约包 = `contract.yml` + 文档（[wit-abi](wit-abi.md) W7 D164，2026-10-19）；WIT 只承载平台固定 world。方法集与事件形状住契约包（W7 章 = T13-m）。`lib/` = 部署级契约包目录，插件随包契约同形。
-3. **schema 化路径**：方法签名级校验归 WIT 富类型（平台封闭面）与瘦身形状 DSL（Value 形状面），**与事件 payload 形状共享同一套契约包**；Definition 包从「常量 + 文档」升级为「类型 + 文档」——W7/W8 章（T13-m/T13-n）。**W7 兑现注（2026-10-19）**：契约包 = `contract.yml` + 文档；四节 = `types` / `methods` / `errors` / `events`；作者类型由 `types!()` 生成（[wit-abi](wit-abi.md) W7 D164–D170）。
+3. **schema 化路径**：方法签名级校验归 WIT 富类型（平台封闭面）与瘦身形状 DSL（Value 形状面），**与事件 payload 形状共享同一套契约包**；Definition 包从「常量 + 文档」升级为「类型 + 文档」——W7/W8 章（T13-m/T13-n）。**W7 兑现注（2026-10-19）**：契约包 = `contract.yml` + 文档；四节 = `types` / `methods` / `errors` / `events`；作者类型由 `types!()` 生成（[wit-abi](wit-abi.md) W7 D164–D170）。**W8 兑现注（2026-10-19）**：事件形状总表 = 三来源契约 `events:` 并集；事件声明面 = 审批面、运行期不强制（[wit-abi](wit-abi.md) W8 D173–D179）。
 4. **契约演化规则**：加方法 = 兼容；删方法 / 改签名 = 破坏（契约版本 +1；动态消费者级联重启用，编译期消费者须重编译；调用期 `service-method-missing` 当场响亮）。schema 化后启用 / 审批时静态判定变更级别，审批界面显示「此更新破坏 N 个消费者 / M 个需重编译」（[wit-abi](wit-abi.md) W7 D171）。
 5. **自省目录**：注册表 + 双声明使服务目录（谁提供什么/方法集/谁依赖谁）纯推导可得；对模型暴露（Harness `cordis_inspect` 两级形态：列表省 token、详查带文档）登记工具面。
 

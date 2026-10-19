@@ -148,6 +148,8 @@ v1 只走声明式 entry 树，`ctx:spawn` 推迟。理由：警惕第二条生�
 
 **W3 兑现注（2026-10-19）**：监听登记住宿主（`events.listen` / `unlisten`），`Ctx::on(name)` 只登记兴趣并返回 `Listener`（同名去重 + 引用计数：一个实例一个宿主条目；Drop / `off()` 减引用，归零 unlisten；`detach()` 交宿主账本），处理走 `Plugin::on_event` catch-all；`on-event(listener-id, name, payload)` 导出形状归 W8；`emit` async 但只 await 入队（不等监听者完成）；派发满时背压，不静默丢弃（[wit-abi](wit-abi.md) W3 D146 / D152）。
 
+**W8 兑现注（2026-10-19）**：`on-event` 定形并进入 required 导出集（[wit-abi](wit-abi.md) W8 D177）；事件名 = 扁平精确键、`internal/` 前缀保留、不立通配与实例作用域（D173）；声明面 = 审批面、运行期不强制（D174）；emit 按事件形状总表校验、`internal/*` 冒用 = trap（D176）；事件四派发与监听器语义不变（ADR-0014 原位）。
+
 ## 8. 决策点状态
 
 | #  | 决策点                                                                        | 状态                                                                                                                                                                                                                                                                                       |

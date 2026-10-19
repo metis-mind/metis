@@ -31,7 +31,7 @@
 | W5  | 错误与 result 习语（`result<T,E>` 原生）                                                                                          | A5                          | ✅ 2026-10-19（D136–D141） |
 | W6  | 边界转换：canonical ABI / 递归 Value 线编码（TLV 主线化 = E1 选项① 拍板）/ resource 句柄族（blob / byte-stream / 双车道 payload） | A6                          | ✅ 2026-10-19（D155–D162） |
 | W7  | 契约与类型来源（① 平台封闭面 = WIT 富类型原生；A7 半消融 = E5 拍板：瘦身形状 DSL 继承 Value 形状面）                              | A7                          | ✅ 2026-10-19（D163–D172） |
-| W8  | 事件静态声明                                                                                                                      | A8                          | 未开始                     |
+| W8  | 事件静态声明（扁平名 + `internal/` 保留；声明 = 审批面；`on-event` 导出）                                                         | A8                          | ✅ 2026-10-19（D173–D179） |
 | W9  | deps/provide 与能力门（进口对账机械化）                                                                                           | A9                          | 未开始                     |
 | W10 | 工具形态与 ABI 版本纪律（WIT package version 承接 abi_rev）                                                                       | A10                         | 未开始                     |
 
@@ -95,17 +95,17 @@ world plugin {
     export dispose: async func() -> result<_, error>;
     export on-call: async func(service: string, method: string, args: payload) -> result<payload, error>;  // W3 D147 + W6 D160
     export on-timer: async func(id: u64, coalesced: u32);                                                     // W3 D145
-    // on-event 随 W8 增补（W3 D146 已定形状：listener-id + name + payload；payload = W6 D160）
+    export on-event: async func(listener-id: u64, name: string, payload: payload) -> result<option<payload>, error>; // W8 D177
 }
 ```
 
-- **W3 增补（2026-10-19）**：`on-call` / `on-timer` 是非生命周期导出，随 W3 D147 / D145 加入 v1 world；`on-event` 随 W8。`0.1.0` 尚未发布，本节草图与 W3 同批补全 = 首个发布快照的编制（W10 冻结）；发布后的增补才适用「新 package version」纪律。**W6 增补（2026-10-19）**：`on-call` 的 args / 返回改 `payload`（D160）；config 仍是 TLV。
+- **W3 增补（2026-10-19）**：`on-call` / `on-timer` 是非生命周期导出，随 W3 D147 / D145 加入 v1 world；`on-event` = W8 D177。`0.1.0` 尚未发布，本节草图与 W3 同批补全 = 首个发布快照的编制（W10 冻结）；发布后的增补才适用「新 package version」纪律。**W6 增补（2026-10-19）**：`on-call` 的 args / 返回改 `payload`（D160）；config 仍是 TLV。**W8 增补（2026-10-19）**：`on-event` 定形并进入 required 导出集（D177）；SDK 默认 `Ok(None)`。
 
 - **`setup(config)`**：拿启用期合成并冻结的完整配置（config-format D36 管线产物：校验 → 秘密解析 → 默认值合成），成功返回 = 实例可以进入 Active。返回 `error` = 加载失败（W1.5）。
 - **`on-config(config)`**：配置热更新通道（config-format D42）。`Ok(true)` = live-apply 成交；`Ok(false)` / `Err` / trap = 重挂载。默认实现 = `Ok(false)`（SDK 补全），所以「没实现」与「拒绝吸收」是同一行为。
 - **`dispose()`**：唯一的手动清理通道（A1.2 平移）。在飞任务结算后由宿主调用（W1.6）；可 await ctx 效应调用；错误 / trap 记日志、不中断后续清理。
 - **无 ctx 参数**：ctx = 宿主 import 接口集（W3）；SDK 在作者面合成 `Ctx`，作者签名形如 `async fn setup(&mut self, ctx: &Ctx, config: Value) -> Result<(), Error>`。ABI 不重复传递宿主能力表。
-- **world 导出集在单一 package version 内封闭**：组件必须导出生命周期三者与 W3 的 `on-call` / `on-timer`；缺任一 = 安装期 world 不匹配错误。作者面的「可选钩子」= trait 默认方法，不是缺失导出。`on-event` 导出（W8）在同一 world 上 additive 增补；发布后的增补 = 新 package version（W10）。
+- **world 导出集在单一 package version 内封闭**：组件必须导出生命周期三者与 W3 的 `on-call` / `on-timer` / `on-event`（W8 D177）；缺任一 = 安装期 world 不匹配错误。作者面的「可选钩子」= trait 默认方法，不是缺失导出。发布后的增补 = 新 package version（W10）。
 - **元数据唯一去处 = manifest**：组件 custom section 不作声明面（A1.1「table 字段集封闭」的载体平移）。
 
 ### W1.4 D119 入口执行时序与激活门
@@ -197,11 +197,11 @@ world plugin {
 | W6（T13-l）    | **已兑现（2026-10-19）= W6 D155–D162**：`on-call` args / 返回 = `payload`（value / blob）；world import 集 += `blobs` / `streams` / `payloads`；`setup` / `on-config` config 保持 TLV                            |
 | W5（T13-k）    | **已兑现（2026-10-19）**：`error` 类型 = W5 D136–D141；生命周期返回的 `result` 形状确认（D118）                                                                                                                  |
 | W7（T13-m）    | **已兑现（2026-10-19）= W7 D163–D172**：随包契约 `lib/`（包内容区的一部分，D35）；W1 只定 `manifest.yml` + 组件文件 + `lib/` 的包布局边界                                                                        |
-| W8（T13-n）    | `on-event` 导出 additive 增补到同一 world（D118）                                                                                                                                                                |
+| W8（T13-n）    | **已兑现（2026-10-19）= W8 D173–D179**：`on-event` 定形并进入 required 导出集；事件名 / `internal/` / 声明语义 / emit 校验 / 形状生命周期由 W8 承接（D118 的 additive 增补完成）                                 |
 | W10（T13-p）   | package version 的数值与比较、多版本快照、ABI 版本纪律（D117）                                                                                                                                                   |
 | T10.10         | 实例化 / Store 限额 / fuel / epoch；加载预算与 dispose 预算的数值；`.cwasm` 缓存                                                                                                                                 |
 | T10.12         | 安装期 start / world 校验；包内容复制与未知文件处置；卸载                                                                                                                                                        |
-| T10.14         | SDK 默认实现（`setup` = `Ok(())`、`on-config` = `Ok(false)`、`dispose` = `Ok(())`）；作者面签名；`Ctx` 合成                                                                                                      |
+| T10.14         | SDK 默认实现（`setup` = `Ok(())`、`on-config` = `Ok(false)`、`dispose` = `Ok(())`、`on-event` = `Ok(None)`）；作者面签名；`Ctx` 合成                                                                             |
 | T10.15         | 可部署包布局与组件文件名（D116）；预检 start 拒绝（D122）；零仪式源码合成 manifest                                                                                                                               |
 | config-format  | D42 `on_config` 的 ABI 签名已兑现（D118）；D29 `plugin.wasm` 占位已兑现（D116）；D35 零仪式 ABI 面（D123）                                                                                                       |
 | build-pipeline | D106/D108 的组件文件名 / 包布局指针已兑现（D116）；D108 start 政策已确认（D122）                                                                                                                                 |
@@ -349,13 +349,13 @@ inject:
     required: [llm, memory]
     optional: [cache]
 events:
-    publish: [some/event]
-    listen: [another/event]
+    publish: [some/event] # 名字须在契约 events: 中有定义（W8 D174）
+    listen: [another/event] # listen 允许无定义名（开放词汇）
 ```
 
 - `provides` = map 服务名 → 条目；条目封闭字段 = `{ contract }`（可选字符串；**缺省 = 无契约（contractless）**，不默认解析为服务名；显式引用查无 = 启用期响亮；`@N` 规则归 W7）；`methods` 字段消亡（方法集 = 契约数据）；`null` ≡ `{}`。（2026-10-19 W7 修订：缺省语义由「服务名」改为 contractless——否则无契约私有服务无法表达。）
 - `inject` = map，封闭字段 `{ required, optional }`，值为服务名列表；缺省空；required 缺失 = 启用期 Pending / 响亮（W9）；判环 = config-format C9.1 D52。
-- `events` = map，封闭字段 `{ publish, listen }`，值为事件名列表；形状不写在这里，住契约 `types:` / `events:`（W7/W8）；`internal/` 规则归 W8。
+- `events` = map，封闭字段 `{ publish, listen }`，值为事件名列表；形状不写在这里，住契约 `types:` / `events:`（W7）；声明语义、`internal/` 规则与运行期强制程度 = W8 D173–D179。**W8 兑现（2026-10-19）**：声明 = 审批面，运行期不强制；`publish` 名须有形状出处，`listen` 任意名合法。
 - **作者自定义 schema 的住处 = 契约包**：服务方法集、业务 data 形状、事件形状由契约定义；三来源 = 平台内嵌 / 部署 `lib/` / 插件随包（包内容区 `lib/`，W1.1 D116）；格式与命名空间合并 = W7，事件语义 = W8。manifest 只引用契约名与事件名，不重复声明形状。
 - 无契约也可提供私有服务 / 发事件，但失去形状对账（W9）；同名不同 schema = 启用期响亮；同名同 schema = 可替换实现（seam 三角）。
 - 服务名扁平；`plugin-name/service` 前缀仅约定不强制；撞名判定 = W9。契约治理三层与契约包版本规则 = W7 原位，本章不转抄。
@@ -421,7 +421,7 @@ events:
 | W3（T13-j）     | ctx.fs = private（隐式读写）/ global（`fs: read/write` 声明）；无命名根；global 能力门在运行期强制；DB = guest crate + private fs（无宿主 sqlite）                                                                                   |
 | W5（T13-k）     | **已兑现（2026-10-19）**：生命周期返回的 `error` 类型 = W5 D136；manifest 校验错误是宿主侧错误，不经 guest 错误通道（D133）                                                                                                          |
 | W7（T13-m）     | **已兑现（2026-10-19）= W7 D163–D172**：`type:` 表达式语法与词汇（D166）；契约包格式 / 三来源合并（D164/D165）；`provides.contract` 与 `@N`（D165）；作者自定义服务 / 事件 schema 的住处（D167）；作者类型由 `types!()` 生成（D170） |
-| W8（T13-n）     | 事件名语义、`internal/` 规则、事件形状在契约中的写法；manifest 只列名字                                                                                                                                                              |
+| W8（T13-n）     | **已兑现（2026-10-19）= W8 D173–D179**：事件名语义 / `internal/` 规则 / 声明强制程度 / 形状总表 / emit 校验 / `on-event`；manifest 只列名字，形状住契约                                                                              |
 | W9（T13-o）     | inject / provides / events 对账；能力门（含 `mount` 例外）；import 清单 ⊆ SDK 词汇表                                                                                                                                                 |
 | W10（T13-p）    | `abi` 的数值与比较；manifest 字段集 / 能力词汇 additive 演进纪律                                                                                                                                                                     |
 | config-format   | D36 配置管线按 `config` schema 消费；共享变量 = `{ $value: "name" }`（含 secret；C6.4 D135 / [ADR-0040](../decisions/0040-config-shared-variables.md)）；fs 两档（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）          |
@@ -598,8 +598,9 @@ interface events {
 - **监听者返回约定**（A3.4 平移）：`Ok(Some(payload))` = 有值；`Ok(None)` = 无值。`serial` 首个 `Some` 短路；`waterfall` `Some` 继续链 / `None` 否决；`parallel` 逐项收集；`emit` 忽略返回值。监听者 `Err` = 事件错误（serial / waterfall fail-open 记日志，parallel 逐项收，emit 记日志）；非 business 的 listener 错误 = 宿主判 `core-contract-violation`（W5 D138）。
 - **作者面**：`Ctx::on(name) -> Result<Listener, Error>` 只做登记；事件处理走 S1 的 catch-all `Plugin::on_event(ctx, name, payload) -> Result<Option<Payload>, Error>`。**同名去重 + 引用计数**：一个实例一个宿主 listener 条目（按首次登记序）；`on(name)` 首次 = 宿主 `listen` 建条目（refcount = 1，attached），再次只增引用；`Listener` Drop / `off()` 减引用，**归零且条目未 host-owned 时** `unlisten` 并删条目；`detach()` 减引用并把条目标为 **host-owned**（此后归零也不再 unlisten，留到卸载）；host-owned 条目被后续 `on(name)` 复用时只增引用，不恢复自动摘除。这样一次 emit 每实例只触发一次 catch-all（作者按 `name` 分支；逐 handler 区分 = S7 强类型演进位）。
 - **id 作用域**：listener id 每实例作用域；宿主校验归属，外来 id = trap；自己的已摘除 id = 幂等 no-op。
-- **`on-event` 导出**：形状登记给 W8：`on-event(listener-id: u64, name: string, payload: payload) -> result<option<payload>, error>`，async（W6 D160）。带 listener-id 才能逐监听者保序 / 短路；W8 定事件名语义、`internal/` 规则与声明面。
-- **动态名**：`listen` / `emit` 接受字符串；声明对账（manifest `events.listen/publish`）归 W8 / W9；`listen` 返回 `result` 让 W9 决定未声明名的失败载体。
+- **条目预算**：每实例 listener 条目数上限 = 实现期配置（T10.10），超限 = `listen` 返回 `core-contract-violation` Err；host-owned / `detach()` 条目同计（W8 D177）。
+- **`on-event` 导出**：**已定形 = W8 D177**：`on-event(listener-id: u64, name: string, payload: payload) -> result<option<payload>, error>`，async（W6 D160）。带 listener-id 才能逐监听者保序 / 短路；事件名语义、`internal/` 规则与声明面 = W8。
+- **动态名**：`listen` / `emit` 接受字符串；声明语义（manifest `events.listen/publish`）= W8 D173–D179；机械化对账 = W9。**W8 定案**：未声明的名字恒合法（`listen` 不因此失败），`listen` 的 `result` 只承载空名 / 超长名等值错误与宿主侧失败。
 - **投递**：事件派发 = 宿主向监听者实例发起 export 调用，走 W4.3 闸门；邮箱满 = 背压，不丢弃（W3.11）。
 
 ### W3.6 D147 services：call / provide / deps 与 on-call
@@ -774,7 +775,7 @@ interface instance {
 
 ### W3.13 D154 能力门载体与 world 终态
 
-**D154 定案：能力门 = 宿主 import 实现内逐调用 fail-closed；未声明 = trap 指路 manifest；WASI 0.3 基线是基础设施白名单；v1 world 导出集 = 生命周期三导出 + `on-call` / `on-timer`（W8 再补 `on-event`）。**
+**D154 定案：能力门 = 宿主 import 实现内逐调用 fail-closed；未声明 = trap 指路 manifest；WASI 0.3 基线是基础设施白名单；v1 world 导出集 = 生命周期三导出 + `on-call` / `on-timer` / `on-event`（W8 D177 补全）。**
 
 - **门载体**：固定 world 下所有 import 恒链接，链接期无法裁剪；门在宿主 import 实现内逐调用判定（S6 先例：Spin / Zed 均运行期门）。未声明 = trap（W5 D139），message 指路 manifest 字段；依赖方收 `service-unavailable`（D11.3）。
 - **门表**：
@@ -792,7 +793,7 @@ interface instance {
 | `streams`                            | 随属主（fs / http）；无独立门              | 无属主调用 = trap；reader / writer 不跨实例                    |
 
 - **WASI 0.3 基线白名单**：`wasi:clocks` / `wasi:random` / `wasi:filesystem`（async；preopen 与 `std::fs`）/ 以及 guest std 拖带的 WASI 0.3 导入，是宿主基础设施；宿主统一注册 wasmtime-wasi 0.3。W9 的进口对账把「std 拖带集 + 上述标准件」视为基线白名单，不计入作者能力面；作者手写其他 WASI import = 越权（词汇表外）。具体清单 SSOT = W9。wasip2 时代的 14 导入 papercut（补遗 6）是历史证据，0.3 基线由 T10.10 核实。
-- **world 终态**：v1 导出集 = `setup` / `on-config` / `dispose` / `on-call` / `on-timer`（全 async），W8 再补 `on-event`。`0.1.0` 尚未发布；本批补全 = 首个发布快照的编制，不是版本演进；首个冻结快照由 W10 记录。W1.3 的签名草图同批更新。
+- **world 终态**：v1 导出集 = `setup` / `on-config` / `dispose` / `on-call` / `on-timer` / `on-event`（全 async；`on-event` = W8 D177）。`0.1.0` 尚未发布；本批补全 = 首个发布快照的编制，不是版本演进；首个冻结快照由 W10 记录。W1.3 的签名草图同批更新。
 - **不立编译期能力检查**：SDK 面不按 manifest 裁剪类型；作者面形状恒定（A3.2「出现规则」平移），越权调用 = 运行期 trap。编译期组合 world 维持扩展位（plugin-sdk S6）。
 
 ### W3.14 A3 机制消亡清单（考古索引）
@@ -830,20 +831,20 @@ interface instance {
 
 | 去向              | 内容                                                                                                                                                                                                                                                                                                                                |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W1（T13-h）       | world 导出集补 `on-call` / `on-timer`（W1.3 签名草图同批更新；W8 再补 `on-event`）；生命周期三导出不变；`on-call` args / 返回 = `payload`（W6 D160）                                                                                                                                                                                |
+| W1（T13-h）       | world 导出集补 `on-call` / `on-timer`（W1.3 签名草图同批更新；W8 D177 补 `on-event`）；生命周期三导出不变；`on-call` args / 返回 = `payload`（W6 D160）                                                                                                                                                                             |
 | W2（T13-i）       | 消费 `capabilities.fs/http/process/mount`、`provides/inject/events`、`abi`；无 manifest 改动                                                                                                                                                                                                                                        |
 | W4（T13-c）       | tick 投递走 W4.3 闸门；`emit` await 入队；投递不静默丢弃（W3.11）；W4.3「tick = 普通邮箱消息」增补为「每 timer pending + 合并计数」                                                                                                                                                                                                 |
 | W5（T13-k）       | **已兑现（2026-10-19）**：所有 fallible import = `result<T, error>`；timer 无 Err 面；`fs-invalid-utf8` 保留（ABI bytes-only；SDK `read_text` 产生）；服务调用四态 + 服务路径 core 两格；mount 路径 `core-mount-failed`（mount 启用失败）；未声明能力 = trap；crypto 无错误面（ADR-0041）                                           |
 | W6（T13-l）       | **已兑现（2026-10-19）= W6 D155–D162**：TLV canonical 线格式与拷贝预算；大负载双车道 = `blob`（不可变 / 可跨实例只读）+ `byte-reader` / `byte-writer`（per-instance）；`fs` += `open-read` / `open-write`，`http` += `download`；process chunk 保持 `list<u8>`（不改写）；`payload` 变体（value / blob）；resource 生命周期与失败面 |
 | W7（T13-m）       | **已兑现（2026-10-19）= W7 D163–D172**：服务方法集 = 契约数据（D167）；强类型生成 = `types!()`（D170）；无契约服务的 method-missing 退化保留（D167 / D169）                                                                                                                                                                         |
-| W8（T13-n）       | `on-event(listener-id, name, payload: payload)` 导出形状；事件名语义 / `internal/` 规则 / manifest `events` 对账；`emit` / `on-event` 的 payload = W6 双车道变体                                                                                                                                                                    |
+| W8（T13-n）       | **已兑现（2026-10-19）= W8 D173–D179**：`on-event(listener-id, name, payload: payload)` 定形并进入 required 导出集；事件名语义 / `internal/` 规则 / 声明面 / emit 校验 / 形状生命周期；`emit` / `on-event` 的 payload = W6 双车道变体                                                                                               |
 | W9（T13-o）       | import 清单 ⊆ 词汇表（含 `blobs` / `streams` / `payloads`）；provide / inject / events 对账；能力门判定（含 mount 例外）；blob 无门 / streams 随属主；WASI 0.3 基线 = clocks + random + filesystem（async）+ std 拖带集                                                                                                             |
 | W10（T13-p）      | package version 与首个发布快照；import / export 增补纪律；多版本共存                                                                                                                                                                                                                                                                |
-| T10.10            | 宿主 import 注册；wasmtime-wasi 0.3；preopen `/`；`on-call` / `on-timer` 导出调用；blob / reader / writer 资源表与跨 Store 重物化                                                                                                                                                                                                   |
+| T10.10            | 宿主 import 注册；wasmtime-wasi 0.3；preopen `/`；`on-call` / `on-timer` / `on-event` 导出调用；blob / reader / writer 资源表与跨 Store 重物化                                                                                                                                                                                      |
 | T10.11            | fs（global host-mediated / private WASI 0.3 async filesystem）/ http / process / timer 实现；crypto 撤回（ADR-0041）；预算 / TOCTOU 硬化；random = wasi:random；`open-read` / `open-write` / `download`；blob 创建 / collect                                                                                                        |
-| T10.12            | 安装期 world 导出校验补 `on-call` / `on-timer`（W8 后补 `on-event`）；preopen 授予                                                                                                                                                                                                                                                  |
+| T10.12            | 安装期 world 导出校验补 `on-call` / `on-timer` / `on-event`；preopen 授予                                                                                                                                                                                                                                                           |
 | T10.13            | TLV 编解码（payload value 车道、config、mount 声明、business data）；blob / stream 不进 TLV；`ValueRef` / `encoded_len` + `encode_into`；canonical 编码与版本字段                                                                                                                                                                   |
-| T10.14            | `Ctx` / 句柄 / RAII / `metis_plugin::raw`；默认钩子；`Payload` / `Blob` / `ByteReader` / `ByteWriter` / `Value::Bytes`；WASI 0.3 错误码 → fs kind 映射；CSPRNG = guest crate（`getrandom` / `rand`）；crypto 便利 re-export = feature 扩展位（v1 不做）                                                                             |
+| T10.14            | `Ctx` / 句柄 / RAII / `metis_plugin::raw`；默认钩子（含 `on_event = Ok(None)`）；`Payload` / `Blob` / `ByteReader` / `ByteWriter` / `Value::Bytes`；WASI 0.3 错误码 → fs kind 映射；CSPRNG = guest crate（`getrandom` / `rand`）；crypto 便利 re-export = feature 扩展位（v1 不做）                                                 |
 | T10.15            | 脚手架不含 crypto；预检 world 导出集与 `wasm32-wasip3` target；`metis check` 的 import 提示                                                                                                                                                                                                                                         |
 | seam-capabilities | §2.1 纯算件判据、§4.2 crypto 撤回、§5.2 fs 两档作者面、§5.3 能力映射、§6.1 W3 行兑现                                                                                                                                                                                                                                                |
 | service-registry  | per-call deadline 作者面 = `call(..., timeout-ms)`；provide 观测保留 S3 对账；deps 目录 = inject 声明集                                                                                                                                                                                                                             |
@@ -1101,21 +1102,22 @@ interface errors {
 
 **D139 定案：调用契约违反（静态可查的 API 误用，含 timer 参数越界 / 卸载期注册）= trap；运行期交互 / 形状失败 = `core-*` Err；运行期数据失败 = 族 Err。**
 
-| 情形                                                                                         | 载体                                                                                                                              |
-| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 未声明能力调用（manifest 门：fs global / http / process / mount 缺省）                       | trap——宿主 import 拒绝，实例 Failed，journal `vm_trap`；依赖方收 `service-unavailable`                                            |
-| Unloading 期新注册「比我长寿」的账（监听 / provide / timer）                                 | trap——实例本就在卸载，无额外损失（W4.5 D11.2）                                                                                    |
-| timer 参数非法（`every` 低于最小间隔等）                                                     | trap——参数非法 = 契约违反，A5 timer「无 Err 面」平移                                                                              |
-| import 参数形状错（WIT 类型面已静态排除；服务 TLV 参数运行期违约、process argv/command XOR） | `core-contract-violation` Err；fs 路径值错误归 `fs-invalid-path`（W3 D144）；违约为参数侧还是返回侧由 message + journal 指示      |
-| 服务返回形状违约 / emit payload 违约                                                         | `core-contract-violation` Err + journal `contract_violation`（D19.1 / D22.4 的运行期校验点存活）                                  |
-| wait-for 圈闭合                                                                              | `core-deadlock` Err 给调用方（W4.4 fail-open 解圈；message 带整圈路径）                                                           |
-| 运行期数据失败（文件不存在 / 网络失败 / 进程退出等）                                         | 对应族 Err                                                                                                                        |
-| 事件 listener 失败                                                                           | emit / serial / waterfall = fail-open：journal `listener_error`，不进控制流；parallel = 逐项 `result` 收集（A5 D15.2 / ADR-0014） |
-| guest trap（panic / abort / fuel / epoch 截断自身）                                          | 实例死亡；journal `vm_trap`；在飞调用方按 D11.3 收 `service-unavailable`                                                          |
-| `setup` 返回 Err / trap                                                                      | 加载失败，实例即弃（W1.5 D120）                                                                                                   |
-| `on-config` 返回 Err / trap                                                                  | 重挂载（W1.3 D118 / config-format D42）                                                                                           |
-| `dispose` 返回 Err / trap                                                                    | 记日志，不中断后续清理（W1.6 D121）                                                                                               |
-| manifest / config / 安装校验失败                                                             | 宿主侧响亮（miette / 启用期拒），不经 guest 错误通道（W2 D133 / W1.5）                                                            |
+| 情形                                                                                         | 载体                                                                                                                                             |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 未声明能力调用（manifest 门：fs global / http / process / mount 缺省）                       | trap——宿主 import 拒绝，实例 Failed，journal `vm_trap`；依赖方收 `service-unavailable`                                                           |
+| guest 四派发 emit / serial / parallel / waterfall 冒用 `internal/*`（W8 D176）               | trap——命名空间边界冒用；宿主拒绝调用，实例 Failed，journal `vm_trap`；依赖方收 `service-unavailable`；运行期构造的名字同判，转发型插件须自行校验 |
+| Unloading 期新注册「比我长寿」的账（监听 / provide / timer）                                 | trap——实例本就在卸载，无额外损失（W4.5 D11.2）                                                                                                   |
+| timer 参数非法（`every` 低于最小间隔等）                                                     | trap——参数非法 = 契约违反，A5 timer「无 Err 面」平移                                                                                             |
+| import 参数形状错（WIT 类型面已静态排除；服务 TLV 参数运行期违约、process argv/command XOR） | `core-contract-violation` Err；fs 路径值错误归 `fs-invalid-path`（W3 D144）；违约为参数侧还是返回侧由 message + journal 指示                     |
+| 服务返回形状违约 / emit payload 违约                                                         | `core-contract-violation` Err + journal `contract_violation`（D19.1 / D22.4 的运行期校验点存活）                                                 |
+| wait-for 圈闭合                                                                              | `core-deadlock` Err 给调用方（W4.4 fail-open 解圈；message 带整圈路径）                                                                          |
+| 运行期数据失败（文件不存在 / 网络失败 / 进程退出等）                                         | 对应族 Err                                                                                                                                       |
+| 事件 listener 失败                                                                           | emit / serial / waterfall = fail-open：journal `listener_error`，不进控制流；parallel = 逐项 `result` 收集（A5 D15.2 / ADR-0014）                |
+| guest trap（panic / abort / fuel / epoch 截断自身）                                          | 实例死亡；journal `vm_trap`；在飞调用方按 D11.3 收 `service-unavailable`                                                                         |
+| `setup` 返回 Err / trap                                                                      | 加载失败，实例即弃（W1.5 D120）                                                                                                                  |
+| `on-config` 返回 Err / trap                                                                  | 重挂载（W1.3 D118 / config-format D42）                                                                                                          |
+| `dispose` 返回 Err / trap                                                                    | 记日志，不中断后续清理（W1.6 D121）                                                                                                              |
+| manifest / config / 安装校验失败                                                             | 宿主侧响亮（miette / 启用期拒），不经 guest 错误通道（W2 D133 / W1.5）                                                                           |
 
 - **为何「响亮」= trap**：wasm 没有可恢复的 guest 异常；guest panic = abort = trap = 实例死亡。这是载体的诚实事实，也是 A5「契约违反不进 Result」的忠实兑现——trap 不可被 `Result` 分支吞掉。代价明记 = 可用性：一个未声明能力调用会杀死插件，依赖方收 `service-unavailable`；作者应在开发期用 `metis check` 与 SDK 类型面排除。
 - **为何 deadlock 与运行期形状违约不 trap**：它们是运行期交互结果，不是静态作者错；W4.4 明确「当场报错 + 整圈路径 + fail-open 解圈」，返回 `core-deadlock` 让调用方解圈，比杀实例更符合 fail-open；形状违约的调用方 / 提供方可能因升级竞态而持有旧契约，返回 `core-contract-violation` 让调用方统一失败 / 告警，具体违约侧由 message + journal 指示。
@@ -1176,7 +1178,7 @@ interface errors {
 | W4（T13-c）       | **已兑现（2026-10-19）**：W4.4 fail-fast 错误面 = D137 / D139——wait-for = `core-deadlock`；卸载期新账 = trap；D11.3 = `service-unavailable`                                                                                                                                                                                                                                                                                                                            |
 | W6（T13-l）       | **已兑现（2026-10-19）= W6 D155–D162**：流式 read EOF = `Ok(none)`（显式，非错误）；reader / writer / blob 错误复用本类型；TLV / blob 预算 / 版本失败 = `core-contract-violation`；business data = TLV；无新增 kind                                                                                                                                                                                                                                                    |
 | W7（T13-m）       | **已兑现（2026-10-19）= W7 D163–D172**：business data 形状 SSOT = 契约 `errors:`（D167）；运行期形状违约 = `core-contract-violation`（D169）；`data` 承载 = TLV（D166）                                                                                                                                                                                                                                                                                                |
-| W8（T13-n）       | listener 错误封套 = 本类型；emit 校验违约 = `core-contract-violation` Err + journal（D139 运行期形状失败格）；不新增错误族                                                                                                                                                                                                                                                                                                                                             |
+| W8（T13-n）       | **已兑现（2026-10-19）= W8 D173–D179**：listener 错误封套 = 本类型；emit 校验违约 = `core-contract-violation` Err + journal（D139 运行期形状失败格）；`internal/*` 冒用 = trap（`vm_trap`）；不新增错误族                                                                                                                                                                                                                                                              |
 | W9（T13-o）       | 能力对账 + 运行期门；未声明能力 = trap；契约运行期校验点 = `core-contract-violation`                                                                                                                                                                                                                                                                                                                                                                                   |
 | W10（T13-p）      | `error-kind` 增补 = 新 WIT package version（封闭 enum 的破坏性变更）；跨版本共存时宿主按 `abi` 使用对应版本绑定，不得把新 kind 送入旧版；无独立错误版本号                                                                                                                                                                                                                                                                                                              |
 | journal           | 不新增 kind；`listener_error` / `vm_trap` / `contract_violation` / `fs_invalid_path_detail` 原位承接；错误 kind 落盘用 kebab-case 规范名                                                                                                                                                                                                                                                                                                                               |
@@ -1375,7 +1377,7 @@ interface services {
   // provide / deps 不变
 }
 
-// W1 的导出与 W8 的 on-event 同批改为 payload：
+// on-call / on-event 已定形（on-event = W8 D177）：
 // on-call: async func(service: string, method: string, args: payload) -> result<payload, error>;
 // on-event: async func(listener-id: u64, name: string, payload: payload) -> result<option<payload>, error>;
 ```
@@ -1463,12 +1465,12 @@ interface services {
 | 去向              | 内容                                                                                                                                                                                                                                                                                                               |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | W1（T13-h）       | 生命周期签名不变（config = TLV）；`on-call` / 未来 `on-event` 的参数 / 返回改 `payload`（W6.6）；world import 集 += `blobs` / `streams` / `payloads`                                                                                                                                                               |
-| W2（T13-i）       | manifest 不变；`capabilities` 不变；`events` 声明面不变（W8 消费 payload 变体）                                                                                                                                                                                                                                    |
+| W2（T13-i）       | manifest 不变；`capabilities` 不变；`events` 声明面不变（W8 已消费 payload 变体）                                                                                                                                                                                                                                  |
 | W3（T13-j）       | import 集 = 9 个功能接口（`events` / `services` / `timer` / `http` / `fs` / `process` / `instance` / `blobs` / `streams`）+ 类型面 `errors` / `fs-types` / `payloads`；`fs` += `open-read` / `open-write`；`http` += `download`；`Ctx` += `Payload` / `Blob` / `ByteReader` / `ByteWriter`；W3.15 的 W6 行本批兑现 |
 | W4（T13-c）       | 拷贝下限利用 W4.1 自由交错（源快照必须先于挂起）；resource 卸载 drain 接 W4.5；不改变调度                                                                                                                                                                                                                          |
 | W5（T13-k）       | 错误封套不变；`error.data` 保持 TLV；流式 EOF / 错误复用属主族；不新增 kind；`core-contract-violation` 承接 TLV / blob 预算失败                                                                                                                                                                                    |
 | W7（T13-m）       | **已兑现（2026-10-19）= W7 D163–D172**：契约形状 = typed decode 的 schema 来源（D167/D170）；`ValueRef<'a>` / `T::decode` 消费同一线格式；blob payload 不做形状校验（D169）；契约包 = `contract.yml` + 文档（D164）                                                                                                |
-| W8（T13-n）       | `on-event` / emit 的 payload 改 `payload` 变体；listener 返回 `option<payload>`；事件名 / `internal/` / 声明对账不变                                                                                                                                                                                               |
+| W8（T13-n）       | **已兑现（2026-10-19）= W8 D173–D179**：`on-event` / emit 的 payload = `payload` 变体；listener 返回 `option<payload>`；blob 车道不参与形状校验；链值所有权按 W6 D161；事件名 / `internal/` / 声明语义不变                                                                                                         |
 | W9（T13-o）       | 进口对账词汇表 += `blobs` / `streams` / `payloads`；blob 无能力门；reader/writer 走 fs/http 门；跨实例只读 blob = 结构允许，可变资源仍拒                                                                                                                                                                           |
 | W10（T13-p）      | 本批 = 首个发布快照编制（0.1.0 未发布）；新增接口 / payload 变体在同一 package version 内落定；发布后增补 = 新版本                                                                                                                                                                                                 |
 | T10.10            | 组件运行时：每实例 `ResourceTable`；blob 注册表（`Arc` + 引用计数）；跨 Store 句柄重物化（S3 补遗 10）；blob / reader / writer 析构；预算                                                                                                                                                                          |
@@ -1637,7 +1639,7 @@ events:
 **D169 定案：契约已知时校验服务 args / returns 与事件 payload；违约 = `core-contract-violation` Err + journal；blob 与 contractless 面不校验。**
 
 - 服务调用：宿主在两跳中点（Value 树转换后、投递前）按契约 walk args；提供方返回后按契约 walk 返回；违约 = 调用方 `core-contract-violation` Err + journal `contract_violation`（W5 D139 / D140；[journal](journal.md) D78）。
-- 事件 emit：按事件形状总表 walk payload；违约 = `core-contract-violation` Err + journal（W8 定事件名语义与 `internal/` 规则）。
+- 事件 emit：按事件形状总表 walk payload；违约 = `core-contract-violation` Err + journal（**已兑现（2026-10-19）= W8 D176**：四派发入队前同判；`internal/*` 冒用 = trap；空名 / 超长名 = `core-contract-violation` Err）。
 - business data：不做运行期校验（W5 D140）；`errors:` 只服务类型生成 / 文档 / 静态对账。
 - `payload.blob`：opaque，不参与形状校验；契约形状只描述 `value` 车道。车道选择不受契约约束——方法 / 事件可以收到 `blob`，此时形状校验跳过；value-typed 生成解码器遇 blob = 解码失败（作者面错误）。per-method / per-event blob 声明 = 扩展位。大负载语义归 W6 D159。
 - walk 语义：record 字段归一化类型含 `nil`（`T?` / `T | nil` / `any | nil`）时键缺席或值为 Null 同义；归一化为 `any`（含含 `any` 的 union，`nil` 已排除）时键必须存在、值任意（含 Null）；其余类型键必须存在且非 Null；字符串字面量按全等校验。
@@ -1721,27 +1723,203 @@ events:
 
 ### W7.12 联动登记汇总（章末）
 
-| 去向             | 内容                                                                                                                                                                                                                                |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| W1（T13-h）      | `lib/` 包布局边界确认（D116）；W1.11 的 W7 行本批兑现                                                                                                                                                                               |
-| W2（T13-i）      | `config.type` = 瘦身 DSL（D166）；`provides.contract` 的 `@N` 规则 = D165；`provides.contract` 缺省 = contractless（W2 D131 2026-10-19 修订）；`methods` 字段消亡后的方法集住处 = 契约（D167）；「契约包 = WIT 包」措辞修正（D164） |
-| W3（T13-j）      | `on-call` 方法集 = 契约数据；服务 args / returns 形状 = 契约（D167）；事件 payload 形状出处 = 契约 `events:`（W8 定名字语义）                                                                                                       |
-| W5（T13-k）      | business data 形状 SSOT = 契约 `errors:`；运行期形状违约 = `core-contract-violation`（D169）                                                                                                                                        |
-| W6（T13-l）      | typed decode 的 schema 来源 = 契约（D170）；TLV 线格式不变；blob payload 不做形状校验（D169）                                                                                                                                       |
-| W8（T13-n）      | 事件名语义 / `internal/` 规则 / `on-event` 最终形状；事件形状总表 = 全部契约 `events:` 派生（D165 / D167）；emit 校验违约 = `core-contract-violation` Err + journal（D169）                                                         |
-| W9（T13-o）      | provides / inject / events 对账与能力门；契约引用缺失两分、同名判定、`@N` 校验的判定面（D168）；import 清单 ⊆ SDK 词汇表                                                                                                            |
-| W10（T13-p）     | DSL 词汇 / 产生式演进 = 新 ABI package version；契约版本与 WIT package version 独立（D165 / D166）                                                                                                                                  |
-| config-format    | D29 `lib/` 行按 D164 修正；D36 配置校验消费 `type:` DSL（D166 / D169）；D43 级联机器复用（D171）                                                                                                                                    |
-| service-registry | §7「契约包 = WIT 包」按 D164 修正；S6 局部 supersede（D172）；§7 生命周期措辞按 D171 修正（动态消费者级联 / 编译期消费者重编译）；Seam 三角 / 加方法兼容规则存活                                                                    |
-| plugin-sdk       | S7 `types!()` 覆盖契约四节 + config schema（D170）；S1 / S7 的强类型演进位兑现                                                                                                                                                      |
-| journal          | `contract_violation` / `event_shape_degraded` 原位承接（D169 / D171）；不新增 kind                                                                                                                                                  |
-| ADR-0019         | C3 整篇 supersede = [ADR-0044](../decisions/0044-contract-package-type-sources.md)；Status 行记 partial supersede（D172）                                                                                                           |
-| ADR-0018         | S6 局部 supersede = ADR-0044；Seam 三角与演化规则存活（D172）                                                                                                                                                                       |
-| ADR-0044         | 契约包与类型来源的新决策记录（D163–D172）                                                                                                                                                                                           |
-| T10.3            | 契约包解析 / DSL parser / 规范化比较器 / 运行期 walk / 命名空间合并 / 引用展开与环检测 / 记忆化预算；平台 WIT 包加载（W1 D117 / W2 D132）                                                                                           |
-| T10.9            | 部署索引登记契约包（含休眠件）；`lib/` 变更检测半与反向索引（D168 / D171）                                                                                                                                                          |
-| T10.14           | `types!()` 实现：契约四节 + config schema 投影；`any` → `Value`；typed decode（D170）                                                                                                                                               |
-| T10.15 / T10.14  | 平台 / 生态契约副本获取路径：v1 = metis 检出或手动复制到作者 `lib/`；`metis sdk export` = 工具扩展位；构建 / `metis check` 验证 `types!()` 引用的契约都在包内 `lib/`（D170）                                                        |
-| T10.7 / T10.12   | provides / inject / events 对账执行；级联重启用执行；安装期契约校验（D168 / D171）                                                                                                                                                  |
-| 实现期配置       | 引用展开 / 结构相等的记忆化或节点预算；冻结形状图按部署共享（`Arc` / interned ID）；契约字段 / 嵌套深度预算（T10.3）                                                                                                                |
-| 扩展位           | 契约 → WIT 投影；per-method / per-event blob 车道声明；blocking-uninstall；嵌套 config 字段 `secret`；README 缺失 lint；构建期服务名 ↔ 契约绑定检查；跨部署契约发现性（任务 9）                                                     |
+| 去向             | 内容                                                                                                                                                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1（T13-h）      | `lib/` 包布局边界确认（D116）；W1.11 的 W7 行本批兑现                                                                                                                                                                                                   |
+| W2（T13-i）      | `config.type` = 瘦身 DSL（D166）；`provides.contract` 的 `@N` 规则 = D165；`provides.contract` 缺省 = contractless（W2 D131 2026-10-19 修订）；`methods` 字段消亡后的方法集住处 = 契约（D167）；「契约包 = WIT 包」措辞修正（D164）                     |
+| W3（T13-j）      | `on-call` 方法集 = 契约数据；服务 args / returns 形状 = 契约（D167）；事件 payload 形状出处 = 契约 `events:`（W8 定名字语义）                                                                                                                           |
+| W5（T13-k）      | business data 形状 SSOT = 契约 `errors:`；运行期形状违约 = `core-contract-violation`（D169）                                                                                                                                                            |
+| W6（T13-l）      | typed decode 的 schema 来源 = 契约（D170）；TLV 线格式不变；blob payload 不做形状校验（D169）                                                                                                                                                           |
+| W8（T13-n）      | **已兑现（2026-10-19）= W8 D173–D179**：事件名语义 / `internal/` 规则 / 声明面 / `on-event` 最终形状；事件形状总表 = 全部契约 `events:` 派生（D165 / D167）；emit 校验违约 = `core-contract-violation` Err + journal（D169）；形状生命周期与降级 = D179 |
+| W9（T13-o）      | provides / inject / events 对账与能力门；契约引用缺失两分、同名判定、`@N` 校验的判定面（D168）；import 清单 ⊆ SDK 词汇表                                                                                                                                |
+| W10（T13-p）     | DSL 词汇 / 产生式演进 = 新 ABI package version；契约版本与 WIT package version 独立（D165 / D166）                                                                                                                                                      |
+| config-format    | D29 `lib/` 行按 D164 修正；D36 配置校验消费 `type:` DSL（D166 / D169）；D43 级联机器复用（D171）                                                                                                                                                        |
+| service-registry | §7「契约包 = WIT 包」按 D164 修正；S6 局部 supersede（D172）；§7 生命周期措辞按 D171 修正（动态消费者级联 / 编译期消费者重编译）；Seam 三角 / 加方法兼容规则存活                                                                                        |
+| plugin-sdk       | S7 `types!()` 覆盖契约四节 + config schema（D170）；S1 / S7 的强类型演进位兑现                                                                                                                                                                          |
+| journal          | `contract_violation` / `event_shape_degraded` 原位承接（D169 / D171）；不新增 kind                                                                                                                                                                      |
+| ADR-0019         | C3 整篇 supersede = [ADR-0044](../decisions/0044-contract-package-type-sources.md)；Status 行记 partial supersede（D172）                                                                                                                               |
+| ADR-0018         | S6 局部 supersede = ADR-0044；Seam 三角与演化规则存活（D172）                                                                                                                                                                                           |
+| ADR-0044         | 契约包与类型来源的新决策记录（D163–D172）                                                                                                                                                                                                               |
+| T10.3            | 契约包解析 / DSL parser / 规范化比较器 / 运行期 walk / 命名空间合并 / 引用展开与环检测 / 记忆化预算；平台 WIT 包加载（W1 D117 / W2 D132）                                                                                                               |
+| T10.9            | 部署索引登记契约包（含休眠件）；`lib/` 变更检测半与反向索引（D168 / D171）                                                                                                                                                                              |
+| T10.14           | `types!()` 实现：契约四节 + config schema 投影；`any` → `Value`；typed decode（D170）                                                                                                                                                                   |
+| T10.15 / T10.14  | 平台 / 生态契约副本获取路径：v1 = metis 检出或手动复制到作者 `lib/`；`metis sdk export` = 工具扩展位；构建 / `metis check` 验证 `types!()` 引用的契约都在包内 `lib/`（D170）                                                                            |
+| T10.7 / T10.12   | provides / inject / events 对账执行；级联重启用执行；安装期契约校验（D168 / D171）                                                                                                                                                                      |
+| 实现期配置       | 引用展开 / 结构相等的记忆化或节点预算；冻结形状图按部署共享（`Arc` / interned ID）；契约字段 / 嵌套深度预算（T10.3）                                                                                                                                    |
+| 扩展位           | 契约 → WIT 投影；per-method / per-event blob 车道声明；blocking-uninstall；嵌套 config 字段 `secret`；README 缺失 lint；构建期服务名 ↔ 契约绑定检查；跨部署契约发现性（任务 9）                                                                         |
+
+---
+
+## W8 事件静态声明
+
+### W8.0 边界与前提
+
+本章定：事件名语义与 `internal/` 命名空间；manifest `events` 声明的语义与强制程度；事件形状总表与名字绑定；四派发 import 的 emit 校验与违约载体；`on-event` 导出的最终形状与监听者契约；动态名与通配政策；事件面的生命周期、冻结与降级；A8 机制消亡清单。不归本章：`events` import 的方法形状 = W3 D146（本章只定 `on-event` 导出与声明语义）；事件 payload 的线格式 = W6 D160；错误类型 = W5 D136–D141；契约包格式 / 形状 DSL / 规范化 / 引用解析 = W7 D164–D168；provides / inject / events 的机械化对账与能力门 = W9；package version 演进 = W10；宿主 import 实现与派发器 = T10.10 / T10.11；SDK catch-all 与强类型演进 = T10.14。
+
+前提（已定不议）：事件四派发语义 = [ADR-0014](../decisions/0014-dispatch-semantics.md)；`internal/` 保留与 v1 两钩子 = [ADR-0016](../decisions/0016-internal-hooks.md)；实例内事件直上租户总线、无实例作用域 = [instance-model](instance-model.md) D71；listen ≠ 依赖 = [config-format](config-format.md) C2.8；`payload` 双车道 = W6 D160；契约 `events:` 节 = W7 D167；AST `analyze` 管线消亡 = [wasm-first-design-review](../research/wasm-first-design-review.md) A8；事件对账四项（#4–#7）的预期推翻 = 同文档补遗 4。
+
+| 节   | 议题                                | 状态               |
+| ---- | ----------------------------------- | ------------------ |
+| W8.1 | 事件名语义与命名纪律                | ✅ D173 2026-10-19 |
+| W8.2 | 声明面语义与强制程度                | ✅ D174 2026-10-19 |
+| W8.3 | 事件形状总表与名字绑定              | ✅ D175 2026-10-19 |
+| W8.4 | emit 校验与违约载体                 | ✅ D176 2026-10-19 |
+| W8.5 | `on-event` 导出与监听者契约         | ✅ D177 2026-10-19 |
+| W8.6 | `internal/*` 命名空间与平台内嵌事件 | ✅ D178 2026-10-19 |
+| W8.7 | 生命周期、冻结与降级                | ✅ D179 2026-10-19 |
+| W8.8 | A8 机制消亡清单（考古索引）         | ✅ 2026-10-19      |
+| W8.9 | 联动登记汇总（章末）                | ✅ 2026-10-19      |
+
+### W8.1 D173 事件名语义与命名纪律
+
+**D173 定案：事件名 = 扁平、精确匹配的 UTF-8 字符串；只有 `internal/` 前缀保留；不立字符集文法、通配与实例作用域。**
+
+- **键语义**：事件名是租户事件总线内的全局键，不是插件命名空间；比较 = UTF-8 全等，大小写敏感，不做 Unicode 归一化。名字非空；空名 = `core-contract-violation` Err（emit / listen 同判）；长度上限 = 实现期配置（T10.10），超限 = 同格 Err。
+- **保留前缀**：只有 ASCII `internal/`（精确小写 + 斜杠）保留给框架；`Internal/`、`internal`（无斜杠）不保留。`internal/` 的发射规则 = W8.6。
+- **命名约定**：文档建议 `plugin-name/event`，不强制；名字不因插件身份自动前缀化（manifest 无 `name`，W2 D126）。
+- **不立通配**：`*` / `#` 等没有特殊语义；声明面全静态事件名（A8 D23.1 原位）。
+- **动态名**：允许构造，但名字是精确键——拼出的名字只有恰好等于总表定义时才获得形状校验。引导写法 = 静态名 + 动态参数进 payload（`session/input` + `session_id` 字段，instance-model D71）。
+- **无实例作用域**：事件直上租户事件总线；同租户跨实例互相可见，按 payload 字段过滤是监听者责任（instance-model D71）。
+- **载体事实**：WIT 面只有 `string name`，事件名无法进 world 静态面（E5 拍板）；声明面 = manifest，形状面 = 契约。
+- **人读面转义**：事件名不立字符集文法，但进 journal / 审批 diff 等展示面时按展示层规则转义控制字符与非 ASCII 混淆字符；键空间本身不收紧（不引入第二套名字语法）。
+- **值错误载体**：空名 / 超长名复用 `core-contract-violation`（封闭枚举里最接近的格）；若将来值错误族成串，走 W10 新 kind 议题，不在此另立。
+
+### W8.2 D174 声明面语义与强制程度
+
+**D174 定案：manifest `events` = 意图 + 审批面，运行期不强制；`publish` 名须有形状出处，`listen` 任意名合法；不立源码漂移对账。**
+
+- **字段**：`events: { publish, listen }`，两项皆为扁平事件名列表（W2 D131）；名单按集合语义，重复项 = 安装期 manifest 校验错误；名单项名值规则 = D173（非空 / 长度上限），违规 = 安装期 manifest 校验错误；未知字段 = W2 D125 / D133 原位。
+- **listen = 弱耦合被动面**：未定义、无人 publish、未来词汇都合法；不因未声明而拒绝 `listen`；`listen` 的 `result` 只承载值错误（空名 / 超长名 / 条目预算超限）与宿主侧失败，不承载「名字未声明」（config-format C2.8「listen ≠ 依赖」的 ABI 面兑现）。**审批面读法**：`events.listen` 是流入意图的可见面，不是运行期白名单——未声明的 `listen`（含 `internal/*`）仍可发生；审批覆盖 = 可见性，不是闸门。
+- **publish = 主动面 + 形状出处门**：每个 publish 名必须在事件形状总表中有定义（三来源任一，W8.3）；缺失两分 = 部署契约索引中存在但来源插件未启用 → Pending（等启用，无超时，warn 政策 = W9 / A8 D22.3）；索引查无 → 启用期响亮，报错写清缺哪个名字、可由谁提供。
+- **`internal/` 声明**：`events.publish` 含 `internal/*` = 启用期响亮（插件发不出该名字）；`events.listen` 含 `internal/*` = 合法（观测一等用法）。
+- **不声明也可 emit / listen**：运行期不强制；未声明 = 不参与审批面，但仍受 emit 形状校验（按名字跟总表走，W8.4）与 `internal/` 拦截。W2 D131「无契约也可发事件」由此保持：未声明的 contractless 名字可发，代价 = 无形状校验、无审批可见性。
+- **审批覆盖面**：`events.publish` 只覆盖有形状定义的主动面；contractless 发射结构性不可声明（D174 的取舍）——它们在审批 diff 中不可见，且无形状校验。需要可见性 = 扩展位（允许无定义 publish 并在审批面标 `unvalidated`，走 manifest 演进 / 新 package version）。
+- **淘汰源码漂移机器**：A10 D28.3 的四项事件检查（#4 emit↔publish / #5 on↔listen / #6 动态名拼接 / #7 跨插件同名无契约；§7 曾预期随 E5 存活）在 wasm 期无源码扫描面，D174 明确淘汰（[补遗 4](../research/wasm-first-design-review.md)）；不立运行期对账（不新增 journal kind）。`metis check` 只做静态预演：manifest 结构、publish 出处（部署上下文内）、DSL 语法；不扫代码。
+- **声明价值**：审批 diff 展示「想发什么 / 想听什么」，部署者裁决；声明不是运行时白名单。
+- **零仪式插件**：无 manifest → 无声明面；emit 形状校验不因形态豁免（W1.8）。
+
+### W8.3 D175 事件形状总表与名字绑定
+
+**D175 定案：事件形状总表 = 三来源契约 `events:` 的逻辑并集；名字即绑定；listen 不写形状；publish 名必须解析；作者 `internal/*` 定义仅允许与平台定义规范化相等。**
+
+- **派生**：总表从平台内嵌契约、部署 `lib/` 生态契约与插件随包契约的 `events:` 节逻辑合并（W7 D165 三来源）；键 = 精确事件名；不搬文件、不进模块系统。
+- **同名**：规范化后结构相等 = 共存（契约竞标）；两个具体形状不等 = 启用期响亮并指名双方；`any` 与一切相容，具体形状胜出（W7 D168 原位）。
+- **名字即绑定**：publish / listen 名单零重写；listen 永不写形状——监听者的类型知识由 `types!()` 从总表读取（W7 D170），重复抄写 = 分歧源。
+- **publish 出处**：名字必须在总表中解析（D174）；定义写 `any` 合法（不表态 = 诚实宽形状）。
+- **平台 `internal/*` 形状**：平台内嵌契约是唯一权威；v1 = `internal/plugin` / `internal/status`，具体字段随 T10.4 实现冻结（首个发布快照前）。本节只定机制，不冻结字段形状。
+- **作者复制件例外**：使用 `types!()` 监听 internal 事件的插件，可把平台契约复制进自己包的 `lib/`（发布仅限宿主，插件不复制用于发布）；该副本可含 `internal/*` 名，**仅当该 `internal/*` 事件条目及其类型引用展开后与平台定义规范化相等**。这是对 `internal/*` 命名空间的显式收紧：W7 D168 的 `any` 相容规则在此不适用——复制件必须是同形副本，不是放宽版；其余非 internal 条目仍按 D168。新增或分歧的 `internal/*` 名 = 启用期响亮——谁都发不出的死定义不许进场；复制件是类型来源，不是第二权威。
+- **无契约事件**：总表无定义 → emit 不校验（D176）；仍可 listen；不要求 manifest publish（D174）。W2 D131「无契约也可发事件」由此保持。
+- **数据面**：总表是宿主数据（契约解析产物），不是 WIT；WIT 不承载动态名（E5 拍板）。解析 / 合并 / 规范化 = T10.3；消费 / 派发 = T10.4。
+
+### W8.4 D176 emit 校验与违约载体
+
+**D176 定案：四派发在入队前按活表校验 payload；违约 = `core-contract-violation` Err + journal；`internal/*` 冒用 = trap。**
+
+- **检查点**：宿主 import 实现内，TLV 合式性 / 预算检查后、入邮箱（emit）或开始派发（serial / parallel / waterfall）前；一次树 / 字节走查，不新增拷贝（W7 D169 成本口径）。
+- **查找**：按精确事件名查当前部署级总表（W8.7 活表）；无定义 / 归一化为 `any` = 跳过；具体形状 = walk。
+- **车道**：`payload.blob` = opaque，不参与形状校验；事件名仍受空名 / 超长 / `internal/` 规则约束。value 车道越过契约形状 = 违约。
+- **违约**：`core-contract-violation` Err 给发射方 + journal `contract_violation`，不派发；message 人读，结构化细节（事件名、违约路径、期望形状）进 journal。四派发同判。
+- **空名 / 超长名**：同格 Err（D173）。
+- **`internal/*` 冒用**：guest 四派发任一 = trap——宿主拒绝调用、实例 Failed、journal `vm_trap`；依赖方收 `service-unavailable`。理由 = 命名空间边界冒用，与 W5 D139「未声明能力调用 = trap」同族；不降级为 Err。宿主自身 emit `internal/*` 不走 guest import，不受此检查；宿主按平台契约自家定义构造。
+- **转发危害明记**：名字是运行期字符串，宿主无法区分「字面量冒用」与「转发数据的名字恰好以 `internal/` 开头」；转发型插件必须在转发前自行校验名字（SDK 提供 `is_reserved` 类助手 = T10.14 扩展），否则外部数据可触发实例死亡。这是「命名空间边界 = 响亮」的明示代价。
+- **无校验面**：contractless / 全 `any` / blob 车道；TLV 合式性仍检查（W6 D156）。
+- **形状退化**：唯一形状定义离场 → 该名字回退为无校验 + journal `event_shape_degraded`（W8.7；journal D78）。
+- **返回值不校验**：emit 忽略；serial / waterfall 链值不校验；parallel 逐项收集。事件返回形状声明 = 扩展位（A8 D22.5 原位）。
+- **零监听者仍校验**：校验是无条件的（有定义即 walk），不以「当前无人监听」为跳过条件——形状违约是作者错，不因部署恰好无人订阅而静默；成本 = 一次 walk，v1 接受。
+- **成本**：一次 walk；typed walk 直接走编码字节（W7 D169）；v1 不做投机优化。
+
+### W8.5 D177 `on-event` 导出与监听者契约
+
+**D177 定案：`on-event` 进 v1 world 导出集（required，SDK 默认 `Ok(None)`）；listener-id 每实例作用域；四派发返回语义按 ADR-0014；listener 错误 fail-open / parallel 逐项收。**
+
+```wit
+// W1.3 world 的 W8 增补（payload / error 引用同 W1.3）
+export on-event: async func(listener-id: u64, name: string, payload: payload) -> result<option<payload>, error>;
+```
+
+- **required 导出**：world 导出集 = 生命周期三 + `on-call` + `on-timer` + `on-event`；缺任一 = 安装期 world 不匹配。SDK 提供默认 `Ok(None)`，零仪式插件不需手写（W1.8）。
+- **调用**：宿主只向已登记 listener 投递；一个 (实例, 事件名) 一个宿主条目（同名去重 + 引用计数，W3 D146），因此每实例每次派发至多一次 `on-event`；`listener-id` 用于逐监听者保序 / 短路，宿主校验归属（外来 id = trap；自己的已摘除 id = 幂等 no-op，W3 D146 原位）。
+- **参数**：`name` = 原始事件名；`payload` = 双车道（W6 D160），宿主不重编码；blob 句柄按 W6 D161 所有权规则转移。
+- **返回**：`emit` = 忽略返回值；`serial` = 首个 `Ok(Some(payload))` 短路并带回，`Ok(None)` 继续；`waterfall` = `Some` 继续链，`None` 否决；`parallel` = 逐项收集 `result<option<payload>, error>`；`Err` 在 emit / serial / waterfall = 记日志后继续（fail-open，ADR-0014），在 parallel = 逐项返回。
+- **错误方向**：listener `Err` 只许 `business`（W5 D138）；非 business = 宿主判 `core-contract-violation`——emit / serial / waterfall = journal `listener_error` + `contract_violation`，fail-open；parallel = 该项结果计 `core-contract-violation`。宿主不把非 business 静默降级为 business。
+- **条目预算**：每实例 listener 条目数（含 host-owned / `detach()` 保留的条目）= 实现期配置（T10.10），必须设上限；超限 = `listen` 返回 `core-contract-violation` Err（message 带预算）。`detach()` 不释放条目，动态唯一名 + detach 可耗尽预算——作者应复用稳定名；这是 ADR-0014「监听者百级以内」规模纪律的 ABI 面兜底。
+- **作者面**：SDK 分发到 catch-all `Plugin::on_event(ctx, name, payload) -> Result<Option<Payload>, Error>`（plugin-sdk S1）；按事件名生成强类型方法 = S7 演进位，不属 v1。
+- **卸载 / 关闸**：Unloading 期投递按 W4.5；在飞 `on-event` 按五段化 drain；卸载丢弃可见 = `unload_gate_closed` / `unload_killed`。
+- **`internal/*` 监听**：允许；v1 internal 事件由宿主 emit（只观测），返回值为 `None` 被忽略，`on-event` 仍被调用。
+- **无收信复核**：listener 收到的 payload 已按 D176 校验（有定义时），收信复核无意义（A8 D22.5 原位）；listener 返回链值不校验。
+
+### W8.6 D178 `internal/*` 命名空间与平台内嵌事件
+
+**D178 定案：`internal/*` 只许宿主 emit；插件可 listen；平台内嵌契约是形状权威；插件目录名规则死亡。**
+
+- **保留前缀**：`internal/`（精确小写 + 斜杠）；插件四派发冒用 = trap（D176）。
+- **平台 v1 事件**：`internal/plugin` / `internal/status`，emit-only（只观测不介入，ADR-0016）；宿主在 fiber 生命周期点 emit；具体 payload 形状 = 平台内嵌契约，字段随 T10.4 实现冻结。
+- **作者契约**：可复制平台契约（规范化相等，D175）；新增 / 分歧 `internal/*` 名 = 启用期响亮。部署 `lib/` 生态契约同判。
+- **契约名不保留**：`lib/internal/` 作为目录名合法，但其中的 `internal/*` 事件仍受上述约束；不立第二套命名保留。
+- **插件目录名规则死亡**：A8 的「插件目录取名 `internal` = 保留」在 wasm 期无兑现面——manifest 无 `name`（W2 D126），插件名不构成事件命名空间。
+- **发送方身份与冒充**：`on-event` 不携带发送方身份，v1 不鉴别「谁发的」——任何插件可发任何非 `internal/` 名（事件本是开放词汇）。需要来源鉴别 = 服务调用（点对点 + 注册表，ADR-0018 语义原位）；事件来源鉴别 = 扩展位（`on-event` 增补 `from` 参数 = 新 package version）。宿主可见实际派发方，`listener_error` / `contract_violation` journal 记录派发方供事后取证。
+- **internal 监听审批读法**：`events.listen` 中的 `internal/*` 是可见意图，不是运行期闸门；未声明的 internal 监听仍可发生（D174 的开放广播取舍），审批面只提供可见性。
+- **不占能力门**：`internal/` 事件不进能力声明、不占 import；emit 拦截是宿主实现内的命名空间检查，不是能力声明。
+
+### W8.7 D179 生命周期、冻结与降级
+
+**D179 定案：事件形状总表 = 部署级活视图；声明过 publish 的发射方进反向索引并级联；最后一份定义离场 = 降级无校验 + journal。**
+
+- **活表**：总表随契约来源变化重建（部署 `lib/` 增删改 = boot / 显式 reload，W7 D171 / config-format D43；插件随包契约 = 插件更新审批事务）；emit 校验读当前活表。替换必须原子——读者看到完整旧表或完整新表，不得看到半重建表（`Arc` / `ArcSwap` 形态，T10.4）。
+- **声明冻结**：各插件在启用事务内解析并冻结自己的 publish 绑定 / 类型引用（W7 D171 原位）；两次启用之间，编译期期望恒定。
+- **破坏性变更**：已有名字的形状变更 / 删除条目 = 契约版本 bump——仅部署级生态契约有 `version:`（W7 D165）；插件随包契约禁写版本，靠同部署内同名对账与级联送达。反向索引（契约 → publish 绑定者 / 类型引用者）级联重启用；动态消费者按新形状继续；编译期消费者（`types!()` 随包副本）必须重新编译——旧副本与新契约同名不同形状 = 启用期响亮。
+- **未声明发射方**：不在反向索引；emit 时读活表，形状变化可能使其运行期失败（`core-contract-violation` Err），不是 trap。这是「校验跟名字走」的诚实代价（A8 D22.4 语义原位）。
+- **最后一份定义离场**：该事件名 emit 回退为无校验 + journal `event_shape_degraded`（一次；journal D78）；监听者已冻结的类型知识不受影响；监听登记不清除。
+- **监听者 / 发射方卸载**：监听条目随实例卸载摘除（W4.5）；在飞派发按五段化；卸载丢弃可见。
+- **无事件持久化**：总表不是日志；journal 只记违约 / 降级 / 监听错误；无 replay。
+- **实现期**：记忆化 / 节点预算 / 形状图共享 = T10.3 / T10.4（W7 D171 已登记）。
+
+### W8.8 A8 机制消亡清单（考古索引）
+
+每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 [ADR-0026](../decisions/0026-luau-abi.md)（已 superseded）。
+
+| 机制                                                                                       | 死因                                                                                                                                            |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| A10 D28.3 事件四项（#4 emit↔publish / #5 on↔listen / #6 动态名拼接 / #7 跨插件同名无契约） | §7 曾预期随 E5 存活；wasm 无源码扫描面，D174 淘汰（[补遗 4](../research/wasm-first-design-review.md)）；声明面降为审批面 + publish 出处静态预演 |
+| listen 期望形状声明 / 事件返回形状字段                                                     | v1 不立（A8 D22.5 原位；返回形状 = 扩展位）                                                                                                     |
+| manifest 内联 `define:` 节                                                                 | 形状唯一住处 = 契约包（W7 D164 / D167）                                                                                                         |
+| 通配语法                                                                                   | A8 从未立（D23.1 原位）                                                                                                                         |
+| 插件目录名 `internal` 保留                                                                 | wasm 期插件名不构成事件命名空间（D178）                                                                                                         |
+| 契约定义 `internal/*` = 一律响亮                                                           | 修正为「仅允许与平台定义规范化相等的复制件」（D175 / D178）                                                                                     |
+| Luau `sdk types` 的 `.d.luau` / `export type` 事件类型生成                                 | `types!()`（W7 D170）                                                                                                                           |
+| 事件 payload = Luau table 深快照 / 契约优先槽位                                            | TLV Value + 总表 walk（W6 / W7）                                                                                                                |
+| 两槽 `res, err` 事件返回                                                                   | `result<option<payload>, error>`（W5 D136）                                                                                                     |
+| `internal/dispatch` 钩子                                                                   | 替换为 tracing（ADR-0016；W8 不复活）                                                                                                           |
+| 运行期全强制 / 能力门式事件白名单                                                          | 明确淘汰（A8 D20.2 理由原位：开放广播、观测类插件听一切）                                                                                       |
+| journal 内部流量族（`message_enqueued` / `dispatch_completed` 等）                         | journal D84 v1 骨架化，事件面只剩违约 / 降级 / 监听错误（非 W8 新增死亡，注明）                                                                 |
+
+**语义平移保留**：四派发语义（ADR-0014）；fail-open；`internal/` 保留；声明 = 审批面；名字即绑定；publish 出处两分；`any` 诚实宽形状；emit 按名字校验；事件词汇开放。
+
+### W8.9 联动登记汇总（章末）
+
+| 去向                     | 内容                                                                                                                                                                                                             |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1（T13-h）              | **已兑现（2026-10-19）**：`on-event` 进入 required 导出集并补全 world 草图（D177）；W1.11 的 W8 行本批兑现                                                                                                       |
+| W2（T13-i）              | **已兑现（2026-10-19）**：`events` 声明语义（publish 出处 / listen 自由 / `internal/` 规则）；无字段改动                                                                                                         |
+| W3（T13-j）              | **已兑现（2026-10-19）**：`on-event` 最终形状；`listen` 未声明名恒 `Ok`；四派发校验点 = D176；world 导出集补 `on-event`                                                                                          |
+| W5（T13-k）              | **已兑现（2026-10-19）**：listener 错误封套 = D136–D141；非 business listener 错误 = `core-contract-violation`（D138）；emit 形状违约 = `core-contract-violation`（D139）；`internal/*` 冒用 = trap；不新增 kind |
+| W6（T13-l）              | **已兑现（2026-10-19）**：`payload` 双车道；blob 不参与形状校验；`on-event` 返回 `option<payload>`；链值所有权按 D161                                                                                            |
+| W7（T13-m）              | **已兑现（2026-10-19）**：总表 = 契约 `events:` 并集；D168 同名规则；D171 生命周期；D169 事件校验点由 W8 钉死                                                                                                    |
+| W9（T13-o）              | 机械化对账 = provides / inject / events（publish 出处缺失两分、`internal/` 规则、import 清单 ⊆ 词汇表）；W8 只定语义                                                                                             |
+| W10（T13-p）             | `on-event` 导出 / WIT 面演进 = 新 WIT package version；事件名 / 声明面词汇 = manifest 字段集演进纪律（`internal/*` 词汇增补同）                                                                                  |
+| T10.3                    | 契约解析 / 事件总表合并 / 规范化 / 引用展开 / 记忆化预算                                                                                                                                                         |
+| T10.4                    | 派发器；总表消费；emit 校验；`on-event` 调用与 listener 表；`internal/plugin` / `internal/status` 的 payload 形状与发射点                                                                                        |
+| T10.10 / T10.11          | 宿主 import 实现；`internal/*` 冒用拦截；事件名长度预算                                                                                                                                                          |
+| T10.12                   | 安装期 world 导出校验补 `on-event`                                                                                                                                                                               |
+| T10.14                   | SDK 默认 `on_event`；`Listener` RAII；名称常量 = 扩展位（v1 不立）                                                                                                                                               |
+| T10.15                   | 脚手架 / `metis check` 预检 world 导出集补 `on-event`；不扫代码                                                                                                                                                  |
+| context-events           | §7 W8 兑现注；事件总线 / 派发语义不变                                                                                                                                                                            |
+| instance-model           | D71 事件跨界 / 静态名 + payload 参数化兑现；D72 = 事件面不新增 journal 字段                                                                                                                                      |
+| config-format            | C2.8 listen ≠ 依赖兑现；C8.3 W8 行兑现                                                                                                                                                                           |
+| plugin-sdk               | S1 catch-all / `on_event` 默认实现；W8 行兑现；强类型事件方法 = S7 扩展位                                                                                                                                        |
+| service-registry         | §6 事件形状共享同一契约包兑现                                                                                                                                                                                    |
+| journal                  | 不新增 kind；`listener_error` / `contract_violation` / `event_shape_degraded` 原位                                                                                                                               |
+| 实现期配置               | 事件名长度上限；事件总表节点 / 引用展开预算；事件 payload 的 TLV 深度 / 字节预算（原位）；listener 每实例条目上限（必设，含 host-owned / detach 条目）                                                           |
+| 扩展位                   | 事件返回形状声明；强类型事件方法（S7）；`types!()` 事件名常量；通配（维持不立）；事件审计族（维持不立）                                                                                                          |
+| wasm-first-design-review | 补遗 4：A10 D28.3 #4–#7 事件对账的去向 = D174 淘汰（wasm 无源码扫描面）                                                                                                                                          |
+| ADR                      | 不新增；A8 为归档设计文档（非 ADR）；ADR-0016 机制不变、正文冻结；兑现记录住本章联动行                                                                                                                           |
