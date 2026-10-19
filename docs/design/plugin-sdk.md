@@ -1,7 +1,7 @@
 # Metis — 插件 SDK 作者面设计（living doc）
 
 > 状态：living design doc——2026-10-17 开章（T13-d SDK 形态议题批拍板写入：七项形态定案 = S1–S7（D98–D104）；第八项 = 固化去处定案，无 D 号——本文件开章 + [sdk-precedent-survey](../research/sdk-precedent-survey.md) 落盘即其兑现）。本文档 = 插件作者面（`metis-plugin` crate 的宏形状、trait 族、异步与错误习语、类型生成）的 SSOT；ABI 层（宿主 ↔ 组件边界）= [wit-abi](wit-abi.md) W 系列，本文档住其上一层——ABI 走钉版纪律（W10 D192 已兑现），作者面随语义演进，分层防单一文档膨胀（[doc-lifecycle](doc-lifecycle.md)）。
-> 前提（已定不议）：插件唯一载体 = wasm 组件、作者不见 WASI/WIT、`#[metis::plugin]` + trait 实现形态（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §1/§4）；接口数据三分法与 E3/E4 拍板（2026-10-16，SSOT = [台账](../backlog.md) T13 状态行）；实例内执行模型 = [wit-abi](wit-abi.md) W4 章（D93–D97）。
+> 前提（已定不议）：插件唯一载体 = wasm 组件、作者不见 WASI/WIT、`#[metis::plugin]` + trait 实现形态（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §1/§4）；接口数据三分法与 E3/E4 拍板（2026-10-16；细则 = ADR-0034 及其后续 0035–0044 + [wit-abi](wit-abi.md) W1–W10）；实例内执行模型 = [wit-abi](wit-abi.md) W4 章（D93–D97）。
 > 证据基线：[sdk-precedent-survey](../research/sdk-precedent-survey.md)（proxy-wasm / zed_extension_api / Spin / Extism PDK 宏藏 ABI 机制四路调研，2026-10-17）；[wasm-research](../research/wasm-research.md) 补遗 6/7（S1/S2 spike：guest 样板 31 行、同实例重入实证）。
 > Last reviewed: 2026-10
 
