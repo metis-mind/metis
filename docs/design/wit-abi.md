@@ -28,7 +28,7 @@
 | W2  | manifest 格式                                                                                        | A2                          | ✅ 2026-10-19（D125–D134） |
 | W3  | ctx 形态：WIT import 接口集与 SDK 映射（作者不见 WASI/WIT = ADR-0034 §4）                            | A3                          | 未开始                     |
 | W4  | async 与交错语义（组件模型 async 映射；S1/S2 spike 双 PASS 托底 = 补遗 6/7）                         | A4                          | ✅ 2026-10-17              |
-| W5  | 错误与 result 习语（`result<T,E>` 原生）                                                             | A5                          | 未开始                     |
+| W5  | 错误与 result 习语（`result<T,E>` 原生）                                                             | A5                          | ✅ 2026-10-19（D136–D141） |
 | W6  | 边界转换：canonical ABI / 递归 Value 线编码（TLV 主线化 = E1 选项① 拍板）/ resource 句柄族           | A6                          | 未开始                     |
 | W7  | 契约与类型来源（① 平台封闭面 = WIT 富类型原生；A7 半消融 = E5 拍板：瘦身形状 DSL 继承 Value 形状面） | A7                          | 未开始                     |
 | W8  | 事件静态声明                                                                                         | A8                          | 未开始                     |
@@ -84,7 +84,7 @@
 
 **D118 定案：固定 world 的生命周期导出 = `setup` / `on-config` / `dispose`，全 async；开放数据以 TLV 过边界。**
 
-签名示意（非可编译 WIT：`list<u8>` = TLV 编码的 Value；`error` = W5 章的共享错误类型，W5 落地前 WIT 包不冻结）：
+签名示意（非可编译 WIT：`list<u8>` = TLV 编码的 Value；`error` = W5 D136 的共享错误类型）：
 
 ```text
 package metis:plugin@0.1.0;
@@ -189,7 +189,7 @@ world plugin {
 | -------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | W2（T13-i）    | **已兑现（2026-10-19）**：manifest 字段全集与形状 = D125–D133；模块系统消亡 = D134/ADR-0038；fs 两档 = D129/D130/ADR-0039 |
 | W3（T13-j）    | ctx = imports（D118）；作者面签名合成；`on-call` 服务调用导出；生命周期导出与 ctx import 接口集的边界                     |
-| W5（T13-k）    | `error` 类型定义；生命周期返回的 `result` 形状已固定（D118）                                                              |
+| W5（T13-k）    | **已兑现（2026-10-19）**：`error` 类型 = W5 D136–D141；生命周期返回的 `result` 形状确认（D118）                           |
 | W7（T13-m）    | 随包契约 `lib/`（包内容区的一部分，D35）；W1 只定 `manifest.yml` + 组件文件 + `lib/` 的包布局边界                         |
 | W8（T13-n）    | `on-event` 导出 additive 增补到同一 world（D118）                                                                         |
 | W10（T13-p）   | package version 的数值与比较、多版本快照、ABI 版本纪律（D117）                                                            |
@@ -276,13 +276,13 @@ world plugin {
 
 ```yaml
 config:
-  api_key:
-    type: string
-    required: true
-    secret: true
-  refresh_interval:
-    type: integer
-    default: 60
+    api_key:
+        type: string
+        required: true
+        secret: true
+    refresh_interval:
+        type: integer
+        default: 60
 ```
 
 - 条目字段 = 封闭集；未知字段响亮。
@@ -304,12 +304,12 @@ config:
 
 ```yaml
 capabilities:
-  fs: read
-  http:
-    - api.openai.com
-    - "*.anthropic.com"
-  process: true
-  mount: true
+    fs: read
+    http:
+        - api.openai.com
+        - "*.anthropic.com"
+    process: true
+    mount: true
 ```
 
 - `capabilities` = map，封闭键 `fs` / `http` / `process` / `mount`；未知键响亮；节缺省 = 无该能力；fail-closed 不变。
@@ -335,15 +335,15 @@ capabilities:
 
 ```yaml
 provides:
-  memory: {}                 # contract 缺省 = 服务名
-  search:
-    contract: search@2       # 生态契约带 @N（W7）
+    memory: {} # contract 缺省 = 服务名
+    search:
+        contract: search@2 # 生态契约带 @N（W7）
 inject:
-  required: [llm, memory]
-  optional: [cache]
+    required: [llm, memory]
+    optional: [cache]
 events:
-  publish: [some/event]
-  listen: [another/event]
+    publish: [some/event]
+    listen: [another/event]
 ```
 
 - `provides` = map 服务名 → 条目；条目封闭字段 = `{ contract }`（可选字符串，缺省 = 服务名；`@N` 规则归 W7）；`methods` 字段消亡（方法集 = 契约数据）；`null` ≡ `{}`。
@@ -412,7 +412,7 @@ events:
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | W1（T13-h）     | `component` 缺省 `plugin.wasm`（D116）；零仪式 ABI 面（D123）措辞按 ADR-0039 更新：private fs 隐式，效应能力仍 fail-closed                                                                                                  |
 | W3（T13-j）     | ctx.fs = private（隐式读写）/ global（`fs: read/write` 声明）；无命名根；global 能力门在运行期强制；DB = guest crate + private fs（无宿主 sqlite）                                                                          |
-| W5（T13-k）     | 生命周期返回的 `error` 类型；manifest 校验错误是宿主侧错误，不经 guest 错误通道                                                                                                                                             |
+| W5（T13-k）     | **已兑现（2026-10-19）**：生命周期返回的 `error` 类型 = W5 D136；manifest 校验错误是宿主侧错误，不经 guest 错误通道（D133）                                                                                                 |
 | W7（T13-m）     | `type:` 表达式语法与词汇；契约包格式 / 三来源合并；`provides.contract` 与 `@N`；作者自定义服务 / 事件 schema 的住处                                                                                                         |
 | W8（T13-n）     | 事件名语义、`internal/` 规则、事件形状在契约中的写法；manifest 只列名字                                                                                                                                                     |
 | W9（T13-o）     | inject / provides / events 对账；能力门（含 `mount` 例外）；import 清单 ⊆ SDK 词汇表                                                                                                                                        |
@@ -491,7 +491,7 @@ events:
 
 - **D1.7 四层平移**：① 启用期 manifest 依赖图禁环（不动；WIT 形态归 W9 章）；② 写码期教具 = 形状教材归 SDK lints 与 Creator 文档（AST lint 管线随载体消亡 = [wasm-first-design-review](../research/wasm-first-design-review.md) A8；三形状载体中立，于 Rust 同样成立：跨 await 读改写 / 持锁等跨插件调用 / `every` 回调挂起未自锁）；③ 运行期 wait-for 图（宿主全见跨插件等待——服务调用与事件链；收窄写实：插件内名字等待随宿主零同步原语退出图的节点集，除非 W4.2 扩展位上报激活）；④ 超时 = 最后保险丝（[ADR-0011](../decisions/0011-actor-execution-model.md) 三层保险既有面）。
 - **插件内等待面盘点（A4 D10.1 平移）**：fan-out join 与 exclusive 排队 = guest 内部面，宿主不见不立 deadline（guest 侧结构化纪律 = SDK）；流 `read()` 挂起 = 唯一真无界源的性质不变（作者自开自流、可见可控），处置 = W6 资源面登记（per-read timeout 扩展位随章平移）。不立的理由平移：能定出原则性数值的形状都已有 deadline，剩下的是合法长等，任何统一数值都是拍脑袋；兜底三件套 = 在飞预算记账 + 卸载强杀（W4.5）+ 成环检测（层三）。
-- **fail-fast 清单（宿主可见面重订）**：wait-for 圈闭合（当场报错 + 整圈路径 + fail-open 解圈 = [ADR-0014](../decisions/0014-dispatch-semantics.md)）；卸载期注册新账（W4.5）；未声明能力调用 = 进口对账编译期结构事实（[wasm-first-design-review](../research/wasm-first-design-review.md) B1——运行期出现规则兜底退役为结构保证）；不可转换值跨界（W6 面）。A4 清单的插件内四项消亡或归 SDK：exclusive 嵌套 / 自家人进名（SDK 类型与纪律面）；被登记线程裸 yield（无对应物——宿主无「无登记挂起」可检，观测点缺失即消亡理由）；fan-out 子任务未随 handler 完结（guest 结构化纪律，宿主无观测点）。
+- **fail-fast 清单（宿主可见面重订）**：wait-for 圈闭合（当场报错 + 整圈路径 + fail-open 解圈 = [ADR-0014](../decisions/0014-dispatch-semantics.md)）；卸载期注册新账（W4.5）；未声明能力调用 = 两层：import 清单 ⊆ SDK 封闭词汇表 = 编译期结构事实（[wasm-first-design-review](../research/wasm-first-design-review.md) B1）；manifest 能力声明 = 运行期门 fail-closed，越权 = trap（W5 D139）；不可转换值跨界（W6 面）。A4 清单的插件内四项消亡或归 SDK：exclusive 嵌套 / 自家人进名（SDK 类型与纪律面）；被登记线程裸 yield（无对应物——宿主无「无登记挂起」可检，观测点缺失即消亡理由）；fan-out 子任务未随 handler 完结（guest 结构化纪律，宿主无观测点）。
 - **兜底保险丝层平移**：单步执行硬截断 = fuel/epoch 计量（wasmtime 原生件，实测 1.022× = [ADR-0024](../decisions/0024-carrier-layering.md) §8；[ADR-0011](../decisions/0011-actor-execution-model.md)「防堵 executor」语义不动，机制自 interrupt 回调换血——Status 注同批落地）；服务调用 deadline（service-registry S5）/ bounded 邮箱 + 在飞预算回压（W4.3）/ 加载总预算（W1 章面）/ drain 总预算（[fiber](fiber.md) §10）。
 
 ### W4.5 D97 卸载与在飞任务交接（2026-10-18 五段化）
@@ -537,7 +537,7 @@ events:
 | T10.14（插件 SDK）   | exclusive = async mutex 助手 + D1.2 三规则重估面（W4.2）；fan-out 呈现形态（W4.2）；写码期教具三形状（W4.4 层二）；S2 papercuts 7–11 输入（[wasm-research](../research/wasm-research.md) 补遗 7），含 `exports: { default: async }` 绑定约束（papercut 7） |
 | W1 章（入口契约）    | `dispose` 调用位回填（W1.6 D121）；卸载五段 = 关闸 → 优雅窗口 → dispose → 实例即弃 → 宿主 drain                                                                                                                                                            |
 | W3 章（ctx 形态）    | 挂起点的作者面呈现（W4.1）；SDK async 映射输入（W4.1/W4.2）；补遗 6/7 papercuts 分流在案                                                                                                                                                                   |
-| W5 章（错误）        | fail-fast 清单的错误面接口（W4.4）——wait-for 圈 / 卸载期新账的错误族归置                                                                                                                                                                                   |
+| W5 章（错误）        | **已兑现（2026-10-19）**：fail-fast 清单的错误面 = W5 D137/D139——wait-for 圈 = `core-deadlock`；卸载期新注册长寿账 = trap；`service-unavailable` 承接 D11.3                                                                                                |
 | W6 章（边界转换）    | 流 `read()` 无界源登记（W4.4）；不可转换值跨界 fail-fast 格（W4.4）；流式句柄族 drain 强 close 铁律平移面（W4.5 D11.2）                                                                                                                                    |
 | journal.md           | `fanout_cancelled` 处置 = **已兑现 = [ADR-0035](../decisions/0035-journal-fanout-cancelled-supersede.md)**（2026-10-18）；`unload_gate_closed`/`unload_killed` 两族存活（W4.5 语义原位，条目措辞随实现期载体词）                                           |
 | 实现期配置           | 每实例在飞 async 任务预算（W4.3，超限 = 纯回压）；优雅窗口 + drain 总预算（W4.5）；host 侧事件在途投递界（A4 D10.2 原位存活）                                                                                                                              |
@@ -546,3 +546,219 @@ events:
 | ADR-0011             | 「独立解释器状态」「interrupt 时间盒」两格载体面 partial supersede——**同批落地 = Status 行注**（2026-10-17）                                                                                                                                               |
 | context-events §0/§1 | worker 伪码、三层保险行与服务调用路径行清写——**已清写 = T13-c/T13-f**（2026-10-18）                                                                                                                                                                        |
 | Creator 文档         | 作者契约四条平移（协作式 / 挂起窗口 / 同步全显式 / 在飞即成本，W4.1）+「等的事重叠 = guest async 原生；算的事并行 = 多实例/外部服务」分工条                                                                                                                |
+
+---
+
+## W5 错误与 result 习语
+
+### W5.0 边界与前提
+
+本章定：共享错误类型的 WIT 形状与封闭 kind 枚举；错误族清单；宿主↔guest 的方向纪律；「响亮报错」与 `result` 的载体分界；business 数据与 message 纪律；作者面投影与 A5 习语消亡。不归本章：ctx import 接口集与各方法签名 = W3；递归 Value 的 TLV 线编码与 resource 句柄族 = W6；契约形状来源与运行期校验细则 = W7/W9；事件声明与 emit 校验形态 = W8；能力门机械对账 = W9；WIT package version 比较与演进 = W10；trap 的运行时处置实现 = T10.10；journal kind 表 = journal D78。
+
+前提（已定不议）：插件唯一载体 = wasm 组件（[ADR-0034](../decisions/0034-wasm-first-carrier.md)）；错误封套语义 = A5（`{kind, message, data?}`、kind 定控制流、三条分界判据、服务四态）；B5 要求呈现层类型化（[wasm-first-design-review](../research/wasm-first-design-review.md) §3）；接口数据三分法①（平台封闭面 = WIT 富类型；E1①/E2①/E5①，2026-10-16 拍板）；作者面错误封套 = [plugin-sdk](plugin-sdk.md) S5 D102；实例内执行模型 = W4；sqlite 撤回（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）；盒概念消解（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）。
+
+| 节   | 议题                          | 状态               |
+| ---- | ----------------------------- | ------------------ |
+| W5.1 | 错误类型形状                  | ✅ D136 2026-10-19 |
+| W5.2 | 错误族清单                    | ✅ D137 2026-10-19 |
+| W5.3 | 方向性：宿主↔guest            | ✅ D138 2026-10-19 |
+| W5.4 | 响亮 vs Result 的 wasm 载体   | ✅ D139 2026-10-19 |
+| W5.5 | business data 与 message 纪律 | ✅ D140 2026-10-19 |
+| W5.6 | 作者面投影与 A5 习语消亡      | ✅ D141 2026-10-19 |
+| W5.7 | A5 机制消亡清单（考古索引）   | ✅ 2026-10-19      |
+| W5.8 | 联动登记汇总（章末）          | ✅ 2026-10-19      |
+
+### W5.1 D136 错误类型形状
+
+**D136 定案：共享 `record error { kind, message, data? }` + 封闭 `enum error-kind`；`kind` 定控制流，`message` 只进日志，`data` 仅 business 携 TLV Value。**
+
+```wit
+package metis:plugin@0.1.0;
+
+interface errors {
+  record error {
+    kind: error-kind,
+    message: string,
+    data: option<list<u8>>,
+  }
+
+  enum error-kind {
+    // fs
+    fs-not-found,
+    fs-permission-denied,
+    fs-invalid-path,
+    fs-invalid-utf8,
+    fs-invalid-type,
+    fs-too-large,
+    fs-io,
+    // http
+    http-timeout,
+    http-connect,
+    http-policy,
+    http-too-large,
+    http-invalid,
+    http-error,
+    // process
+    process-spawn-failed,
+    process-timeout,
+    process-gone,
+    // service（ADR-0018 S5 四态；business 共享）
+    service-unavailable,
+    service-method-missing,
+    service-timeout,
+    // 宿主框架族
+    core-deadlock,
+    core-contract-violation,
+    // provider-defined
+    business,
+  }
+}
+```
+
+- **world 引用**：W1.3 D118 的 world 以 `use errors.{error}` 引用本类型；生命周期导出的签名不变（`setup` / `on-config` / `dispose`）。
+
+- **1:1 平移**：A5 的封套三字段与 [plugin-sdk](plugin-sdk.md) S5 D102 的三格封套逐字段对应。`kind` = WIT enum，控制流分支由编译器穷尽检查（A5 的 analyze #10「kind 串必须在枚举内」由编译器白拿）；`message` = 人读摘要；`data` = `option<list<u8>>`，内容 = TLV 编码的 `Value`（E1①，线编码归 W6/T10.13）。
+- **`data` 纪律**：仅 `business` 使用；其余 kind 恒 `none`，宿主不读，SDK 不对非 business 暴露 data 语义。封闭族不需要结构化 data——message 足够，完整诊断进 journal。
+- **族分组是命名约定**：kind 名的族前缀（`fs-` / `http-` / `process-` / `service-` / `core-`）只作分组与审计检索，不是类型分层；封闭 enum 已提供穷尽匹配。
+- **选扁平 record 而非嵌套 variant**：A5 的三字段分工是设计本体，D102 作者面已冻结为同一封套；ABI 与作者面同形，避免第二套 SSOT 与 SDK 扁平整形层。代价明记 = 非 business 的 `data` 组合在结构上合法但被纪律禁止（宿主不读、SDK 不暴露）。
+- **类型住处**：`crates/metis-plugin/wit/error.wit` 的 `interface errors`（W1.2 D117 的文件按章拆）；world 与各 import interface 以 `use errors.{error}` 引用，W3 落地 import 接口时同源引用。不立独立错误版本号；kind 增补随 WIT package version（W10）。
+- **message**：必填字符串；宿主生成时给出非空摘要；guest business 错误可给空串，SDK 补默认文案。错误消息永不参与控制流（分支只对 `error-kind`）。
+
+### W5.2 D137 错误族清单
+
+**D137 定案：族 = fs / http / process / service / core / business；`sql.*` 与 `box.trap` 死亡；timer 无 Err 面。**
+
+| 族       | kind                      | 触发                                                                                               | 备注                                                                                          |
+| -------- | ------------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| fs       | `fs-not-found`            | read / list / delete 目标不存在                                                                    | A5 原位                                                                                       |
+|          | `fs-permission-denied`    | OS 层拒绝（EACCES / EPERM / EROFS / ENOTCAPABLE，动作相同 = 放弃）                                 | private preopen 逃逸同格                                                                      |
+|          | `fs-invalid-path`         | global 档两段式解析拒绝全族：逃逸 / 豁免命中 / 循环 / 超长；TOCTOU 竞态窗口同格                    | message 通用化，不点名豁免命中；完整原因进 journal（D140）                                    |
+|          | `fs-invalid-utf8`         | 文本读取的 UTF-8 校验失败                                                                          | W3 若选 bytes-only 读取，本格在 WIT 包冻结前删除                                              |
+|          | `fs-invalid-type`         | read 目录 / list 文件                                                                              | A5 原位                                                                                       |
+|          | `fs-too-large`            | read 预算超限                                                                                      | 预算数值归 T10.11                                                                             |
+|          | `fs-io`                   | 兜底（message = OS 原文，按 D89 脱敏）                                                             | 开放空间诚实兜底格                                                                            |
+| http     | `http-timeout`            | 强制超时命中（与 `service-timeout` 不同族：彼 = 服务调用 deadline，此 = 外部请求超时）             | A5 原位                                                                                       |
+|          | `http-connect`            | DNS / TCP / TLS / 连接中断一格（动作相同）                                                         | A5 原位                                                                                       |
+|          | `http-policy`             | 域名白名单 / SSRF / 跨域重定向拒绝（部署者数据 → Err）                                             | 与未声明能力的 loud 两界不混（W5.4）                                                          |
+|          | `http-too-large`          | 响应预算超限                                                                                       | A5 原位                                                                                       |
+|          | `http-invalid`            | URL 畸形等值层参数错误                                                                             | 参数形状错仍走响亮（WIT 类型面静态排除）                                                      |
+|          | `http-error`              | 兜底：响应畸形 / 解压失败 / 重定向异常                                                             | 开放空间诚实兜底格                                                                            |
+| process  | `process-spawn-failed`    | 命令不存在 / 权限 / fork 失败                                                                      | A5 原位                                                                                       |
+|          | `process-timeout`         | exec 强制超时杀进程组                                                                              | A5 原位                                                                                       |
+|          | `process-gone`            | write / signal 已退出进程（高频竞态）                                                              | read 在进程死后 = 正常 EOF，不算错误                                                          |
+| service  | `service-unavailable`     | 提供方缺席 / 崩溃 / 卸载窗口；可选依赖常态答案                                                     | ADR-0018 S5；D11.3 即错即回                                                                   |
+|          | `service-method-missing`  | 方法名不存在（宿主查注册表拦下，不走消息）                                                         | ADR-0018 S5                                                                                   |
+|          | `service-timeout`         | 服务调用 deadline / 提供方被 fuel / epoch 截断                                                     | ADR-0018 S5                                                                                   |
+| core     | `core-deadlock`           | wait-for 圈闭合（W4.4 层三）；message 带整圈路径（按实现期上限截断）                               | 宿主检测 + fail-open 解圈；不占服务族第五格                                                   |
+|          | `core-contract-violation` | 运行期契约 / 方向违约：服务参数或返回值形状不符、emit payload 不符、guest 导出返回非 business kind | journal `contract_violation`；message 人读，结构化细节住 journal                              |
+| business | `business`                | guest 起源的业务错误（服务 handler 的业务失败 / 生命周期钩子与事件 listener 的唯一合法导出 kind）  | `data` = TLV Value；服务路径形状 SSOT = 服务契约（W7/W9）；非服务路径由 SDK 约定（通常 none） |
+
+- **三条分界判据平移**（A5 D14.1）：① `Err` vs `Ok` 内状态字段看载荷是否完整成立——HTTP 4xx/5xx、进程非零 exit = `Ok` 载荷分支，状态码 / exit code 不进 kind；② `Err` vs 响亮报错看静态可否查——契约违反 = loud（W5.4），运行期数据决定 = `Err`；③ kind 细分粒度看调用方动作是否不同，开放空间（OS / 网络 / 进程）必设诚实兜底格。
+- **死亡项**：`sql.*` 族随 sqlite 能力撤回永久死亡（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)；DB = guest crate + private fs）；`box.trap` 随盒概念消解（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）——插件 trap = 实例死亡 + journal `vm_trap`，在飞调用方收 `service-unavailable`（D11.3），不立 guest 可见的 trap kind；timer 无 Err 面，参数非法走响亮（W5.4）。
+- **service 四态不立第五格**：`service-unavailable` / `service-method-missing` / `service-timeout` + 共享 `business` 即 ADR-0018 S5 四态；服务调用路径的调用方可见错误集合 = 这四格 + `core-deadlock` / `core-contract-violation`（宿主框架族）。`core-*` 不改变服务注册表语义，也不占服务族第五格；ADR-0018 正文与 Status 不动。
+- **封闭枚举演进**：新增 kind = 新 WIT package version（W10）；不做开放字符串，也不在 guest 侧枚举未知 kind 的透传槽——跨版本共存时宿主按 `abi` 使用对应版本绑定（W5.3 / W10），旧版绑定不接收新版 kind。
+
+### W5.3 D138 方向性：宿主↔guest
+
+**D138 定案：共享类型 + 方向纪律；guest 导出只许 `business`；guest 返回非 business kind = 宿主判 `core-contract-violation`。**
+
+- **import（宿主→guest）**：宿主可产生 fs / http / process / service / core 族；`business` 仅由 guest 提供方产生、宿主在服务调用路径上透传，宿主自身不产生 `business`（宿主级失败用 core 族）。
+- **export（guest→host）**：生命周期钩子、服务 handler、事件 listener 的 `Err` 只许 `business`；`data` = TLV Value（服务路径 = 契约形状；生命周期 / 事件路径 = SDK 约定，通常 none）。SDK 在作者面只提供 `Error::business(data)` 作为导出错误构造入口（具体 API 归 T10.14），文档同条。
+- **非 business 的导出错误 = 方向违约**：宿主不静默降级为 business，而是判 `core-contract-violation` 并按出口处置——服务 handler → 调用方收该格 + journal `contract_violation`；`setup` → 加载失败（W1.5），日志记违约；`on-config` → 重挂载（W1.3），日志记违约；`dispose` → 记日志、继续 drain（W1.6）；事件 listener → emit / serial / waterfall = `listener_error` + `contract_violation`，fail-open；parallel = 该项结果计 `core-contract-violation`（A5 D15.2 / ADR-0014）。
+- **不立两个 WIT 类型**（`host-error` / `guest-error`）：一个封套是 A5 的设计本体；方向纪律在宿主一处归一即可；两个类型不带来安全收益（business data 本就是任意 TLV），却让 W1.3 签名与 SDK 映射双份。
+- **跨版本 kind 面**：`error-kind` 是封闭 enum，新增 case = 破坏性变更；跨版本共存（W10）时宿主按组件声明的 `abi` 使用对应版本的 WIT 绑定，不得把新版 kind 送进旧版绑定。多版本快照 / 翻译责任 = W10 章（登记见 W5.8）。
+
+### W5.4 D139 响亮 vs Result 的 wasm 载体
+
+**D139 定案：调用契约违反（静态可查的 API 误用，含 timer 参数越界 / 卸载期注册）= trap；运行期交互 / 形状失败 = `core-*` Err；运行期数据失败 = 族 Err。**
+
+| 情形                                                                   | 载体                                                                                                                              |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 未声明能力调用（manifest 门：fs global / http / process / mount 缺省） | trap——宿主 import 拒绝，实例 Failed，journal `vm_trap`；依赖方收 `service-unavailable`                                            |
+| Unloading 期新注册「比我长寿」的账（监听 / provide / timer）           | trap——实例本就在卸载，无额外损失（W4.5 D11.2）                                                                                    |
+| timer 参数非法（`every` 低于最小间隔等）                               | trap——参数非法 = 契约违反，A5 timer「无 Err 面」平移                                                                              |
+| import 参数形状错（WIT 类型面已静态排除；服务 TLV 参数运行期违约）     | `core-contract-violation` Err——调用方统一失败 / 告警；违约为参数侧还是返回侧由 message + journal 指示（v1 不提供机器可分支细节）  |
+| 服务返回形状违约 / emit payload 违约                                   | `core-contract-violation` Err + journal `contract_violation`（D19.1 / D22.4 的运行期校验点存活）                                  |
+| wait-for 圈闭合                                                        | `core-deadlock` Err 给调用方（W4.4 fail-open 解圈；message 带整圈路径）                                                           |
+| 运行期数据失败（文件不存在 / 网络失败 / 进程退出等）                   | 对应族 Err                                                                                                                        |
+| 事件 listener 失败                                                     | emit / serial / waterfall = fail-open：journal `listener_error`，不进控制流；parallel = 逐项 `result` 收集（A5 D15.2 / ADR-0014） |
+| guest trap（panic / abort / fuel / epoch 截断自身）                    | 实例死亡；journal `vm_trap`；在飞调用方按 D11.3 收 `service-unavailable`                                                          |
+| `setup` 返回 Err / trap                                                | 加载失败，实例即弃（W1.5 D120）                                                                                                   |
+| `on-config` 返回 Err / trap                                            | 重挂载（W1.3 D118 / config-format D42）                                                                                           |
+| `dispose` 返回 Err / trap                                              | 记日志，不中断后续清理（W1.6 D121）                                                                                               |
+| manifest / config / 安装校验失败                                       | 宿主侧响亮（miette / 启用期拒），不经 guest 错误通道（W2 D133 / W1.5）                                                            |
+
+- **为何「响亮」= trap**：wasm 没有可恢复的 guest 异常；guest panic = abort = trap = 实例死亡。这是载体的诚实事实，也是 A5「契约违反不进 Result」的忠实兑现——trap 不可被 `Result` 分支吞掉。代价明记 = 可用性：一个未声明能力调用会杀死插件，依赖方收 `service-unavailable`；作者应在开发期用 `metis check` 与 SDK 类型面排除。
+- **为何 deadlock 与运行期形状违约不 trap**：它们是运行期交互结果，不是静态作者错；W4.4 明确「当场报错 + 整圈路径 + fail-open 解圈」，返回 `core-deadlock` 让调用方解圈，比杀实例更符合 fail-open；形状违约的调用方 / 提供方可能因升级竞态而持有旧契约，返回 `core-contract-violation` 让调用方统一失败 / 告警，具体违约侧由 message + journal 指示。
+- **未声明能力 vs 部署策略拒绝两界不混**：manifest 缺省 = loud（trap）；manifest 声明但部署数据拒绝（http 白名单 / SSRF / 跨域重定向）= `http-policy` Err（A5 D14.5 平移）。
+- **不立 `retryable` 位**：A5 D14.6 三理由原样成立（错误性质 × 操作幂等 × 业务语义的乘积超出宿主知识范围；单 bit 诱导裸重试；信息不明）。kind 分格已含动作信息；重试决策归作者，business 的重试语义归契约。
+
+### W5.5 D140 business data 与 message 纪律
+
+**D140 定案：business `data` = TLV 编码的 Value，宿主不解释；`message` = 人读摘要，不泄 secrets / 受保护路径细节；错误不做 message 匹配。**
+
+- **business data**：`data = option<list<u8>>`，内容 = TLV 编码的 `Value`（E1①；codec = T10.13）；宿主不解释业务语义，也不对 business payload 做契约形状校验（A5 A7.4：`errors:` 节不进运行期校验）；成功返回值的形状仍按 D19.1 校验。形状 SSOT = 服务契约（W7/W9）+ SDK 生成类型。接收方 SDK 解码失败 = 本地作者面错误（不回流宿主），因为宿主对 business payload 无形状知识。
+- **host 族 data**：恒 `none`；宿主不把结构化诊断塞进 `data`——有专门 journal kind 的族（`fs-invalid-path` → `fs_invalid_path_detail`）进 journal，其余族的完整原因 = message（按 D89 脱敏）。
+- **message**：人读摘要；宿主按族政策生成——`fs-invalid-path` 通用化（不点名受保护路径 / 豁免清单），完整原因进 journal `fs_invalid_path_detail`；其余族可带 OS / 库原文，但按 D89 脱敏（secrets / 受保护路径）。guest business message 由提供方负责，宿主不二次加工。
+- **无 message 匹配**：控制流只对 `error-kind`；SDK 不提供 message 匹配 API，`Error` 的 `Display` 只服务日志。
+- **错误通道自身必须无敌**：宿主产生封套失败（编码 / 分配）不在设计面内；guest business data 是不可解释字节，最坏情况是接收方解码失败，不会二次杀死宿主。A5 的「不可转换错误值落字符串摘要」carve-out 因此消亡（B5）。
+- **预算**：business data 的字节预算沿用 W6 / T10.13 TLV 编解码预算；`message` 是 WIT `string`，不适用 TLV 预算——宿主侧设长度上限（实现期配置，登记 T10.10 / T10.11 / T10.14），超限截断并 journal 注记；`core-deadlock` 的整圈路径同受该上限约束。W5 不冻结数值。
+
+### W5.6 D141 作者面投影与 A5 习语消亡
+
+**D141 定案：SDK 作者面 = D102 三格封套不变；`ErrorKind` 与 ABI `error-kind` 1:1；A5 的呈现层习语消亡或换载体。**
+
+- **类型投影**：`metis_plugin::Error { kind: ErrorKind, message: String, data: Option<Value> }`；`ErrorKind` 与 `error-kind` 逐格对应（kebab-case → Rust variant）；`Error` 实现 `std::error::Error` + `Display`；`Result<T, Error>` 贯穿效应调用与钩子返回。
+- **构造面**：`Error::business(data)` 为 guest 导出的唯一合法构造入口；宿主族 kind 的构造器只服务测试 / 宿主侧映射，SDK 文档明确其不可用于导出返回（宿主兜底 = W5.3）。具体构造器命名与可见性归 T10.14。
+- **作者契约**（A5 D15.3 的 Rust 版）：① 错误必须处置——`?` 传播或 match，裸丢弃受 `#[must_use]` 警告（lint 面随载体消亡，纪律仍在）；② kind 定控制流，message 只进日志；③ 重试自由、幂等自负，无 retryable 位；④ guest 导出只返回 business，data 形状按契约；⑤ 响亮错误（trap）不可恢复，不要设计成可捕获。
+- **习语映射**：`assert` 升级 → `?`；`error(err)` 透传 → `?`；fail-fast 姿态 → `expect` / `panic`（注意 = trap = 实例死亡，只用于真正的不可恢复分支）；`res, err` 两槽 → `Result`；`Ok` 载荷不为 nil → WIT 类型无 nil，`option<T>` 显式表达可选。
+- **SDK 不做 message 匹配**：`ErrorKind` 是唯一分支面；`Error::message()` 只给日志 / 展示。
+
+### W5.7 A5 机制消亡清单（考古索引）
+
+每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 [ADR-0026](../decisions/0026-luau-abi.md)（已 superseded）。
+
+| 机制                                      | 死因                                                                                                           |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 多返回值 `res, err` 两槽（A5 D12.1）      | WIT `result<T, error>` 原生；Rust `Result` + `?`                                                               |
+| `assert` 升级习语                         | `?` / `expect`；panic = trap = 实例死亡，只保留 fail-fast 姿态                                                 |
+| `nil, nil` = EOF 位                       | 流式 read 的 EOF 表示归 W6（显式形态）；非错误                                                                 |
+| 「Ok 载荷永不为 nil」纪律                 | WIT 类型无 nil；可选值用 `option<T>` 显式表达                                                                  |
+| err 纯数据表 / frozen 待遇                | WIT record 值语义；无 frozen 概念                                                                              |
+| kind 两级字符串 / 封闭枚举串              | WIT `error-kind` enum；编译器穷尽检查（analyze #10 白拿）                                                      |
+| `sql.*` 错误族                            | sqlite 撤回（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）；DB = guest crate + private fs          |
+| `box.trap`                                | 盒概念消解（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）；插件 trap = 实例死亡 + journal `vm_trap` |
+| `error(v)` 深快照 / 不可转换 carve-out    | `data` = TLV Value（E1①）；不存在任意错误值，也不存在「错误通道自身失败」                                      |
+| uncaught 独立格 / fanout 子任务错误收集   | guest trap = 实例死亡，宿主无收集面（W4.2）；handler Err = business                                            |
+| `return nil, err` 非法升级通道            | `?` 唯一升级通道；无两槽                                                                                       |
+| `retryable` 布尔标识                      | A5 D14.6 从未立；kind 分格 + 契约语义                                                                          |
+| analyze #9 err 槽裸丢弃 / #10 kind 串枚举 | Rust `#[must_use]` 警告 + 穷尽 match；AST lint 管线随载体消亡（design-review A8）                              |
+| V3 两槽关联 narrowing                     | 无两槽；`Result` 类型原生收窄                                                                                  |
+
+**语义平移保留**：三条分界判据（D14.1）；kind 定控制流、message 只进日志、data 按族查表；服务四态（ADR-0018 S5）；事件 fail-open（ADR-0014）；契约违反响亮、运行期数据失败 `Err`；不立 retryable。
+
+### W5.8 联动登记汇总（章末）
+
+| 去向              | 内容                                                                                                                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| W1（T13-h）       | **已兑现（2026-10-19）**：`error` 类型 = D136；W1.3 生命周期签名确认；`setup` Err / trap = 加载失败（W1.5）；`dispose` Err / trap = 记日志继续（W1.6）                                                                                           |
+| W2（T13-i）       | **已兑现（2026-10-19）**：manifest 校验错误 = 宿主侧响亮，不经 guest 错误通道（D133）；生命周期 `error` 类型 = D136                                                                                                                              |
+| W3（T13-j）       | 所有 fallible import 返回 `result<T, error>`；能力门未声明 = trap（D139）；fs / http / process 错误映射；timer 无 Err 面；`mount` 未声明 = trap；服务调用返回 service / business / core 族；冻结前确认 `fs-invalid-utf8` 去留（bytes-only 则删） |
+| W4（T13-c）       | **已兑现（2026-10-19）**：W4.4 fail-fast 错误面 = D137 / D139——wait-for = `core-deadlock`；卸载期新账 = trap；D11.3 = `service-unavailable`                                                                                                      |
+| W6（T13-l）       | 流式 read 的 EOF 表示与错误复用属主族（A5 D14.3 语义）；resource 句柄错误复用本类型；business data = TLV（与 W6 线编码同源）                                                                                                                     |
+| W7（T13-m）       | business data 形状 SSOT = 服务契约；运行期形状违约 = `core-contract-violation`；`data` 承载 = TLV                                                                                                                                                |
+| W8（T13-n）       | listener 错误封套 = 本类型；emit 校验违约 = `core-contract-violation` Err + journal（D139 运行期形状失败格）；不新增错误族                                                                                                                       |
+| W9（T13-o）       | 能力对账 + 运行期门；未声明能力 = trap；契约运行期校验点 = `core-contract-violation`                                                                                                                                                             |
+| W10（T13-p）      | `error-kind` 增补 = 新 WIT package version（封闭 enum 的破坏性变更）；跨版本共存时宿主按 `abi` 使用对应版本绑定，不得把新 kind 送入旧版；无独立错误版本号                                                                                        |
+| journal           | 不新增 kind；`listener_error` / `vm_trap` / `contract_violation` / `fs_invalid_path_detail` 原位承接；错误 kind 落盘用 kebab-case 规范名                                                                                                         |
+| seam-capabilities | §6.1 W5 行兑现：能力失败 `result` 形态 + service 四态；`fs-invalid-path` message 通用化政策                                                                                                                                                      |
+| plugin-sdk        | **已兑现（2026-10-19）**：D102 三格封套不变；`ErrorKind` 1:1；guest 导出只许 business；`?` 习语                                                                                                                                                  |
+| service-registry  | ADR-0018 S5 四态 = `service-unavailable` / `service-method-missing` / `service-timeout` + 共享 `business`；core 族不占第五格；调用方可见集合 = 四态 + core 两格                                                                                  |
+| T10.10            | trap → 实例 Failed + journal `vm_trap`；在飞调用方 `service-unavailable`                                                                                                                                                                         |
+| T10.11            | 能力错误映射（fs / http / process）；未声明能力 trap；timer 参数 trap                                                                                                                                                                            |
+| T10.13            | business data = TLV Value（`metis-codec`）                                                                                                                                                                                                       |
+| T10.14            | `Error` / `ErrorKind` 类型与构造器；SDK 文档（服务四态 + core 两格、business-only 导出、message 不分支）                                                                                                                                         |
+| Creator 文档      | 作者契约五条（W5.6）：`?` / kind 分支 / business-only 导出 / business data 契约形状 / trap 不可捕获；「族 → 建议动作」表按 kind 清单重写                                                                                                         |
+| 实现期配置        | message 长度上限（宿主侧截断 + journal 注记；登记 T10.10 / T10.11 / T10.14）；core-deadlock 路径同受该上限；business data 预算沿用 W6 / T10.13                                                                                                   |
+| 扩展位            | 非 business 族的结构化 `data` 不立（将来需要走 package version）；`retryable` 维持不立；per-family data = 扩展位                                                                                                                                 |
+| ADR               | 不新增；A5 语义继承（ADR-0026 已 superseded）；ADR-0018 S5 四态不动（调用方可见集合 = 四态 + core 两格，见 W5.2）                                                                                                                                |

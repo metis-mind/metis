@@ -46,18 +46,18 @@ trait 方法全 `async fn`（Rust 原生 async fn in trait）。fanout = guest �
 
 ## S5 D102 错误面 = Result 贯穿 + 三格封套 Error（2026-10-17 定案，T13-d 拍板）
 
-作者面 = `Result<T, metis_plugin::Error>` 贯穿一切效应调用与钩子返回。`Error` = 三格封套：kind 封闭枚举 + message + `data: Option<Value>`（[wasm-first-design-review](../research/wasm-first-design-review.md) B5：err 封套语义全存活，形态类型化）；kind 定控制流——「禁 message 匹配做控制流」从纪律变结构（编译器强制）。服务四态（unavailable / method_missing / timeout / business）平移为 kind variant 四格（B5）。
+作者面 = `Result<T, metis_plugin::Error>` 贯穿一切效应调用与钩子返回。`Error` = 三格封套：kind 封闭枚举 + message + `data: Option<Value>`（[wasm-first-design-review](../research/wasm-first-design-review.md) B5：err 封套语义全存活，形态类型化）；kind 定控制流——「禁 message 匹配做控制流」从纪律变结构（编译器强制）。服务四态（unavailable / method_missing / timeout / business）是 kind 枚举的服务子集；完整枚举 + `core-*` 两格 = [wit-abi](wit-abi.md) W5 D136–D141。guest 导出只许 `business`（W5 D138）。
 
 淘汰项 = proxy-wasm 模式：host 失败大量 `.unwrap()` → guest trap（wasm 下 panic = abort = 杀实例，靠宿主重启兜底）——WIT `result` 一等错误通道下，失败以 `Result` 贯穿作者面（[sdk-precedent-survey](../research/sdk-precedent-survey.md) §1.6）。
 
-分工登记：底层承载（WIT variant vs TLV 封套）归 [wit-abi](wit-abi.md) W5 章（T13-k）落定，作者面形状不随承载变。本节现在就冻结的理由：SDK 骨架（S1/S4）的每个方法签名长在错误面之上。
+分工登记：底层承载（WIT record/enum vs TLV 封套）归 [wit-abi](wit-abi.md) W5 章（T13-k）落定（已兑现 = D136），作者面形状不随承载变。本节现在就冻结的理由：SDK 骨架（S1/S4）的每个方法签名长在错误面之上。
 
 ## S6 D103 「world 固定」释读与能力映射原则（2026-10-17 定案，T13-d 拍板）
 
 ADR-0034 §4「world 固定，能力白名单由 manifest 声明对账，作者无法越权加 import」与 design-review B1「import 清单机械抠出 → 能力对账 = 集合包含判定」的合成释读：
 
 - world = 单一固定，import 词汇表封闭。「作者无法越权加 import」= 编译期结构事实：SDK 绑定之外无符号可链接；手工添加的进口在启用期对账被机械抠出——B1 集合包含判定的准确含义 = 组件 import 清单 ⊆ SDK 封闭词汇表（防越权加 import），粒度到接口、不到能力实例。
-- 能力白名单 = manifest 声明 → 运行期能力门 fail-closed + 启用期对账（信任模型骨架 = design-review C8 存活）；越权调用的作者面 = S5 类型化错误（kind 格）。先例 = Spin（声明全在 manifest、SDK 零编译期检查、越权 = 「Destination not allowed」运行期类型化错误）与 Zed（运行期 CapabilityGranter 门控）——两大先例均选运行期门，SDK 面不设编译期能力检查机器。
+- 能力白名单 = manifest 声明 → 运行期能力门 fail-closed + 启用期对账（信任模型骨架 = design-review C8 存活）；越权调用 = trap（[wit-abi](wit-abi.md) W5 D139），不是 S5 类型化错误——S5 只覆盖已声明但运行期失败的路径。先例 = Spin（声明全在 manifest、SDK 零编译期检查、越权 = 「Destination not allowed」运行期类型化错误）与 Zed（运行期 CapabilityGranter 门控）——两大先例均选运行期门，SDK 面不设编译期能力检查机器。
 
 映射风格三原则（本节定原则，具体接口集归 W3 章 = T13-j）：① 有生命周期实体（连接/存储）= 句柄 `open()` 形态（Spin `key_value::Store::open_default()` 先例）；② 无状态服务 = ctx 方法/自由函数（Spin `llm::infer` / `variables::get` 先例）；③ 原始生成绑定保留 escape hatch 但标注「正常不需使用」（Spin rustdoc 先例）。生效层细化（运行期门 vs 链接期条件拒绝）同归 W3 章。
 
@@ -71,17 +71,17 @@ ADR-0034 §4「world 固定，能力白名单由 manifest 声明对账，作者�
 
 ## 联动登记汇总（章末）
 
-| 去向           | 登记内容                                                                                                                          |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| W1 章（T13-h） | **已兑现（2026-10-18）**：WIT 目录 = `crates/metis-plugin/wit/`（D117）；生命周期钩子 = `setup` / `on-config` / `dispose`（D118） |
-| W2 章（T13-i） | **已兑现（2026-10-19）= wit-abi W2 D125–D134**：能力声明节 = D129；编译期组合 world 维持扩展位（不启用）                          |
-| W3 章（T13-j） | ctx import 接口集具体化 S6 映射三原则；能力生效层细化；escape hatch 标注                                                          |
-| W5 章（T13-k） | 错误底层承载落定（S5 作者面投影不变）                                                                                             |
-| W7 章（T13-m） | 瘦身形状 DSL 解析器 = S7 `types!()` 输入                                                                                          |
-| W8 章（T13-n） | 事件静态声明 → S1 catch-all 的强类型演进位                                                                                        |
-| T10.13         | metis-codec = Value/TLV 双 target 依赖（S3/S7）                                                                                   |
-| T10.14         | S1–S7 实现站；D11 声明随站                                                                                                        |
-| T13-e/T10.15   | 薄插件地板承接（S1）：脚手架模板藏 crate-type/target/钉版依赖                                                                     |
+| 去向           | 登记内容                                                                                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| W1 章（T13-h） | **已兑现（2026-10-18）**：WIT 目录 = `crates/metis-plugin/wit/`（D117）；生命周期钩子 = `setup` / `on-config` / `dispose`（D118）                                              |
+| W2 章（T13-i） | **已兑现（2026-10-19）= wit-abi W2 D125–D134**：能力声明节 = D129；编译期组合 world 维持扩展位（不启用）                                                                       |
+| W3 章（T13-j） | ctx import 接口集具体化 S6 映射三原则；能力生效层细化；escape hatch 标注                                                                                                       |
+| W5 章（T13-k） | **已兑现（2026-10-19）**：错误底层承载 = [wit-abi](wit-abi.md) W5 D136–D141；S5 作者面投影不变（三格封套 + `ErrorKind` 1:1），S5/S6 的 kind 面与越权错误已按 W5 D137/D139 同步 |
+| W7 章（T13-m） | 瘦身形状 DSL 解析器 = S7 `types!()` 输入                                                                                                                                       |
+| W8 章（T13-n） | 事件静态声明 → S1 catch-all 的强类型演进位                                                                                                                                     |
+| T10.13         | metis-codec = Value/TLV 双 target 依赖（S3/S7）                                                                                                                                |
+| T10.14         | S1–S7 实现站；D11 声明随站                                                                                                                                                     |
+| T13-e/T10.15   | 薄插件地板承接（S1）：脚手架模板藏 crate-type/target/钉版依赖                                                                                                                  |
 
 ## 扩展位登记（五条）
 

@@ -92,6 +92,8 @@
 
 **载体吸收**（2026-10-18，W4.2/W4.6 拍板兑现）：`fanout_cancelled`（handler 结束强制取消子协程）——fan-out 不再是宿主 ABI 原语，等的事重叠 = guest 异步设施原生（`join!`/`select!`），宿主无观测点；该 kind 不立、无替代条目。正式 supersede = [ADR-0035](../decisions/0035-journal-fanout-cancelled-supersede.md)。
 
+**W5 确认（2026-10-19）**：错误面不新增 journal kind；[wit-abi](wit-abi.md) W5 D136–D141 的 `listener_error` / `vm_trap` / `contract_violation` / `fs_invalid_path_detail` 原位承接，kind 落盘用 WIT enum 的 kebab-case 规范名。
+
 **mount/unmount 进 journal 的取舍**（D72 留下的「人读面与 journal 边界」裁定）：进——mount = 激活新代码的元权限动作（[instance-model](instance-model.md) D63），审计面少它 = 防线 2 破窗；成本 = 低频两条。D72 人读面 host 日志不动（人读告警与机读审计两通道并存）。
 
 ### J1.5 议题地图（六站）

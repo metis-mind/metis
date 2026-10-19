@@ -151,7 +151,7 @@ journal kind 表 SSOT = [journal](journal.md) D78；v1 = 写死族骨架（D84�
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | W2（T13-i）manifest | **已兑现（2026-10-19）= wit-abi W2 D129**：`capabilities` 字段面 = `{ fs, http, process, mount }`；`fs: read/write` 标量 = global（private 隐式）；sqlite 撤回；timer 无门；纯算件无需声明 |
 | W3（T13-j）ctx      | ctx 效应方法面 = fs / http / timer / process；`fs` = private（隐式）/ global（`fs` 标量声明）；DB = guest crate + private fs；编排面 = 事件 / 服务调用 / `mount` / `unmount`               |
-| W5（T13-k）错误     | 能力失败的 `result` 形态；unavailable / method_missing / timeout / business 四格                                                                                                           |
+| W5（T13-k）错误     | **已兑现（2026-10-19）= wit-abi W5 D136–D141**：能力失败 `result` 形态；service 四态 + `business`；未声明能力 = trap（D139）；`fs-invalid-path` message 通用化                             |
 | W6（T13-l）边界     | 递归 Value 的 TLV 线编码；流式句柄族；resource 句柄生命周期                                                                                                                                |
 | W9（T13-o）能力门   | 进口对账机械化（组件 import 清单 ⊆ SDK 封闭词汇表）+ 运行期 fail-closed；编排面不立能力门的既有立场，唯一例外 = `mount: true`                                                              |
 | W10（T13-p）版本    | 能力词汇 additive 增补 → WIT package version 演进（原 `abi_rev` 纪律的承接）                                                                                                               |

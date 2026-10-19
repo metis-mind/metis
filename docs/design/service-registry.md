@@ -80,6 +80,7 @@ v1 简化：inject 由 manifest 固定，entry 层不覆盖（Cordis 两处可�
 - **`Err(Business)` 是契约的一部分**（如 query 对不存在 key 返回 not_found），调用方必须显式处理；三个框架错误表拓扑/配置问题，合理反应是降级或传播
 - 观测分工：调用方统一拿 `Err(Business)`；host 日志区分契约内错误与 handler 崩溃（后者进故障计数）——不给调用方暴露第三种类型
 - **`Err(Unavailable)` 的精确语义（附议修正）**：可选依赖的常态答案 + 提供方**崩溃窗口**的竞态兜底（host 发现崩溃 → 启动依赖者卸载之间的固有延迟，任何异步系统不可消除）；**稳态必需依赖设计上不可达**（激活门 + 卸载顺序双保险）；**热更窗口不提供等待机制**——服务对象窄（依赖者正在死、可选依赖缺席即信息），重试策略归未来 `lib/` helper；扩展位：实测痛点出现再加 host 侧有界等待（机制与 Pending 激活门同族）
+- **W5 兑现注（2026-10-19）**：S5 四态 = [wit-abi](wit-abi.md) W5 D137 的 `service-unavailable` / `service-method-missing` / `service-timeout` + 共享 `business`；宿主框架族 `core-deadlock` / `core-contract-violation` 不占服务第五格，但出现在服务调用路径的调用方可见错误集合中（四态 + core 两格）；注册表语义不变。
 
 ### 并发四条款
 
