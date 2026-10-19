@@ -489,3 +489,44 @@ wasmtime 49.0.3 组件模型 async 支持同实例重入：单宿主线程 `run_
 ## 补遗 9（2026-10-19）：目标 WASI 版本 = 0.3
 
 维护者确认当前目标 = **WASI 0.3**（不是 0.2）；private fs 的 async 面由 WASI 0.3 `wasi:filesystem` 原生提供，设计不再以 wasip2 的同步 filesystem 为前提。补遗 6 papercut 1 的 wasip2 std 14 导入为历史证据；0.3 基线由 T10.10 核实。S1/S2 spike 在 wasip2 上取证，其 async 语义结论不变。
+
+## 补遗 10（2026-10-19）：S3 spike——blob 跨实例句柄验证（W6 章开工前置）
+
+> 性质：addendum——[wit-abi](../design/wit-abi.md) W6 章的前置技术验证。维护者拍板（2026-10-19）：插件间高频通信需要一条「不可变大对象 + 只读句柄」车道，避免 fanout 的 N 次内容拷贝；S3 验证 host 定义 resource 能否在两个独立 Store 的组件实例之间复用同一份数据。执行 = 子代理一次性工程（`scratch/s3-blob/`，gitignored，原始文件与命令见其 README 式说明）。判决：**PASS**。
+
+### 环境
+
+与 S1/S2 一致：rustup 自管 `1.98.1-x86_64-unknown-linux-gnu` + target `wasm32-wasip2`；guest = wit-bindgen 0.63.0；host = wasmtime 49.0.3 + wasmtime-wasi 49.0.3 + tokio current_thread；全程 `--offline`（registry 暖缓存）。
+
+### 被测形状
+
+WIT = 自建 `metis:s3@0.1.0`：
+
+- `blobs` import：host-defined `resource blob { duplicate() -> own<blob>; len() -> u64; read(offset, max) -> result<list<u8>, string>; }` + `make(list<u8>) -> own<blob>`；
+- `payloads` type interface：`variant payload { value(list<u8>), blob(own<blob>) }`；
+- `api` export：`produce() -> own<blob>` / `consume(own<blob>) -> u64` / `produce-payload() -> payload` / `consume-payload(payload) -> u64`。
+
+Host 侧两个独立 `Store`（A/B），各自 `ResourceTable`。A `produce` 后，host 从 A 的资源表取出底层 `Arc<Vec<u8>>`，在 B 的表里新建一个 `Resource<Blob>`（同一 `Arc`，不复制数据），然后调用 B；A 的 Store 在 B 消费前即被 drop。
+
+### 结果
+
+| 项                                 | 结果 | 证据                                                                                                                               |
+| ---------------------------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| R1 跨 Store 句柄重物化             | PASS | A 产出 1 MiB blob；host 取 `Arc` 后在 B 表新建句柄；B `len` = 1048576、`read` 内容校验通过                                         |
+| R2 生产者先卸载                    | PASS | drop A Store 后 `Arc::strong_count` 2 → 1；B 仍能读同一 blob                                                                       |
+| R3 duplicate + Drop 引用计数       | PASS | B guest 调 `duplicate` 后两个 own 句柄；guest 返回时两者被 drop，`strong_count` 2 → 1（宿主本地 `Arc` 仍持有一份）                 |
+| R4 variant 内嵌 `own<blob>`        | PASS | `Payload::Blob` 从 A 返回、host 重物化到 B、B 解出并读取；`Payload::Value` 同时验证                                                |
+| R5 宿主 destructor                 | PASS | guest drop own 句柄触发 host `drop(Resource<Blob>)`，`ResourceTable::delete` 后引用计数回落                                        |
+| R6 `list<payload>`（资源承载列表） | PASS | `produce-many` 返回 Value + Blob 两项；host 重物化 blob 后传入 `consume-many`，返回 3 + 64 = 67——list 内的 resource 句柄正常编解码 |
+
+### 技术结论（供 W6 / T10.10）
+
+- **跨 Store 不能直接传同一个 `Resource`**：wasmtime 的 `Resource<T>` 绑定 Store 的表。可行机制 = host 持有底层数据（`Arc`），在目标实例的 `ResourceTable` 里**重物化一个新句柄**；数据 0 拷贝，句柄创建 O(1)。
+- **variant / record / list 内嵌 `own<resource>` 可用**：wit-bindgen 0.63 + wasmtime 49 正常编解码，跨实例传递成立；`parallel` 的 `list<result<option<payload>, error>>` 是同一机制的复合，W6 以此为准。
+- **仅只读不可变对象适合跨实例**：重物化机制不携带可变状态所有权；`process-handle` / `mount-handle` 这类可变、有副作用的资源仍应保持 per-instance。
+- **host 定义的 resource 需要 bindgen `with` 映射**（`"metis:s3/blobs.blob": crate::Blob`）；async 方法落 `HostBlobWithStore<T>`，sync 方法落 `HostBlob`，destructor = `HostBlob::drop` + `ResourceTable::delete`。
+- 纯类型 interface（`payloads`）仍会生成空的 `Host` impl；`add_to_linker` 需要它。
+
+### 与最终 W6 形状的差异
+
+spike 为聚焦机制，`read` 错误用 `string`；W6 章节的最终形状按 W5 错误类型 / 无错误面重新表述（见 W6 章）。这不影响上述机制结论。

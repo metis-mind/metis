@@ -191,7 +191,7 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 
 ### S3.3 D63 mount API 与能力门 = 立门 `mount: true`
 
-- **API 族**：`ctx.mount(declaration) -> handle`（编排面新方法族）；句柄供 unmount（D64）。参数/返回的 Value 编码细则归 [wit-abi](wit-abi.md) W6 章（T13-l）。
+- **API 族**：`ctx.mount(declaration) -> handle`（编排面新方法族）；句柄供 unmount（D64）。declaration 的编码 = TLV `Value`（[wit-abi](wit-abi.md) W6 D160/D162：mount 声明不走 blob 车道）；不透明句柄形态 = `mount-handle` resource（W3 D150）。
 - **能力门立 `mount: true`**（capabilities map 新键，`process: true` 同形）：mount = 元权限（激活代码运行）——D26 编排面不立门的间接化论证到此断开：间接化管「调用已激活的」，mount 是「激活新的」。fail-closed 缺省（未声明调用 = 运行时响亮指路 manifest，W3 章原样）；零仪式插件无资格（W1 章原样）；审批面三栏并示同栏可见（W9 章原样）。
 - **淘汰**：不立门走编排面惯例（D26）——对称性在「激活新代码」处断开，严格制定调下显式门更合身。
 - **演进纪律**：capabilities 词汇 additive 增补 → WIT package version 演进（[wit-abi](wit-abi.md) W10 章 = T13-p）；正式进字段面 = [ADR-0028](../decisions/0028-instance-model.md) 批次 #1。

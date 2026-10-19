@@ -1,6 +1,6 @@
 # 0041. 纯算件归 guest 包生态：crypto 能力撤回
 
-- Status: accepted（局部 supersede [ADR-0025](0025-seam-capabilities.md) §4 的 crypto 内建件项与 [ADR-0024](0024-carrier-layering.md) §4 中 crypto 行的「必须内建」结论；技术事实「wasm 无 AES/SHA 指令直通」保留）
+- Status: accepted（局部 supersede [ADR-0025](0025-seam-capabilities.md) §4 的 crypto 内建件项与 [ADR-0024](0024-carrier-layering.md) §4 中 crypto 行的「必须内建」结论；技术事实「wasm 无 AES/SHA 指令直通」保留；Decision §3「v1 metis 功能 import = 7 个」计数由 [ADR-0043](0043-blob-two-lane-payload.md) 局部取代为 9 个（新增 `blobs` / `streams`，2026-10-19）；crypto 撤回结论不变）
 - Date: 2026-10-19
 
 ## Context

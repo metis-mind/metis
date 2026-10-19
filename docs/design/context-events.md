@@ -70,7 +70,7 @@ loop {
 
 外加半个隐式通道：**声明式组合**（entry 树挂载、preset）——回答「谁存在」，不是「谁调用谁」。
 
-服务调用路径（7 步）：A 调代理 → 打包 `CallService` 发 host → host 查注册表（key→B、B Active；epoch 不在调用路径校验，陈旧由重启纪律解决——[ADR-0018](../decisions/0018-service-registry.md) S5）→ 转发 B 邮箱 → 投递 B 实例执行（错误遏制面 = [wit-abi](wit-abi.md) W5 章）→ 结果路由回 A → A 的调用返回（guest 侧 await 形态 = [wit-abi](wit-abi.md) W3/W4 章）。
+服务调用路径（7 步）：A 调 `services.call` import → host 查注册表（key→B、B Active；epoch 不在调用路径校验，陈旧由重启纪律解决——[ADR-0018](../decisions/0018-service-registry.md) S5）→ 转发 B 邮箱 → 投递 B 实例执行（错误遏制面 = [wit-abi](wit-abi.md) W5 章）→ 结果路由回 A → A 的调用返回（guest 侧 await 形态 = [wit-abi](wit-abi.md) W3/W4 章；payload = W6 双车道）。
 
 ## 2. 派发语义：五种收敛为四种（D3/D4/D8 ✅ = [ADR-0014](../decisions/0014-dispatch-semantics.md)）
 
@@ -99,15 +99,15 @@ serial 的「注册顺序 + 首认领」只是 host 内置的默认路由策略�
 - 边界：选择器不能改 host 派发语义，力量来自「站在入口」而非「修改路由器」；独占入口靠组合部署（preset/entry 树）保证
 - 含义：**派发策略本身成为可替换的用户空间组件**（everything-is-a-plugin 的又一兑现）；host 永远只提供四种硬编码默认策略
 
-## 3. payload 值类型（D5 ✅ = [ADR-0015](../decisions/0015-payload-value-model.md)，闭环 payload 类型遗留问题；`Int(i64)` 提正 = [ADR-0022](../decisions/0022-value-int64.md)）
+## 3. payload 值类型（D5 ✅ = [ADR-0015](../decisions/0015-payload-value-model.md)，闭环 payload 类型遗留问题；`Int(i64)` 提正 = [ADR-0022](../decisions/0022-value-int64.md)；`Bytes` 提正 = [ADR-0042](../decisions/0042-value-bytes.md)；blob 双车道 = [ADR-0043](../decisions/0043-blob-two-lane-payload.md)）
 
-进程内派发**不需要字节编解码**：payload 以 Rust 值在 host 与各组件实例间传递，只在实例边界做 canonical ABI lift/lower 与递归 Value 的 TLV 编解码（[wit-abi](wit-abi.md) W6 章）。定的是数据模型，不是线路格式。
+进程内派发**不要求逐跳重建 `Value` 树**：跨组件实例边界承载 = TLV 字节或 blob 句柄；宿主按需解码为 `Value` / `ValueRef`，内部路由默认复用编码字节，不重复编码（[wit-abi](wit-abi.md) W6 D155/D160）。定的是数据模型，不是线路格式。大载荷走 W6 D159 的 blob 车道：`payload` = `value(list<u8>)` 或 `blob(own<blob>)`。
 
-| 方案                                              | 评                                                                                                                                                                                                                 |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **A. 自定义最小 `Value`（JSON 数据模型）** ✅采纳 | `Null/Bool/Float(f64)/String/Array/Map`；与 YAML 1.2 core schema（[ADR-0007](../decisions/0007-yaml-config-subset.md)）及 WIT canonical 类型双落点对齐；`Int(i64)`（[ADR-0022](../decisions/0022-value-int64.md)） |
-| B. `serde_json::Value`                            | 零维护，但 number 语义绕（i64/u64/f64 三分对数据模型无独立意义），config 侧还得再定一个类型                                                                                                                        |
-| C. 扩展版（+`Int(i64)`/`Bytes`）                  | 真实需求但 v1 无用户，登记扩展位；`Int(i64)` 由 [ADR-0022](../decisions/0022-value-int64.md) 提正（WIT `s64` 原生），`Bytes` 仍留扩展位                                                                            |
+| 方案                                              | 评                                                                                                                                                                                                                                                          |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. 自定义最小 `Value`（JSON 数据模型）** ✅采纳 | `Null/Bool/Float(f64)/String/Array/Map`；与 YAML 1.2 core schema（[ADR-0007](../decisions/0007-yaml-config-subset.md)）及 WIT canonical 类型双落点对齐；`Int(i64)`（[ADR-0022](../decisions/0022-value-int64.md)）                                          |
+| B. `serde_json::Value`                            | 零维护，但 number 语义绕（i64/u64/f64 三分对数据模型无独立意义），config 侧还得再定一个类型                                                                                                                                                                 |
+| C. 扩展版（+`Int(i64)`/`Bytes`）                  | 真实需求但 v1 无用户，登记扩展位；`Int(i64)` 由 [ADR-0022](../decisions/0022-value-int64.md) 提正（WIT `s64` 原生），`Bytes` 已提正 = [ADR-0042](../decisions/0042-value-bytes.md)（WIT `list<u8>` 原生；大二进制走 [wit-abi](wit-abi.md) W6 的 blob 车道） |
 
 采纳 A，且 **config 值与事件 payload 共用同一 `Value`**——schema 校验、审批 diff、事件日志全套基础设施只吃一种数据模型（「数据大一统」）。
 
@@ -150,13 +150,13 @@ v1 只走声明式 entry 树，`ctx:spawn` 推迟。理由：警惕第二条生�
 
 ## 8. 决策点状态
 
-| #  | 决策点                                                                        | 状态                                                                                                                                                  |
-| -- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D1 | 执行模型 actor 语义 + tokio                                                   | ✅ [ADR-0011](../decisions/0011-actor-execution-model.md)                                                                                             |
-| D2 | Context 形态 = fiber 句柄；作用域特性 v1 全裁，isolate/intercept 推迟到任务 5 | ✅ [ADR-0013](../decisions/0013-context-scope.md)                                                                                                     |
-| D3 | 五种收敛为四语义（bail 并入 serial）                                          | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                                                                                                |
-| D4 | waterfall = 变换链+否决，非真洋葱                                             | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                                                                                                |
-| D5 | payload = 自定义 JSON 数据模型 `Value`，config 共用                           | ✅ [ADR-0015](../decisions/0015-payload-value-model.md)（闭环 payload 类型遗留问题）+ [ADR-0022](../decisions/0022-value-int64.md)（`Int(i64)` 提正） |
-| D6 | internal 钩子 v1 开 plugin/status，机制保留                                   | ✅ [ADR-0016](../decisions/0016-internal-hooks.md)                                                                                                    |
-| D7 | 编程式 spawn v1 推迟                                                          | ✅ [ADR-0017](../decisions/0017-programmatic-spawn-deferred.md)                                                                                       |
-| D8 | serial 遇错不短路，值短路唯一                                                 | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                                                                                                |
+| #  | 决策点                                                                        | 状态                                                                                                                                                                                                                                                                                       |
+| -- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| D1 | 执行模型 actor 语义 + tokio                                                   | ✅ [ADR-0011](../decisions/0011-actor-execution-model.md)                                                                                                                                                                                                                                  |
+| D2 | Context 形态 = fiber 句柄；作用域特性 v1 全裁，isolate/intercept 推迟到任务 5 | ✅ [ADR-0013](../decisions/0013-context-scope.md)                                                                                                                                                                                                                                          |
+| D3 | 五种收敛为四语义（bail 并入 serial）                                          | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                                                                                                                                                                                                                                     |
+| D4 | waterfall = 变换链+否决，非真洋葱                                             | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                                                                                                                                                                                                                                     |
+| D5 | payload = 自定义 JSON 数据模型 `Value`，config 共用                           | ✅ [ADR-0015](../decisions/0015-payload-value-model.md)（闭环 payload 类型遗留问题）+ [ADR-0022](../decisions/0022-value-int64.md)（`Int(i64)` 提正）+ [ADR-0042](../decisions/0042-value-bytes.md)（`Bytes` 提正）+ [ADR-0043](../decisions/0043-blob-two-lane-payload.md)（blob 双车道） |
+| D6 | internal 钩子 v1 开 plugin/status，机制保留                                   | ✅ [ADR-0016](../decisions/0016-internal-hooks.md)                                                                                                                                                                                                                                         |
+| D7 | 编程式 spawn v1 推迟                                                          | ✅ [ADR-0017](../decisions/0017-programmatic-spawn-deferred.md)                                                                                                                                                                                                                            |
+| D8 | serial 遇错不短路，值短路唯一                                                 | ✅ [ADR-0014](../decisions/0014-dispatch-semantics.md)                                                                                                                                                                                                                                     |
