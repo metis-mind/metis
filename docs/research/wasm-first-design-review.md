@@ -28,13 +28,13 @@
 
 每条设计逐项回答两问：这条设计服务的约束来自 Luau 还是来自系统本身？wasm 组件模型下该约束还在吗？
 
-| 类 | 判据 | 处置 |
-| --- | --- | --- |
-| A 消亡 | 约束是 Luau 自身的（f64 数、table 形态、coroutine、stdlib、require、无包生态） | 机制整体删除，冻结 ADR 走 supersede，living doc 修订注 |
-| B 妥协可更优 | 约束是真实的，但当年解法是给 Luau 打补丁；wasm 有原生答案 | 推翻解法、保留问题，按 wasm 原生形态重做 |
-| C 不动 | 约束是系统自身的（热更、隔离、审批、审计），与载体无关 | 原样保留，最多换措辞 |
-| D 新机会 | 当年因 Luau 明确放弃或不敢立的 | 重新立案评估 |
-| E 硬张力 | wasm 也不给免费答案的真设计题 | 议题批出示，维护者拍板 |
+| 类           | 判据                                                                           | 处置                                                   |
+| ------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| A 消亡       | 约束是 Luau 自身的（f64 数、table 形态、coroutine、stdlib、require、无包生态） | 机制整体删除，冻结 ADR 走 supersede，living doc 修订注 |
+| B 妥协可更优 | 约束是真实的，但当年解法是给 Luau 打补丁；wasm 有原生答案                      | 推翻解法、保留问题，按 wasm 原生形态重做               |
+| C 不动       | 约束是系统自身的（热更、隔离、审批、审计），与载体无关                         | 原样保留，最多换措辞                                   |
+| D 新机会     | 当年因 Luau 明确放弃或不敢立的                                                 | 重新立案评估                                           |
+| E 硬张力     | wasm 也不给免费答案的真设计题                                                  | 议题批出示，维护者拍板                                 |
 
 ## 2. A 类：随载体消亡（机制失去对象）
 
@@ -82,18 +82,18 @@
 
 以下各项经逐条复核，约束来自系统本身（热更、隔离、审批、审计），ADR-0034 Context 保留资产明文覆盖——**不动**，至多随 T13-f 换措辞：
 
-| # | 资产 | 一句复核 |
-| --- | --- | --- |
-| C1 | fiber 全家（状态机 / 账本 LIFO / disposer 统一异步签名 / epoch 指纹 / 反向索引 / 子 fiber = 父 effect / 激活门） | 生命周期语义与载体无关；wasm 实例即弃反而让 drain 更便宜 |
-| C2 | actor 星型拓扑 + 邮箱 + 四派发 + fail-open 错误遏制 | 组合语义；VM 时间盒换 fuel/epoch 原生件（ADR-0024 §8 实测 1.022×） |
-| C3 | manifest 双声明 SSOT + Pending/Failed 显式状态 + 缺失三分 + 启用期判环 | 审批与激活门的结构前提；wasm 下 manifest-first 被 import 对账强化（B1） |
-| C4 | Value 数据大一统（config/payload/journal 同型）+ 严格制哲学 | 对齐轴从「与 Luau 一一对应」换成「YAML/JSON + WIT canonical 双落点」；模型本体不动 |
-| C5 | 实例模型全家（租户 / mount / 快照 / 实例作用域 / parent 链） | 见 B7 顺风增强 |
-| C6 | 配置格式全家（`config.yml` / overlay / secrets / 两档卸载 / diff 协调 / on_config 语义） | 呈现形态转 WIT export（A4），语义不动 |
-| C7 | journal 骨架 + D7.3 格式纪律（JSONL + Int 字符串惯例 + 格式版本） | 约束来自 JSON parser 与审计哲学；VM 族拦截点改指 wasm 操作（ADR-0034 已登记） |
-| C8 | 出区四门 + 能力门 fail-closed + 两层授权分工（A2.6）+ 能力间接化合法（D26.2） | 信任模型的骨架；wasm 下四门映射 = wasi 件 + host import 自研件（E4） |
-| C9 | 时间戳毫秒纪律 | ADR-0022 保留：纳秒连 i64 也撑不过 2262 年 |
-| C10 | ADR-0008 审批管线（暂存 → 校验 → 审批 → 原子提交） | Creator 权重降但管线载体中性；不可读制品时代审批面更重要；校验步内容换（组件 validate + import 对账）；地位复议题 T13-f 已登记 |
+| #   | 资产                                                                                                             | 一句复核                                                                                                                       |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| C1  | fiber 全家（状态机 / 账本 LIFO / disposer 统一异步签名 / epoch 指纹 / 反向索引 / 子 fiber = 父 effect / 激活门） | 生命周期语义与载体无关；wasm 实例即弃反而让 drain 更便宜                                                                       |
+| C2  | actor 星型拓扑 + 邮箱 + 四派发 + fail-open 错误遏制                                                              | 组合语义；VM 时间盒换 fuel/epoch 原生件（ADR-0024 §8 实测 1.022×）                                                             |
+| C3  | manifest 双声明 SSOT + Pending/Failed 显式状态 + 缺失三分 + 启用期判环                                           | 审批与激活门的结构前提；wasm 下 manifest-first 被 import 对账强化（B1）                                                        |
+| C4  | Value 数据大一统（config/payload/journal 同型）+ 严格制哲学                                                      | 对齐轴从「与 Luau 一一对应」换成「YAML/JSON + WIT canonical 双落点」；模型本体不动                                             |
+| C5  | 实例模型全家（租户 / mount / 快照 / 实例作用域 / parent 链）                                                     | 见 B7 顺风增强                                                                                                                 |
+| C6  | 配置格式全家（`config.yml` / overlay / secrets / 两档卸载 / diff 协调 / on_config 语义）                         | 呈现形态转 WIT export（A4），语义不动                                                                                          |
+| C7  | journal 骨架 + D7.3 格式纪律（JSONL + Int 字符串惯例 + 格式版本）                                                | 约束来自 JSON parser 与审计哲学；VM 族拦截点改指 wasm 操作（ADR-0034 已登记）                                                  |
+| C8  | 出区四门 + 能力门 fail-closed + 两层授权分工（A2.6）+ 能力间接化合法（D26.2）                                    | 信任模型的骨架；wasm 下四门映射 = wasi 件 + host import 自研件（E4）                                                           |
+| C9  | 时间戳毫秒纪律                                                                                                   | ADR-0022 保留：纳秒连 i64 也撑不过 2262 年                                                                                     |
+| C10 | ADR-0008 审批管线（暂存 → 校验 → 审批 → 原子提交）                                                               | Creator 权重降但管线载体中性；不可读制品时代审批面更重要；校验步内容换（组件 validate + import 对账）；地位复议题 T13-f 已登记 |
 
 ## 5. D 类：wasm 白送的新机会（当年明确放弃或不敢立的）
 
@@ -140,4 +140,14 @@
 
 ## 8. 通读清单（验证范围）
 
-本报告全部结论以以下文档逐节通读为据（未通读者不出结论）：docs/backlog.md（T13 块）；docs/decisions/ 0003 / 0004 / 0005 / 0007 / 0008 / 0010 / 0011 / 0015 / 0019 / 0022 / 0024 / 0034；docs/design/ luau-abi（全文 1444 行）/ wit-abi / fiber / context-events / seam-capabilities / service-registry / config-format / instance-model / journal；docs/research/wasm-research.md 补遗 6。未通读：ADR-0001/0002/0006/0009/0012/0013/0014/0016/0017/0018/0020/0021/0023/0025–0033 正文（经设计文档转引覆盖其要点；其中 0013/0014/0016/0017/0018 的机制本体已在 context-events 与 service-registry 通读面内）。wasm-research 补遗 1–5 仅按转引使用，未逐节重读。
+本报告全部结论以以下文档逐节通读为据（未通读者不出结论）：docs/backlog.md（T13 块）；docs/decisions/ 0003 / 0004 / 0005 / 0007 / 0008 / 0010 / 0011 / 0015 / 0019 / 0022 / 0024 / 0034；docs/design/ luau-abi（全文 1444 行）/ wit-abi / fiber / context-events / seam-capabilities / service-registry / config-format / instance-model / journal；docs/research/wasm-research.md 补遗 6。未通读：ADR-0001/0002/0006/0009/0012/0013/0014/0016/0017/0018/0020/0021/0023/0025–0033 正文（经设计文档转引覆盖其要点；其中 0013/0014/0016/0017/0018 的机制本体已在 context-events 与 service-registry 通读面内）；wasm-research 补遗 1–5 仅按转引使用，未逐节重读。
+
+---
+
+## 补遗 1（2026-10-19）：crypto 内建件撤回
+
+§3 B2 的「crypto 留在核心（硬件论据）」结论被维护者 2026-10-19 拍板推翻：wasm 下 guest 是编译语言，基础计算性能可信；减少插件执行过程中与内核的通信，纯算件归 guest 包生态。sha256 / sha512 / hmac / AES-GCM 改由 guest crate 提供；CSPRNG 走 `wasi:random`。技术事实（wasm 无 AES-NI / SHA-NI，差 3–10×）不变，成本被接受；正式记录 = [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)。§0 / §3 的结论面按本补遗读，正文不改写。
+
+## 补遗 2（2026-10-19）：目标 WASI 版本 = 0.3
+
+§7「新增 SDK 站输入增补」中的「wasip2 std 拖带 14 个导入的 world 收敛（补遗 6 papercut 1）」按本补遗读：wasip2 是 S1/S2 spike 的取证环境，不是目标；当前目标 = **WASI 0.3**（[wasm-research](wasm-research.md) 补遗 9）。SDK 站输入相应改为「WASI 0.3 std 拖带导入集的 world 收敛」，具体清单 SSOT = wit-abi W9 进口对账。§0 / §7 的 wasip2 表述为历史证据，正文不改写。

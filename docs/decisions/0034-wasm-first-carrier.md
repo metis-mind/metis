@@ -1,6 +1,6 @@
 # 0034. 插件载体全面转向 wasm 组件（wasm-first）
 
-- Status: accepted（整篇取代 [ADR-0021](0021-extension-language-runtime.md)；[ADR-0024](0024-carrier-layering.md) §1 分层定妆与 §2 盒的形态由本 ADR 局部取代（§3–§8 继续有效，§5/§6 适用范围扩展为全插件）；整篇取代 [ADR-0026](0026-luau-abi.md)——[luau-abi](../design/luau-abi.md) 归档 archived；ABI 重设计开章 = [wit-abi](../design/wit-abi.md)（living doc，W 系列））
+- Status: accepted（整篇取代 [ADR-0021](0021-extension-language-runtime.md)；[ADR-0024](0024-carrier-layering.md) §1 分层定妆与 §2 盒的形态由本 ADR 局部取代（§3–§8 继续有效，§5/§6 适用范围扩展为全插件）；整篇取代 [ADR-0026](0026-luau-abi.md)——[luau-abi](../design/luau-abi.md) 归档 archived；ABI 重设计开章 = [wit-abi](../design/wit-abi.md)（living doc，W 系列）；W7 落地形态更新 = 目标 WASI 0.3（2026-10-19 维护者确认；wasm32-wasip3 target / std p3 迁移归 T10.10 / T10.15，风险本体保留）；W1 / W3 行中的 wasip2 表述 = S1/S2 取证环境（非目标））
 - Date: 2026-10-15
 
 ## Context

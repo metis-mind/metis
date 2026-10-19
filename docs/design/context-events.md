@@ -146,6 +146,8 @@ v1 只走声明式 entry 树，`ctx:spawn` 推迟。理由：警惕第二条生�
 3. **顺序保证**：serial/waterfall 按注册顺序；同一监听者收事件顺序 = 派发入邮箱顺序（单派发者维度保序，跨派发者不保）
 4. **错误遏制分模式**：emit 记日志；parallel 收集每项 Result；serial/waterfall 记日志后继续
 
+**W3 兑现注（2026-10-19）**：监听登记住宿主（`events.listen` / `unlisten`），`Ctx::on(name)` 只登记兴趣并返回 `Listener`（同名去重 + 引用计数：一个实例一个宿主条目；Drop / `off()` 减引用，归零 unlisten；`detach()` 交宿主账本），处理走 `Plugin::on_event` catch-all；`on-event(listener-id, name, payload)` 导出形状归 W8；`emit` async 但只 await 入队（不等监听者完成）；派发满时背压，不静默丢弃（[wit-abi](wit-abi.md) W3 D146 / D152）。
+
 ## 8. 决策点状态
 
 | #  | 决策点                                                                        | 状态                                                                                                                                                  |

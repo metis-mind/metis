@@ -60,7 +60,8 @@ inject:
 
 **actor 模型没有「过期服务引用」**：Cordis 的 epoch 重启解决「持有的服务对象引用过期」；Metis 的调用是 host 每次现查的路由消息，无可过期之物。epoch 重启的新理由：**激活门 + setup 期快照刷新**（插件 setup 缓存的派生状态在依赖热更后过期，干净重启重跑 setup 刷新——保守但可推理，[ADR-0010](../decisions/0010-fiber-core.md) 哲学）。
 
-**可选依赖精确语义**：静态声明；缺席**不阻塞激活**、调用时缺席返回框架错误；**出现/消失/热更统一重启消费者**（「依赖视图变化 → 重启」一条不变量无例外；惊扰面由反向索引限定 + 拓扑序 + 可选依赖只用于低频服务的纪律收敛）。**复审点**：若 SDK 类型系统能结构性禁掉 setup 期可用性探测（无 setup 探测型插件），可放宽为不重启。
+- **可选依赖精确语义**：静态声明；缺席**不阻塞激活**、调用时缺席返回框架错误；**出现/消失/热更统一重启消费者**（「依赖视图变化 → 重启」一条不变量无例外；惊扰面由反向索引限定 + 拓扑序 + 可选依赖只用于低频服务的纪律收敛）。**复审点**：若 SDK 类型系统能结构性禁掉 setup 期可用性探测（无 setup 探测型插件），可放宽为不重启。
+- **W3 兑现注（2026-10-19）**：provide 观测 = `services.provide(key)` import（setup 内限定；宿主据此保留「声明了没 provide = 激活失败」「provide 了没声明 = 响亮」）；deps 目录 = `services.deps()`（manifest inject 声明集 + required / optional / available）；未声明 inject 的调用 = trap（S3 响亮 × [wit-abi](wit-abi.md) D139）；方法集仍归契约，无契约服务的 missing method = guest catch-all 返回 `business`，宿主只在契约已知时短路 `service-method-missing`（[wit-abi](wit-abi.md) W3 D147）。
 
 v1 简化：inject 由 manifest 固定，entry 层不覆盖（Cordis 两处可写，我们一处）；同插件多实例的 inject 分化见用户再加。
 
@@ -81,6 +82,7 @@ v1 简化：inject 由 manifest 固定，entry 层不覆盖（Cordis 两处可�
 - 观测分工：调用方统一拿 `Err(Business)`；host 日志区分契约内错误与 handler 崩溃（后者进故障计数）——不给调用方暴露第三种类型
 - **`Err(Unavailable)` 的精确语义（附议修正）**：可选依赖的常态答案 + 提供方**崩溃窗口**的竞态兜底（host 发现崩溃 → 启动依赖者卸载之间的固有延迟，任何异步系统不可消除）；**稳态必需依赖设计上不可达**（激活门 + 卸载顺序双保险）；**热更窗口不提供等待机制**——服务对象窄（依赖者正在死、可选依赖缺席即信息），重试策略归未来 `lib/` helper；扩展位：实测痛点出现再加 host 侧有界等待（机制与 Pending 激活门同族）
 - **W5 兑现注（2026-10-19）**：S5 四态 = [wit-abi](wit-abi.md) W5 D137 的 `service-unavailable` / `service-method-missing` / `service-timeout` + 共享 `business`；宿主框架族 `core-deadlock` / `core-contract-violation` 不占服务第五格，但出现在服务调用路径的调用方可见错误集合中（四态 + core 两格）；注册表语义不变。
+- **W3 兑现注（2026-10-19）**：per-call deadline 的作者面 = `services.call(service, method, args, timeout-ms)`；args / 返回 = 单个 TLV `Value`；缺席 timeout = 全局默认，0 / 非法 = `core-contract-violation` Err（[wit-abi](wit-abi.md) W3 D147）。
 
 ### 并发四条款
 

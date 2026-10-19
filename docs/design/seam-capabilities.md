@@ -28,11 +28,11 @@
 
 guest 的非确定性来源只剩宿主授予的少数 import；宿主不注入可替换的标准库层。
 
-| 源             | 形态                                                         | 纪律                                                                                                                  |
-| -------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| 时钟           | `wasi:clocks`（或宿主等价的注入实现）                        | 宿主侧实现接收注入时钟；测试用受控时钟，生产用系统时钟                                                                |
-| 随机           | `wasi:random`（宿主实现；SDK 面 `crypto.random` 为能力别名） | 安全级随机一律 CSPRNG；编排级随机由 guest 自选 PRNG，种子经宿主注入                                                   |
-| 宿主导入的实现 | 一切能力 import                                              | 实现不得无限阻塞（[wit-abi](wit-abi.md) W4.4）；guest 计算由 fuel/epoch 计量硬截断（ADR-0011 时间盒语义的 wasm 形态） |
+| 源             | 形态                                                 | 纪律                                                                                                                  |
+| -------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 时钟           | `wasi:clocks`（或宿主等价的注入实现）                | 宿主侧实现接收注入时钟；测试用受控时钟，生产用系统时钟                                                                |
+| 随机           | `wasi:random`（宿主实现；SDK 可 re-export 便利函数） | 安全级随机一律 CSPRNG；编排级随机由 guest 自选 PRNG，种子经宿主注入                                                   |
+| 宿主导入的实现 | 一切能力 import                                      | 实现不得无限阻塞（[wit-abi](wit-abi.md) W4.4）；guest 计算由 fuel/epoch 计量硬截断（ADR-0011 时间盒语义的 wasm 形态） |
 
 确定性纪律与 replay 无关：核心不立 replay 引擎（[journal](journal.md) D75），时间 / 随机 / IO 的注入缝服务于测试确定性与宿主可控性，不承担录制职责。
 
@@ -40,10 +40,10 @@ guest 的非确定性来源只剩宿主授予的少数 import；宿主不注入�
 
 ### 2.1 两类能力
 
-| 类别     | 形态                      | 归属                                                                                                   |
-| -------- | ------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 效应能力 | host import（timer 无门） | fs / http / timer / process——必须宿主中介（政策、预算、journal 挂载位）；DB = guest crate + private fs |
-| 纯算能力 | guest 语言与包生态        | json / yaml / regex / diff / uuid / hex / base64 / timefmt 等由 guest 自行选依赖；核心不提供纯算内建件 |
+| 类别         | 形态                      | 归属                                                                                                                                                                                                                                                          |
+| ------------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 效应能力     | host import（timer 无门） | fs / http / timer / process——必须宿主中介（政策、预算、journal 挂载位）；DB = guest crate + private fs                                                                                                                                                        |
+| guest 包生态 | guest 语言与包生态        | json / yaml / regex / diff / uuid / hex / base64 / timefmt / crypto / DB 等由 guest 自行选依赖；核心不提供纯算内建件或状态库宿主句柄（crypto 撤回 = [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)；DB = guest crate + private fs = ADR-0039） |
 
 纯算件不再需要「sync 直挂」：插件内计算就是原生代码，不存在旧载体时代的跨界税。SDK 可以提供便利 re-export，那是包形态题，不进核心机制（[plugin-sdk](plugin-sdk.md) S3）。
 
@@ -92,12 +92,13 @@ DB 不是宿主能力：插件自带 guest crate（SQLite / redb / sled 等）�
 
 ### 4.2 标准件与内建件
 
-| 件                 | 形态        | 说明                                                                                                                                                                                        |
-| ------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| clocks / random    | WASI 标准件 | 直接复用；宿主控制实现（§1）                                                                                                                                                                |
-| filesystem preopen | WASI 标准件 | private 由 preopen 承载；global 走 host-mediated 自研逃逸舱（§5.2）                                                                                                                         |
-| crypto             | host import | v1 = sha256 / sha512 + hmac + `crypto.random`（CSPRNG）+ AES-GCM；hash 配流式形态；md5 / sha1 / 签名族 / xxhash 登记扩展位。留在核心的论据 = AES/SHA 指令缺口的硬件约束（ADR-0024 §4 站位） |
-| git                | 扩展位维持  | 领域相关 + 重依赖 + 低频；真实场景走 guest 包或外部服务                                                                                                                                     |
+| 件                 | 形态            | 说明                                                                                                                 |
+| ------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| clocks / random    | WASI 0.3 标准件 | 直接复用；宿主控制实现（§1）。`wasi:random` = CSPRNG 唯一来源                                                        |
+| filesystem preopen | WASI 0.3 标准件 | private = preopen + WASI 0.3 async filesystem（作者面 = SDK 直接包，不套宿主层）；global 走 host-mediated 自研逃逸舱 |
+| git                | 扩展位维持      | 领域相关 + 重依赖 + 低频；真实场景走 guest 包或外部服务                                                              |
+
+crypto 撤回（2026-10-19）= [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)：sha256 / sha512 / hmac / AES-GCM 归 guest crate；宿主不再提供 crypto import；代价与复审触发器见 ADR。
 
 ## 5. 出区通道
 
@@ -110,7 +111,7 @@ DB 不是宿主能力：插件自带 guest crate（SQLite / redb / sled 等）�
 ### 5.2 通道逐项
 
 - **fs：两档 scope（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）。**
-  - **private**：`plugins/<name>/data/fs/` 以 WASI preopen 授予，**隐式读写**，不声明、不可收窄；guest 在 preopen 内用常规文件 API；逃逸防护 = 运行时结构保证，自研两段式解析对 private 退役。
+  - **private**：`plugins/<name>/data/fs/` 以 WASI preopen 授予（guest 路径 `/`），**隐式读写**，不声明、不可收窄；**作者面 = SDK 直接包 WASI 0.3 `wasi:filesystem` 的 async 面**（`ctx.plugin_fs()`；同一 preopen，不另造 host-mediated 层；含 `guest_root` 给 crate）；guest crate 用 `std::fs` 同一 preopen。W3 D144（[wit-abi](wit-abi.md)）；安全决定不变。
   - **global**：减法语义（用户世界 − `secrets.yml` + `journal/` 两条豁免），preopen 表达不了减法 → host-mediated 自研逃逸舱；manifest 声明 `fs: read|write`（语义 = global；形状 = [wit-abi](wit-abi.md) W2.5 D129），缺省 = 无 global；TOCTOU 硬化与路径解析留在宿主实现。
   - **命名根不立**：原「manifest 声明 + 部署者绑定」中间档撤回（ADR-0039）——插件可能服务多个 project，静态绑定一次配不齐；需要用户世界访问走 global。
   - 写 = 临时文件 + rename 原子写。workspace / session 语义归插件层服务投影，核心不做一一映射。
@@ -147,17 +148,17 @@ journal kind 表 SSOT = [journal](journal.md) D78；v1 = 写死族骨架（D84�
 
 ### 6.1 WIT ABI 章回填
 
-| 章                  | 回填                                                                                                                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| W2（T13-i）manifest | **已兑现（2026-10-19）= wit-abi W2 D129**：`capabilities` 字段面 = `{ fs, http, process, mount }`；`fs: read/write` 标量 = global（private 隐式）；sqlite 撤回；timer 无门；纯算件无需声明 |
-| W3（T13-j）ctx      | ctx 效应方法面 = fs / http / timer / process；`fs` = private（隐式）/ global（`fs` 标量声明）；DB = guest crate + private fs；编排面 = 事件 / 服务调用 / `mount` / `unmount`               |
-| W5（T13-k）错误     | **已兑现（2026-10-19）= wit-abi W5 D136–D141**：能力失败 `result` 形态；service 四态 + `business`；未声明能力 = trap（D139）；`fs-invalid-path` message 通用化                             |
-| W6（T13-l）边界     | 递归 Value 的 TLV 线编码；流式句柄族；resource 句柄生命周期                                                                                                                                |
-| W9（T13-o）能力门   | 进口对账机械化（组件 import 清单 ⊆ SDK 封闭词汇表）+ 运行期 fail-closed；编排面不立能力门的既有立场，唯一例外 = `mount: true`                                                              |
-| W10（T13-p）版本    | 能力词汇 additive 增补 → WIT package version 演进（原 `abi_rev` 纪律的承接）                                                                                                               |
+| 章                  | 回填                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| W2（T13-i）manifest | **已兑现（2026-10-19）= wit-abi W2 D129**：`capabilities` 字段面 = `{ fs, http, process, mount }`；`fs: read/write` 标量 = global（private 隐式）；sqlite 撤回；timer 无门；纯算件无需声明                                                                                                                                                                                                                                                                                                       |
+| W3（T13-j）ctx      | **已兑现（2026-10-19）= wit-abi W3 D142–D154**：metis 功能 import = 7 个（`events` / `services` / `timer` / `http` / `fs` / `process` / `instance`）；private fs = WASI 0.3 `wasi:filesystem`（作者面 `ctx.plugin_fs()`）；`fs` = global（`fs` 标量声明，绝对路径）/ `plugin_fs()` = private（隐式，统一 async，preopen 留给 crate）；DB = guest crate + private fs；crypto 撤回 = [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)；编排面 = 事件 / 服务调用 / `mount` / `unmount` |
+| W5（T13-k）错误     | **已兑现（2026-10-19）= wit-abi W5 D136–D141**：能力失败 `result` 形态；service 四态 + `business`；未声明能力 = trap（D139）；`fs-invalid-path` message 通用化                                                                                                                                                                                                                                                                                                                                   |
+| W6（T13-l）边界     | 递归 Value 的 TLV 线编码；流式句柄族；resource 句柄生命周期                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| W9（T13-o）能力门   | 进口对账机械化（组件 import 清单 ⊆ SDK 封闭词汇表）+ 运行期 fail-closed；编排面不立能力门的既有立场，唯一例外 = `mount: true`                                                                                                                                                                                                                                                                                                                                                                    |
+| W10（T13-p）版本    | 能力词汇 additive 增补 → WIT package version 演进（原 `abi_rev` 纪律的承接）                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ### 6.2 实现期登记
 
 - timer 最小间隔 / http 预算与超时 = 实现期配置。
 - 组件单实例基线内存与并发槽单价 = 实现期基准项。
-- crypto 的流式 hash 形态与扩展位成员清单 = 实现期细化。
+- ~~crypto 的流式 hash 形态与扩展位成员清单~~ —— crypto 撤回 = [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)（2026-10-19）；需要时由 guest crate / 外部服务承接。

@@ -361,12 +361,12 @@ fn set_global_i64(lua: &Lua, name: &'static CStr, v: i64) -> LuaResult<()> {
 
 五种递归形态逐一验证（文本解析与 `--wasm` 二进制编码两种模式结果一致）：
 
-| 形态 | 示例骨架 | 结果 |
-| ---- | -------- | ---- |
-| 直接递归 variant | `variant value { nil, num(f64), child(value) }` | ❌ 拒绝 |
-| 经 `list` 间接 | `arr(list<value>)` | ❌ 拒绝 |
-| 经 `option` 间接 | `node(option<tree>)` | ❌ 拒绝 |
-| record 字段递归 | `record node { children: list<node> }` | ❌ 拒绝 |
+| 形态                  | 示例骨架                                                                 | 结果    |
+| --------------------- | ------------------------------------------------------------------------ | ------- |
+| 直接递归 variant      | `variant value { nil, num(f64), child(value) }`                          | ❌ 拒绝 |
+| 经 `list` 间接        | `arr(list<value>)`                                                       | ❌ 拒绝 |
+| 经 `option` 间接      | `node(option<tree>)`                                                     | ❌ 拒绝 |
+| record 字段递归       | `record node { children: list<node> }`                                   | ❌ 拒绝 |
 | variant↔record 互递归 | `record entry { val: value }` + `variant value { entries(list<entry>) }` | ❌ 拒绝 |
 
 报错统一为 resolve 阶段 `error: type \`X\` depends on itself`，工具链未提供任何开关绕过——当前 WIT 工具链不支持任何形式的递归类型。对本项目零冲击：D6.1 已取琐碎签名形态（每方法只搬 `list<u8>`），schema→WIT 生成器永不输出递归类型；本实测是对该选型的独立印证。
@@ -386,12 +386,12 @@ fn set_global_i64(lua: &Lua, name: &'static CStr, v: i64) -> LuaResult<()> {
 
 ### 5.2 Extism 判决：设计参照，非技术选项
 
-| 维度 | Extism | 组件模型 + WIT |
-| --- | --- | --- |
-| 插件形态 | core 模块（任何老工具链可产） | 组件（wasip2/p3 工具链） |
-| ABI | 私有极简：字节过内存，类型靠双方自觉 | WIT 类型化 + canonical ABI 编译期检查 |
-| 绑定生成 | XTP Bindgen（私有 IDL） | wit-bindgen（标准工具链，多语言） |
-| 治理 | 单厂商（dylibso） | W3C 标准 + BA，多运行时 |
+| 维度     | Extism                               | 组件模型 + WIT                        |
+| -------- | ------------------------------------ | ------------------------------------- |
+| 插件形态 | core 模块（任何老工具链可产）        | 组件（wasip2/p3 工具链）              |
+| ABI      | 私有极简：字节过内存，类型靠双方自觉 | WIT 类型化 + canonical ABI 编译期检查 |
+| 绑定生成 | XTP Bindgen（私有 IDL）              | wit-bindgen（标准工具链，多语言）     |
+| 治理     | 单厂商（dylibso）                    | W3C 标准 + BA，多运行时               |
 
 可抄模式：manifest 授权（allowed_hosts ≈ 能力政策声明）、实例 Pool、PDK 宏藏 ABI（`#[plugin_fn]` 式作者体验）。退路地位：若组件模型 guest 工具链验证失败，core-module ABI 为兜底层（吃任何工具链产出）。
 
@@ -406,12 +406,12 @@ fn set_global_i64(lua: &Lua, name: &'static CStr, v: i64) -> LuaResult<()> {
 
 流传说法「WASI 0.3 跨组件交互不再拷贝」不准确。canonical ABI 拷贝语义四层（每实例独立线性内存 = 沙箱本体，值传递无零拷贝）：
 
-| 形态 | 拷贝次数 | 机制 |
-| --- | --- | --- |
-| 值类型（record/variant/list/string/数字） | 每次跨界 1 次（永久） | lift/lower = 拷贝协议（规范级） |
-| `stream<T>`（0.3 新增） | 每块 1 次，边产边消 | read/write 直接在生产者↔消费者缓冲间拷贝；免全量物化、免宿主中间队列 |
-| 流转发（0.3 解决的三明治问题） | **中介 0 次** | 读端直转最终消费者；宿主中转架构（Metis 插件间通信模型）最对口 |
-| `resource` / `own` / `borrow` | **0 次（真零拷贝）** | 数据驻留宿主或产出方，跨界只传句柄 |
+| 形态                                      | 拷贝次数              | 机制                                                                 |
+| ----------------------------------------- | --------------------- | -------------------------------------------------------------------- |
+| 值类型（record/variant/list/string/数字） | 每次跨界 1 次（永久） | lift/lower = 拷贝协议（规范级）                                      |
+| `stream<T>`（0.3 新增）                   | 每块 1 次，边产边消   | read/write 直接在生产者↔消费者缓冲间拷贝；免全量物化、免宿主中间队列 |
+| 流转发（0.3 解决的三明治问题）            | **中介 0 次**         | 读端直转最终消费者；宿主中转架构（Metis 插件间通信模型）最对口       |
+| `resource` / `own` / `borrow`             | **0 次（真零拷贝）**  | 数据驻留宿主或产出方，跨界只传句柄                                   |
 
 对 Metis 的映射：拷贝本是冻结设计的一部分（ADR-0015 值语义 + 边界深快照 = 隔离与 journal replay 前提）；大负载句柄化（流式句柄族 + 接缝 Arc）在 WIT 路线下映射为 `resource`；实测预算锚（补遗 1/2：host 调用 4.3 ns、拷入 15.6 GiB/s）下 1 KB 载荷拷贝 ≈64 ns，高频小负载为噪声级。唯一真·值零拷贝路径（shared-memory threads）与限额/池化冲突，维持禁用（正文 §1.4 / ADR-0024 C2）——「一切交互严格零拷贝」与隔离互斥，正确需求提法 = 最小拷贝 + 大负载句柄化 + 流式管线。
 
@@ -425,12 +425,12 @@ rustup 自管 `1.98.1-x86_64-unknown-linux-gnu` + target `wasm32-wasip2`（rustc
 
 ### 验证矩阵（WIT = 自建 `metis:s1@0.1.0`：`tick` 同步 + `sleep: async func(ms: u64)` 导入；`export run: async func() -> list<string>`）
 
-| 项 | 结果 | 关键数字 |
-| --- | --- | --- |
-| V1 构建链 | PASS | `cargo build --target wasm32-wasip2 --release` 直出组件 105,180 B；首建 13.83 s，增量重建 **0.22–0.29 s**（即写即用工程面的地板实测） |
-| V2 async import 往返 | PASS | guest 内 `futures::join!(sleep(500), sleep(500), tick)`；单实例墙钟 **500/501 ms**（串行应 ~1000 ms——guest 内并发成立） |
+| 项                                  | 结果 | 关键数字                                                                                                                                                |
+| ----------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| V1 构建链                           | PASS | `cargo build --target wasm32-wasip2 --release` 直出组件 105,180 B；首建 13.83 s，增量重建 **0.22–0.29 s**（即写即用工程面的地板实测）                   |
+| V2 async import 往返                | PASS | guest 内 `futures::join!(sleep(500), sleep(500), tick)`；单实例墙钟 **500/501 ms**（串行应 ~1000 ms——guest 内并发成立）                                 |
 | V3 单宿主线程并发在飞（核心裁决项） | PASS | current_thread 上 `tokio::join!` 两实例（独立 Store + `run_concurrent`）：墙钟 **502 ms**（两次运行一致）——guest 挂起不阻塞宿主线程，多实例并发在飞成立 |
-| V4 工效学 | PASS | guest `lib.rs` **31 行**（管道代码仅 `generate!` 4 行 + `export!` 1 行）；host 全量 debug 冷建 50.24 s（16 核，wasmtime+cranelift 依赖树首次编译） |
+| V4 工效学                           | PASS | guest `lib.rs` **31 行**（管道代码仅 `generate!` 4 行 + `export!` 1 行）；host 全量 debug 冷建 50.24 s（16 核，wasmtime+cranelift 依赖树首次编译）      |
 
 ### Papercuts（工效学原始材料，归 wit-abi W3/W4 章与 SDK 站输入）
 
@@ -455,13 +455,13 @@ rustup 自管 `1.98.1-x86_64-unknown-linux-gnu` + target `wasm32-wasip2`；guest
 
 ### 验证矩阵
 
-| 项 | 结果 | 关键数字 |
-| --- | --- | --- |
-| R1 同实例重入（核心裁决项） | PASS | 单实例单 Store，`run_concurrent` 内并发 bump(1,500) ∥ bump(2,100)：墙钟 500.70 / 500.97 ms 两轮（串行应 ≈600 ms）；两个不同时刻的 guest 日志快照拼出唯一完整序 start 1 → start 2 → end 2 → end 1——第二条调用在第一条挂起（await host sleep）期间进入同一实例并先完成 |
-| R2a 挂起点间原子 | PASS | 顺序两调 `atomic_bump()`（无 await 读改写）→ 1、2 |
-| R2b 跨挂起点读改写丢失更新 | 实证成立 | 并发 read_modify_write(500) ∥ read_modify_write(100) → 两者均读 0 写 1，终值 1（非 2）；墙钟 501.57 / 501.38 ms（确为并发在飞）——实例内各任务共享同一线性内存堆、跨 await 读改写无保护，async mutex 动机成立 |
-| R4a 在飞任务随并发域遗弃 | 观察 | `run_concurrent` future 在 guest 任务在飞时被 drop（timeout 300 ms vs 5000 ms sleep）→ 无 panic 无报错，Store 可继续调用，干净 drop |
-| R4b 后台 spawn 不等待 | 观察 | 闭包内 spawn 后不 await JoinHandle 即返回 → `run_concurrent` 立即正常返回（不等后台任务），guest 任务静默遗弃，Store 可复用 |
+| 项                          | 结果     | 关键数字                                                                                                                                                                                                                                                             |
+| --------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1 同实例重入（核心裁决项） | PASS     | 单实例单 Store，`run_concurrent` 内并发 bump(1,500) ∥ bump(2,100)：墙钟 500.70 / 500.97 ms 两轮（串行应 ≈600 ms）；两个不同时刻的 guest 日志快照拼出唯一完整序 start 1 → start 2 → end 2 → end 1——第二条调用在第一条挂起（await host sleep）期间进入同一实例并先完成 |
+| R2a 挂起点间原子            | PASS     | 顺序两调 `atomic_bump()`（无 await 读改写）→ 1、2                                                                                                                                                                                                                    |
+| R2b 跨挂起点读改写丢失更新  | 实证成立 | 并发 read_modify_write(500) ∥ read_modify_write(100) → 两者均读 0 写 1，终值 1（非 2）；墙钟 501.57 / 501.38 ms（确为并发在飞）——实例内各任务共享同一线性内存堆、跨 await 读改写无保护，async mutex 动机成立                                                         |
+| R4a 在飞任务随并发域遗弃    | 观察     | `run_concurrent` future 在 guest 任务在飞时被 drop（timeout 300 ms vs 5000 ms sleep）→ 无 panic 无报错，Store 可继续调用，干净 drop                                                                                                                                  |
+| R4b 后台 spawn 不等待       | 观察     | 闭包内 spawn 后不 await JoinHandle 即返回 → `run_concurrent` 立即正常返回（不等后台任务），guest 任务静默遗弃，Store 可复用                                                                                                                                          |
 
 ### 宿主侧 API 形状（T10.4 / T10.10 参考）
 
@@ -481,3 +481,11 @@ rustup 自管 `1.98.1-x86_64-unknown-linux-gnu` + target `wasm32-wasip2`；guest
 ### 总结论
 
 wasmtime 49.0.3 组件模型 async 支持同实例重入：单宿主线程 `run_concurrent` 内对同一实例的第二条 export 调用在第一条挂起期间进入执行（≈500 ms 墙钟 + 交错日志序实证）；两条在飞任务共享同一线性内存堆，await 间原子、跨 await 读改写丢失更新。E3 拍板语义（最大化并发投递 / 实例内共享堆 / await 间天然原子）全部实证成立；wit-abi W4 章据此开章。
+
+## 补遗 8（2026-10-19）：crypto 内建件撤回
+
+§0 / §3.6 / §5.1 / §5.4 / §5.10 中「crypto 必须是宿主内建件」的结论在 wasm-first 下被设计决策推翻（维护者 2026-10-19 拍板）：guest 是编译语言，基础计算性能可信；减少插件执行过程中与内核的通信，纯算件归 guest 包生态。sha256 / sha512 / hmac / AES-GCM 改由 guest crate 提供；CSPRNG 走 `wasi:random`。技术事实（wasm 无 AES-NI / SHA-NI，差 3–10×）不变，成本被接受；正式记录 = [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)。上述各节的结论面按本补遗读，正文不改写。
+
+## 补遗 9（2026-10-19）：目标 WASI 版本 = 0.3
+
+维护者确认当前目标 = **WASI 0.3**（不是 0.2）；private fs 的 async 面由 WASI 0.3 `wasi:filesystem` 原生提供，设计不再以 wasip2 的同步 filesystem 为前提。补遗 6 papercut 1 的 wasip2 std 14 导入为历史证据；0.3 基线由 T10.10 核实。S1/S2 spike 在 wasip2 上取证，其 async 语义结论不变。

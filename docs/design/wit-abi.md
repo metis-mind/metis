@@ -26,7 +26,7 @@
 | --- | ---------------------------------------------------------------------------------------------------- | --------------------------- | -------------------------- |
 | W1  | 插件包形态与入口契约（包布局 / world 定义 / 生命周期导出）                                           | A1                          | ✅ 2026-10-18（D116–D124） |
 | W2  | manifest 格式                                                                                        | A2                          | ✅ 2026-10-19（D125–D134） |
-| W3  | ctx 形态：WIT import 接口集与 SDK 映射（作者不见 WASI/WIT = ADR-0034 §4）                            | A3                          | 未开始                     |
+| W3  | ctx 形态：WIT import 接口集与 SDK 映射（作者不见 WASI/WIT = ADR-0034 §4）                            | A3                          | ✅ 2026-10-19（D142–D154） |
 | W4  | async 与交错语义（组件模型 async 映射；S1/S2 spike 双 PASS 托底 = 补遗 6/7）                         | A4                          | ✅ 2026-10-17              |
 | W5  | 错误与 result 习语（`result<T,E>` 原生）                                                             | A5                          | ✅ 2026-10-19（D136–D141） |
 | W6  | 边界转换：canonical ABI / 递归 Value 线编码（TLV 主线化 = E1 选项① 拍板）/ resource 句柄族           | A6                          | 未开始                     |
@@ -76,7 +76,7 @@
 
 - **名字**：package `metis:plugin`，world `plugin`，v1 版本号 `0.1.0`。版本号语义、比较规则与兼容判定 = W10 章；本章只定名字与版本字符串的住处。
 - **物理位置**：WIT 目录住 SDK crate（`crates/metis-plugin/wit/`）——SDK 是作者实际依赖、将来要按 crate 发布的单元，Cargo 只打包 crate 目录内的文件，WIT 放在里面才能随 SDK 一起走。宿主 `metis-component` 以源码路径引用同一目录生成绑定（Zed 式两视角：guest 只对当前版本生成，宿主对全部支持版本生成）；两组绑定必须来自同一目录树，禁止拷贝第二份。这是工作区内源码级路径引用，不产生 Cargo 依赖（`metis-component` 不依赖 guest 侧 SDK）；若宿主 crate 将来需要独立发布，再评估中立 WIT crate 或构建期复制。
-- **文件按章拆**：规划中 `plugin.wit`（world + 生命周期导出）；后续 `error.wit`（W5）、`ctx.wit`（W3）、`events.wit`（W8）加入同一 package 目录。WIT 允许多文件同包。
+- **文件按章拆**：规划中 `plugin.wit`（world + 生命周期导出）；后续 `error.wit`（W5）、`ctx.wit`（W3）、`events.wit`（W3 import 面 + W8 声明面）加入同一 package 目录。WIT 允许多文件同包。
 - **固定 world**：单一 world，import 词汇表在一个 package version 内封闭（[plugin-sdk](plugin-sdk.md) S6 已定）；增补 import / export = 新 package version（W10）。宿主与插件不生成按能力裁剪的 world（编译期组合 world = 扩展位，前提 = W2 落地）。
 - **版本快照**：v1 只有一个 ABI 版本；多版本共存形态（每个支持版本一份 WIT 目录、宿主全量生成）归 W10。旧组件与新宿主的兼容判定 = manifest 声明的 package version ≤ 宿主支持版本（比较语义 W10）。
 
@@ -93,14 +93,19 @@ world plugin {
     export setup: async func(config: list<u8>) -> result<_, error>;
     export on-config: async func(config: list<u8>) -> result<bool, error>;
     export dispose: async func() -> result<_, error>;
+    export on-call: async func(service: string, method: string, args: list<u8>) -> result<list<u8>, error>;  // W3 D147
+    export on-timer: async func(id: u64, coalesced: u32);                                                     // W3 D145
+    // on-event 随 W8 增补（W3 D146 已定形状：listener-id + name + payload）
 }
 ```
+
+- **W3 增补（2026-10-19）**：`on-call` / `on-timer` 是非生命周期导出，随 W3 D147 / D145 加入 v1 world；`on-event` 随 W8。`0.1.0` 尚未发布，本节草图与 W3 同批补全 = 首个发布快照的编制（W10 冻结）；发布后的增补才适用「新 package version」纪律。
 
 - **`setup(config)`**：拿启用期合成并冻结的完整配置（config-format D36 管线产物：校验 → 秘密解析 → 默认值合成），成功返回 = 实例可以进入 Active。返回 `error` = 加载失败（W1.5）。
 - **`on-config(config)`**：配置热更新通道（config-format D42）。`Ok(true)` = live-apply 成交；`Ok(false)` / `Err` / trap = 重挂载。默认实现 = `Ok(false)`（SDK 补全），所以「没实现」与「拒绝吸收」是同一行为。
 - **`dispose()`**：唯一的手动清理通道（A1.2 平移）。在飞任务结算后由宿主调用（W1.6）；可 await ctx 效应调用；错误 / trap 记日志、不中断后续清理。
 - **无 ctx 参数**：ctx = 宿主 import 接口集（W3）；SDK 在作者面合成 `Ctx`，作者签名形如 `async fn setup(&mut self, ctx: &Ctx, config: Value) -> Result<(), Error>`。ABI 不重复传递宿主能力表。
-- **world 导出集在单一 package version 内封闭**：组件必须导出三者；缺任一 = 安装期 world 不匹配错误。作者面的「可选钩子」= trait 默认方法，不是缺失导出。`on-call` 服务导出（W3）与 `on-event` 导出（W8）在同一个 world 上 additive 增补，增补 = 新 package version（W10）。
+- **world 导出集在单一 package version 内封闭**：组件必须导出生命周期三者与 W3 的 `on-call` / `on-timer`；缺任一 = 安装期 world 不匹配错误。作者面的「可选钩子」= trait 默认方法，不是缺失导出。`on-event` 导出（W8）在同一 world 上 additive 增补；发布后的增补 = 新 package version（W10）。
 - **元数据唯一去处 = manifest**：组件 custom section 不作声明面（A1.1「table 字段集封闭」的载体平移）。
 
 ### W1.4 D119 入口执行时序与激活门
@@ -110,7 +115,7 @@ world plugin {
 本节只记入口契约对 ABI 调用的约束；投递与背压语义的 SSOT = W4.3，配置变更语义 = config-format D42。
 
 - 顺序：实例化（imports 已注册）→ 宿主直调 `setup` → 成功：fiber 进 Active、闸门开门 → 邮箱积压消息按既有投递政策消费（W4.3）。失败：W1.5。
-- `setup` 不走邮箱、不过投递闸门，但按在飞预算记账（第一个任务）。Loading 期间事件 / 服务调用 / 定时器 tick 只进有界邮箱积压（不投递、不丢弃）；溢出走既有背压链（[context-events](context-events.md) 政策；W4.3）。
+- `setup` 不走邮箱、不过投递闸门，但按在飞预算记账（第一个任务）。Loading 期间事件 / 服务调用进入有界邮箱积压（不投递、不丢弃）；溢出走既有背压链（[context-events](context-events.md) 政策；W4.3）。定时器 tick 按 W3 D145 只置 pending / 合并计数，Active 后投递。
 - `setup` 期间无第二条 export 进入同一实例：同实例重入（W4.1）从 Active 起成立。`setup` 可以 await import（宿主调用 / 服务调用 / 定时器）；死锁红线沿 A1.4 平移——只能等「完成不依赖自身邮箱」的对象，等自己的 tick / 事件 = 死锁。
 - `on-config` 撞 Loading = 合并取最新，Active 后投递；热更撞 Loading = 惯性原则：进行中的加载跑完落定再响应（语义 SSOT = config-format D42）。
 - boot、热更、mount 走同一条激活管线（[instance-model](instance-model.md) D63；[ADR-0023](../decisions/0023-core-restart-semantics.md)）。
@@ -146,7 +151,7 @@ world plugin {
 - 理由：start 在实例化时执行，早于激活门、加载预算与宿主监督；import 级能力门虽已在链接期登记，但 start 可执行任意代码、产生副作用，且其失败不在受管生命周期内——等于给作者一条绕过 `setup` 的执行通道。
 - 检查点：`metis check` / `metis build` 预检（[build-pipeline](build-pipeline.md) D108）与安装期结构校验（T10.12）共用同一判定；违反 = 响亮错误。
 - 额外 export（调试函数等）忽略（宿主只调用 world 导出）；命令类导出按上条拒绝。
-- wasip2 std 拖带的 14 个 WASI 0.2 导入不受影响（它们是 import，不是 start；[plugin-sdk](plugin-sdk.md) S3 既定）。
+- WASI 0.3 基线导入（clocks / random / filesystem async + std 拖带集）不受影响（它们是 import，不是 start；[plugin-sdk](plugin-sdk.md) S3 既定）。
 
 ### W1.8 D123 零仪式插件的 ABI 面
 
@@ -185,25 +190,25 @@ world plugin {
 
 ### W1.11 联动登记汇总（章末）
 
-| 去向           | 内容                                                                                                                      |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| W2（T13-i）    | **已兑现（2026-10-19）**：manifest 字段全集与形状 = D125–D133；模块系统消亡 = D134/ADR-0038；fs 两档 = D129/D130/ADR-0039 |
-| W3（T13-j）    | ctx = imports（D118）；作者面签名合成；`on-call` 服务调用导出；生命周期导出与 ctx import 接口集的边界                     |
-| W5（T13-k）    | **已兑现（2026-10-19）**：`error` 类型 = W5 D136–D141；生命周期返回的 `result` 形状确认（D118）                           |
-| W7（T13-m）    | 随包契约 `lib/`（包内容区的一部分，D35）；W1 只定 `manifest.yml` + 组件文件 + `lib/` 的包布局边界                         |
-| W8（T13-n）    | `on-event` 导出 additive 增补到同一 world（D118）                                                                         |
-| W10（T13-p）   | package version 的数值与比较、多版本快照、ABI 版本纪律（D117）                                                            |
-| T10.10         | 实例化 / Store 限额 / fuel / epoch；加载预算与 dispose 预算的数值；`.cwasm` 缓存                                          |
-| T10.12         | 安装期 start / world 校验；包内容复制与未知文件处置；卸载                                                                 |
-| T10.14         | SDK 默认实现（`setup` = `Ok(())`、`on-config` = `Ok(false)`、`dispose` = `Ok(())`）；作者面签名；`Ctx` 合成               |
-| T10.15         | 可部署包布局与组件文件名（D116）；预检 start 拒绝（D122）；零仪式源码合成 manifest                                        |
-| config-format  | D42 `on_config` 的 ABI 签名已兑现（D118）；D29 `plugin.wasm` 占位已兑现（D116）；D35 零仪式 ABI 面（D123）                |
-| build-pipeline | D106/D108 的组件文件名 / 包布局指针已兑现（D116）；D108 start 政策已确认（D122）                                          |
-| instance-model | D63 零仪式无 mount 资格（D123 原位）                                                                                      |
-| plugin-sdk     | S2 WIT 目录确认（D117）；S1 生命周期钩子形态（D118）；`on_config` 归 W1                                                   |
-| ADR-0005       | Consequences 成本账局部取代（[ADR-0037](../decisions/0037-component-instance-cost-ledger.md)，D124）                      |
-| 实现期配置     | 加载总预算（W1.5）；`dispose` 墙钟预算（W1.6）                                                                            |
-| 扩展位         | 编译期组合 world（S6 登记，W2 已落地后维持不启用）；多组件包（W1/W2 包布局面）；多 ABI 版本共存（W10）                    |
+| 去向           | 内容                                                                                                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W2（T13-i）    | **已兑现（2026-10-19）**：manifest 字段全集与形状 = D125–D133；模块系统消亡 = D134/ADR-0038；fs 两档 = D129/D130/ADR-0039                                            |
+| W3（T13-j）    | **已兑现（2026-10-19）**：import 集 = W3 D142–D154；作者面 `Ctx` / 句柄 / RAII；`on-call` / `on-timer` 导出；fs 两档 / timer / 投递纪律 / 能力门；world 导出集补两款 |
+| W5（T13-k）    | **已兑现（2026-10-19）**：`error` 类型 = W5 D136–D141；生命周期返回的 `result` 形状确认（D118）                                                                      |
+| W7（T13-m）    | 随包契约 `lib/`（包内容区的一部分，D35）；W1 只定 `manifest.yml` + 组件文件 + `lib/` 的包布局边界                                                                    |
+| W8（T13-n）    | `on-event` 导出 additive 增补到同一 world（D118）                                                                                                                    |
+| W10（T13-p）   | package version 的数值与比较、多版本快照、ABI 版本纪律（D117）                                                                                                       |
+| T10.10         | 实例化 / Store 限额 / fuel / epoch；加载预算与 dispose 预算的数值；`.cwasm` 缓存                                                                                     |
+| T10.12         | 安装期 start / world 校验；包内容复制与未知文件处置；卸载                                                                                                            |
+| T10.14         | SDK 默认实现（`setup` = `Ok(())`、`on-config` = `Ok(false)`、`dispose` = `Ok(())`）；作者面签名；`Ctx` 合成                                                          |
+| T10.15         | 可部署包布局与组件文件名（D116）；预检 start 拒绝（D122）；零仪式源码合成 manifest                                                                                   |
+| config-format  | D42 `on_config` 的 ABI 签名已兑现（D118）；D29 `plugin.wasm` 占位已兑现（D116）；D35 零仪式 ABI 面（D123）                                                           |
+| build-pipeline | D106/D108 的组件文件名 / 包布局指针已兑现（D116）；D108 start 政策已确认（D122）                                                                                     |
+| instance-model | D63 零仪式无 mount 资格（D123 原位）                                                                                                                                 |
+| plugin-sdk     | S2 WIT 目录确认（D117）；S1 生命周期钩子形态（D118）；`on_config` 归 W1                                                                                              |
+| ADR-0005       | Consequences 成本账局部取代（[ADR-0037](../decisions/0037-component-instance-cost-ledger.md)，D124）                                                                 |
+| 实现期配置     | 加载总预算（W1.5）；`dispose` 墙钟预算（W1.6）                                                                                                                       |
+| 扩展位         | 编译期组合 world（S6 登记，W2 已落地后维持不启用）；多组件包（W1/W2 包布局面）；多 ABI 版本共存（W10）                                                               |
 
 ---
 
@@ -433,6 +438,404 @@ events:
 
 ---
 
+## W3 ctx 形态：WIT import 接口集与 SDK 映射
+
+### W3.0 边界与前提
+
+本章定：固定 world 的 import 接口集（分族、名字、归属）；每个接口的 WIT 形状（async / sync、富类型 vs TLV、错误面）；作者面 `Ctx` 与宿主能力的映射（访问器、句柄、RAII）；能力门在 import 实现侧的落点；投递纪律（背压 / 合并计数 / 卸载可见）；A3 机制消亡清单。不归本章：事件名语义与 `on-event` 导出 = W8；契约形状与方法集 = W7；TLV 线编码与 resource / stream 细节 = W6；错误类型定义 = W5；provide / inject / events 对账与能力门判定 = W9；package version 比较 = W10；宿主 import 实现 = T10.10 / T10.11；SDK 实现 = T10.14。
+
+前提（已定不议）：插件唯一载体 = wasm 组件（[ADR-0034](../decisions/0034-wasm-first-carrier.md)）；作者不见 WASI / WIT（ADR-0034 §4）；**WASI 目标 = 0.3**（2026-10-19 维护者确认；async filesystem 是 D144 的地基）；固定 world（W1.2 D117）；接口数据三分法（E1① / E2① / E5①，2026-10-16 拍板）；执行模型 = W4（D93–D97）；错误面 = W5（D136–D141）；fs 两档 = [ADR-0039](../decisions/0039-fs-capability-two-tier.md)；sqlite 撤回；命名根撤回；**crypto 撤回 = [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)**（2026-10-19 本批）。
+
+| 节    | 议题                                             | 状态               |
+| ----- | ------------------------------------------------ | ------------------ |
+| W3.1  | 能力面判据：只立 guest 不能自做的 import         | ✅ D142 2026-10-19 |
+| W3.2  | 导入接口集与文件归属                             | ✅ D143 2026-10-19 |
+| W3.3  | fs 两档：`fs` / `plugin_fs()`，统一 async 作者面 | ✅ D144 2026-10-19 |
+| W3.4  | timer：sleep / after / every 与回调投递          | ✅ D145 2026-10-19 |
+| W3.5  | events：宿主登记与四派发                         | ✅ D146 2026-10-19 |
+| W3.6  | services：call / provide / deps 与 on-call       | ✅ D147 2026-10-19 |
+| W3.7  | http：富类型请求 / 响应                          | ✅ D148 2026-10-19 |
+| W3.8  | process：富类型与 resource 句柄                  | ✅ D149 2026-10-19 |
+| W3.9  | instance：mount / unmount                        | ✅ D150 2026-10-19 |
+| W3.10 | async / sync 分类                                | ✅ D151 2026-10-19 |
+| W3.11 | 投递纪律：背压、合并计数、卸载可见               | ✅ D152 2026-10-19 |
+| W3.12 | 作者面 `Ctx` 与句柄                              | ✅ D153 2026-10-19 |
+| W3.13 | 能力门载体与 world 终态                          | ✅ D154 2026-10-19 |
+| W3.14 | A3 机制消亡清单（考古索引）                      | ✅ 2026-10-19      |
+| W3.15 | 联动登记汇总（章末）                             | ✅ 2026-10-19      |
+
+### W3.1 D142 能力面判据：只立 guest 不能自做的 import
+
+**D142 定案：import 判据 = 宿主中介必要性；纯算件归 guest 包生态，不立 ABI。**
+
+- **判据**：只有 guest 不能自做的事进 metis import 面——OS 访问（fs）、网络（http）、时钟唤醒（timer）、子进程（process）、跨实例编排（events / services / instance）。纯算（json / yaml / regex / diff / uuid / hex / base64 / timefmt / crypto / DB）一律由 guest 自选 crate；核心不提供纯算内建件。
+- **crypto 撤回**（2026-10-19 维护者拍板）：crypto 是 Lua 时代对解释器慢的补偿；wasm 下 guest 是编译语言，基础计算性能可信。sha256 / sha512 / hmac / AES-GCM 归 guest crate；CSPRNG 走 `wasi:random`（WASI 标准件，作者用 `getrandom` / `rand`，SDK 便利 re-export = feature 扩展位，v1 不做）。正式记录 = [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)；W5 的 crypto 错误面随撤回消失（参数违约不再有宿主侧入口）。
+- **已消解项**：json / yaml / regex / diff / uuid / hex / base64 / timefmt = design-review B2；sqlite = [ADR-0039](../decisions/0039-fs-capability-two-tier.md)（DB = guest crate + private fs）；crypto = ADR-0041。
+- **WASI 0.3 标准件**：clocks / random / filesystem（async）直接复用，不进 metis 词汇表；SDK 可便利 re-export，作者不见 WASI 名。`wasi:random` 是 CSPRNG 的唯一来源；private fs 的 async 面由 WASI 0.3 提供。
+- **成本明记**：wasm 无 AES-NI / SHA-NI 直通，guest crypto 比原生慢约 3–10×；高吞吐 crypto 走外部服务 / T2 进程；宿主不再提供单一审计实现，crypto 供应链接管归插件作者。复审触发器 = 批量插件因 crypto 性能 / 审计问题成串（ADR-0041）。
+- **timer 不是纯算件**：`sleep` 是宿主到时唤醒当前任务；`after` / `every` 的回调要活过一次 export 调用，宿主只能通过一次新的 export 调用送 tick。调度面必须宿主中介（W3.4）；这与「减少纯算跨界」不矛盾。
+
+### W3.2 D143 导入接口集与文件归属
+
+**D143 定案：metis 功能 import = 7 个按族接口；private fs = WASI 0.3 `wasi:filesystem` 标准件（SDK 映射，不入本包）；类型面 = `errors` + `fs-types`；`events` 的 import 形状归 W3，W8 只加声明语义与 `on-event`。**
+
+| 接口（功能面） | 内容                                                                 | WIT 文件     | 语义归属                             |
+| -------------- | -------------------------------------------------------------------- | ------------ | ------------------------------------ |
+| `events`       | `emit` / `serial` / `parallel` / `waterfall` / `listen` / `unlisten` | `events.wit` | W3 形状；W8 名称 / 声明 / `on-event` |
+| `services`     | `call` / `provide` / `deps`                                          | `ctx.wit`    | W3；对账 W9                          |
+| `timer`        | `sleep` / `after` / `every` / `cancel`                               | `ctx.wit`    | W3                                   |
+| `http`         | `request`                                                            | `ctx.wit`    | W3                                   |
+| `fs`           | global scope 的 11 方法 + 路径接口                                   | `ctx.wit`    | W3                                   |
+| `process`      | `exec` / `spawn` + `process-handle`                                  | `ctx.wit`    | W3                                   |
+| `instance`     | `mount` + `mount-handle`                                             | `ctx.wit`    | W3                                   |
+
+- **private fs 不在 metis 接口表**：`plugins/<name>/data/fs/` 走 WASI 0.3 `wasi:filesystem`（preopen；SDK 映射为 `ctx.plugin_fs()`）；计入 WASI 标准件，不计入 metis 功能 import。
+
+- 类型面：`errors`（W5 D136）与 `fs-types`（`entry-kind` / `dir-entry` / `file-metadata`，global `fs` 接口用）住 `error.wit` / `ctx.wit`；只承载类型，不产生功能 import。private 侧用 WASI 0.3 的富类型，SDK 映射成同一 Rust `Fs` 面。
+- **`fs` = global；private fs = WASI 0.3 `wasi:filesystem`（作者面 `ctx.plugin_fs()`）**（2026-10-19 维护者拍板）；`instance` = 动态子树挂载面（[instance-model](instance-model.md) D63 / D64），不是能力族。命名沿用 `instance`：将来 `list` / `describe` 可 additive 增补；`mount` 只是其中一个操作。
+- **`events` 归属调整**：W1.2 原规划 `events.wit` 归 W8；但固定 world 的 import 词汇表必须在 W3 收口，`Ctx::emit` / `on` 也需要 ABI 锚。W3 写 import 形状，W8 写事件名语义、`internal/` 规则、契约形状与 `on-event` 导出。
+- **不立聚合 `ctx` 接口**：W9 的进口对账粒度 = 接口（design-review B1），按族切才能让 import 清单可读、演进可局部；聚合接口会把所有能力焊在一个版本面上。
+- **文件按章拆**（W1.2 D117 原位）：`plugin.wit`（world + 生命周期导出）/ `error.wit`（W5）/ `ctx.wit`（W3）/ `events.wit`（W3 import 面 + W8 声明面）。WIT 允许多文件同包。
+- **world 导入全集**（示意，非可编译）：
+
+```text
+world plugin {
+    import events;
+    import services;
+    import timer;
+    import http;
+    import fs;          // global scope（host-mediated）
+    import process;
+    import instance;
+    // WASI 0.3：clocks / random / filesystem（async）由 guest std 与 SDK 引入；宿主统一链接，不在此列
+}
+```
+
+- **固定 world 不裁剪**：所有功能接口恒在 import 清单里；能力门 = 运行期 fail-closed（W3.13），不是链接期裁剪。编译期组合 world 维持扩展位（plugin-sdk S6）。
+
+### W3.3 D144 fs 两档：`fs` / `plugin_fs()`，统一 async 作者面
+
+**D144 定案：`ctx.fs()` = global（声明门 + 绝对路径，host-mediated async）；`ctx.plugin_fs()` = private（隐式 + WASI 0.3 `wasi:filesystem` async over preopen）；两者同一 `Fs` 方法族、全部 async；private 不套宿主中介层，也不是 metis WIT 接口。**
+
+- **private 机制**：`plugins/<name>/data/fs/` 以 WASI preopen 授予（guest 路径 `/`）；**作者面 = SDK 直接包 WASI 0.3 `wasi:filesystem` 的 async 文件面**（`ctx.plugin_fs()`），不另造 host-mediated 层——WASI 0.3 的 filesystem 本身 async，宿主中介是舍近求远。SQLite / redb 等 guest crate 用常规 `std::fs`（std 适配 WASI 0.3）；`ctx.plugin_fs()` 与 `std::fs` 同一 preopen，安全边界由 WASI 结构限界提供，不立第二套 resolver。
+- **global 机制**：[ADR-0039](../decisions/0039-fs-capability-two-tier.md) 的 host-mediated 自研逃逸舱；`capabilities.fs: read / write` 门；绝对路径；两段式解析 + TOCTOU 硬化原位（[seam-capabilities](seam-capabilities.md) §5.2）——preopen 表达不了减法，这一档必须宿主中介。
+- **版本前提**：目标 = WASI 0.3（2026-10-19 维护者确认）；`wasm32-wasip3` target / std p3 迁移的工具链落地归 T10.10 / T10.15（ADR-0034 W7 风险面）。S1/S2 spike 的 wasip2 证据只用于 async 语义，不改变 filesystem 的 0.3 async 面。
+- **不提供同步 / 异步两套作者接口**：作者面统一 async；guest crate 的 `std::fs` 是标准库同步 API，底层由 std 适配到 WASI 0.3。
+- **为什么两个访问器而不是一个 `fs`**：两档的安全模型不同——private 是隐式 preopen（结构限界），global 是声明门 + 路径政策（必须宿主中介）；`Fs` 方法族同形，但入口分开让「插件自己的数据目录」与「用户文件系统」在代码里一眼可辨，也让 private 走零中介快路径。
+- **性能澄清**：两档都是一次 host 调用；差别在 global 多了宿主中介的路径解析、能力门与预算记账（µs 级开销），private 由 WASI 直接落盘、零中介。async 不降低单次往返延迟，但并发 IO 可以重叠、不占住调用方任务；把 private 也统一走 global 会把私有目录 IO 拖上中介与能力门，得不偿失。
+- **方法族**（两 scope 同形，Rust-like）：
+
+| 方法                             | 语义                                                                                                             |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `read` / `read_text`             | ABI 层 bytes-only（`read`）；`read_text` 是 SDK 便利方法（UTF-8 校验失败 = `fs-invalid-utf8`，SDK 产生）         |
+| `write` / `append`               | 原子写（tmp + rename）/ 原子追加；自动建父目录                                                                   |
+| `exists` / `metadata`            | `metadata` = `file-metadata { kind, len, modified-ms }`                                                          |
+| `read_dir`                       | 返回 `list<dir-entry>`（`{ name, kind, len }`），带条目预算（超限 = `fs-too-large`）；glob / walk = guest 侧组合 |
+| `create_dir_all`                 | 递归建目录                                                                                                       |
+| `remove_file` / `remove_dir_all` | 删除；目录删除显式                                                                                               |
+| `rename` / `copy`                | 同 scope 内；跨 scope = read + write 组合                                                                        |
+| 路径接口                         | `home_dir` / `config_dir` / `data_dir` / `cache_dir` / `temp_dir`（`fs` 专属，绝对路径）                         |
+| `guest_root`                     | `ctx.plugin_fs()` 专属，返回 `/`（preopen guest 路径，给 crate）                                                 |
+
+- **路径规则**：`fs` 只接受绝对路径；相对路径 = `fs-invalid-path` Err。`ctx.plugin_fs()` 接受相对路径或 preopen-绝对路径（`/...`），两者都在私域根内解析。路径接口返回的绝对路径不授予访问权——访问仍过 `fs` 门。
+- **范围与预算**：整文件读 / 写带预算（数值 = 实现期配置，登记 T10.11）；超限 = `fs-too-large`。大文件 / 流式 = W6（`stream<u8>` resource）；v1 不立流式 fs 方法。
+- **错误映射**：两 scope 共用 W5 `fs` 族；`read_text` 的 UTF-8 失败 = `fs-invalid-utf8`（SDK 产生；ABI bytes-only，宿主不读文本）；private 侧 WASI 错误码 → fs kind、global 侧宿主错误 → fs kind，映射实现归 T10.14（not-found / permission-denied / invalid-type / too-large / io）。
+- **ADR-0039 不变**：private 隐式、preopen 保留、global 标量声明；作者面 = SDK 直接包 WASI 0.3 async filesystem，不新增 host-mediated 私有层。
+
+### W3.4 D145 timer：sleep / after / every 与回调投递
+
+**D145 定案：`sleep` = await import；`after` / `every` = 宿主登记 + `on-timer(id, coalesced)` 导出回调；回调体在 wasm 内执行；RAII 管早停，宿主账本管卸载兜底。**
+
+```wit
+interface timer {
+  sleep: async func(ms: u64);
+  after: func(ms: u64) -> u64;
+  every: func(ms: u64) -> u64;
+  cancel: func(id: u64);
+}
+```
+
+- **两条唤醒路径**（A3.6 载体平移）：`sleep` = 当前任务挂起，宿主到时直接恢复（不排队、不走邮箱）；`after` / `every` = 宿主时钟到期后发起一次新的 export 调用 `on-timer(id, coalesced)`，SDK 在 wasm 内查回调表并执行作者闭包。**回调体在 wasm 内**；宿主只持有 timer 条目（id / 间隔 / 状态），不持有 guest 闭包或指针。
+- **为什么仍须宿主**：guest 是被动的；稳定 canonical ABI 没有 guest 自发后台任务。`after` / `every` 的回调要活过一次 export 调用，宿主只能通过一次新的 export 调用来送 tick——这是调度面，不是纯算件。
+- **tick 投递**：tick 走 W4.3 的在飞预算闸门；每 timer 一个 pending 标记 + **非重叠**策略——上一个 tick 的 handler 未完结时，后续 tick 合并计数；下一次投递带 `coalesced`（0 = 无合并）。不排无界队列、不静默丢弃；作者显式看到合并次数。
+- **RAII**：`TimerHandle` 包裹 id；`Drop` → `cancel`；`detach()` 把生命周期交给宿主账本（fire-and-forget / 不想持有句柄时）；`cancel()` 保留为提前停。**dispose 不需要手动清理 timer**：卸载五段（W4.5）关闸后不再投递，宿主 fiber 账本 LIFO 结清全部登记；RAII 只是早停层。
+- **id 作用域**：timer id 是每实例作用域的 opaque token；宿主校验归属，外来 id = trap；自己的已取消 id = 幂等 no-op。`metis_plugin::raw` 直接调用也过同一校验。
+- **回调生命周期**：SDK 要求 `'static`（必要时 `+ Send`）；借用数据必须 `move` / `Arc` / clone——语言层保证。回调表住实例线性内存，实例丢弃即消失；宿主保证不向已死实例投递，在飞 tick 按 W4.5 drain；trap = 实例死亡，timer 随账本取消。不存在跨边界悬垂。
+- **错误面**：timer 无 `Err` 面（W5 D137）；`after` / `every` 间隔非法（低于最小间隔等）= trap（W5 D139）；回调返回 `Err` = SDK 记日志（fail-open），回调 panic = trap。
+- **作者面**：`ctx.timer().after(ms, handler)` / `every(ms, handler)` 注册；handler = `impl AsyncFnMut(u32) -> Result<(), Error> + 'static`（参数 = 本次投递合并的 tick 数，0 = 无合并）；`Err` = SDK 记日志（fail-open），panic = trap。`sleep(ms).await` 直接可用；handler 可捕获零尺寸 `Ctx`。
+- **Loading 期**：`setup` 内可注册 timer；tick 在 Loading 期只置 pending / 合并计数，Active 后投递（W1.4 既有「积压不丢弃」）；`setup` 失败 = 账本 drain、timer 取消（W1.5）。
+- **卸载期**：Unloading 新注册 timer = trap（W4.5 D11.2）；已登记 timer 随账本取消；在飞 tick 按 W4.5 drain。
+
+### W3.5 D146 events：宿主登记与四派发
+
+**D146 定案：监听登记住宿主（`listen` / `unlisten`），四派发 = import；`emit` 也 async（只 await 入队）；`Listener` RAII。**
+
+```wit
+interface events {
+  use errors.{error};
+  emit: async func(name: string, payload: list<u8>) -> result<_, error>;
+  serial: async func(name: string, payload: list<u8>) -> result<option<list<u8>>, error>;
+  parallel: async func(name: string, payload: list<u8>) -> result<list<result<option<list<u8>>, error>>, error>;
+  waterfall: async func(name: string, payload: list<u8>) -> result<option<list<u8>>, error>;
+  listen: func(name: string) -> result<u64, error>;
+  unlisten: func(id: u64);
+}
+```
+
+- **为什么登记在宿主**：ADR-0014 的派发快照、注册序、逐项活性检查、卸载摘除都是宿主侧机制；闭包不能跨界，宿主必须知道「哪个实例听哪个事件」才能只投递给登记者。guest 侧只存 `name → 引用计数`（宿主 listener 表持有 id 与注册序）。
+- **`emit` 为什么 async**：`await` 只等**入队接纳**，不等监听者完成——fire-and-forget 语义不变；邮箱满时把背压传导给发射方。**容量等待进 wait-for 图**：若多个在飞任务互相等待同一邮箱空位形成圈，宿主 fail-fast 返回 `core-deadlock` Err（W4.4 层三扩展）；`Ok` = 已入队。不静默丢弃。
+- **监听者返回约定**（A3.4 平移）：`Ok(Some(v))` = 有值；`Ok(None)` = 无值。`serial` 首个 `Some` 短路；`waterfall` `Some` 继续链 / `None` 否决；`parallel` 逐项收集；`emit` 忽略返回值。监听者 `Err` = 事件错误（serial / waterfall fail-open 记日志，parallel 逐项收，emit 记日志）；非 business 的 listener 错误 = 宿主判 `core-contract-violation`（W5 D138）。
+- **作者面**：`Ctx::on(name) -> Result<Listener, Error>` 只做登记；事件处理走 S1 的 catch-all `Plugin::on_event(ctx, name, payload) -> Result<Option<Value>, Error>`。**同名去重 + 引用计数**：一个实例一个宿主 listener 条目（按首次登记序）；`on(name)` 首次 = 宿主 `listen` 建条目（refcount = 1，attached），再次只增引用；`Listener` Drop / `off()` 减引用，**归零且条目未 host-owned 时** `unlisten` 并删条目；`detach()` 减引用并把条目标为 **host-owned**（此后归零也不再 unlisten，留到卸载）；host-owned 条目被后续 `on(name)` 复用时只增引用，不恢复自动摘除。这样一次 emit 每实例只触发一次 catch-all（作者按 `name` 分支；逐 handler 区分 = S7 强类型演进位）。
+- **id 作用域**：listener id 每实例作用域；宿主校验归属，外来 id = trap；自己的已摘除 id = 幂等 no-op。
+- **`on-event` 导出**：形状登记给 W8：`on-event(listener-id: u64, name: string, payload: list<u8>) -> result<option<list<u8>>, error>`，async。带 listener-id 才能逐监听者保序 / 短路；W8 定事件名语义、`internal/` 规则与声明面。
+- **动态名**：`listen` / `emit` 接受字符串；声明对账（manifest `events.listen/publish`）归 W8 / W9；`listen` 返回 `result` 让 W9 决定未声明名的失败载体。
+- **投递**：事件派发 = 宿主向监听者实例发起 export 调用，走 W4.3 闸门；邮箱满 = 背压，不丢弃（W3.11）。
+
+### W3.6 D147 services：call / provide / deps 与 on-call
+
+**D147 定案：服务调用 = `call` import + `on-call` export；`provide(key)` 保留激活期对账；`deps` 目录住宿主；方法集归契约，不上 ABI。**
+
+```wit
+interface services {
+  use errors.{error};
+  record dep { name: string, required: bool, available: bool }
+  call: async func(service: string, method: string, args: list<u8>, timeout-ms: option<u32>) -> result<list<u8>, error>;
+  provide: func(service: string) -> result<_, error>;
+  deps: func() -> list<dep>;
+}
+```
+
+- **调用**：`call` async；args / 返回 = 单个 TLV `Value`（E2①）；`timeout-ms` 覆盖全局默认（service-registry S5「全局默认 + per-call 覆盖」的作者面落点）；缺席 = 默认；0 / 非法 = `core-contract-violation` Err。调用方可见错误集合 = service 四态 + `core-deadlock` / `core-contract-violation`（W5 D137）。
+- **provide 观测**：`ctx.provide(key)` 在 setup 内调用（宿主登记）；宿主在 setup 成功后对账「manifest provides 全履行 / provide 了没声明 = 响亮」（S3 的「漂移无法被发布」保留）。Active 后 provide = trap（S2 激活点原子动作）；Unloading 新注册 = trap（W4.5 D11.2）。方法集不在此走线——住契约（W7）；无契约服务的 missing method = guest catch-all 返回 `business`（message = method missing），宿主只在契约已知时短路 `service-method-missing`（契约less 私有服务 = W2 D131 已明记的「失去形状对账」退化）。
+- **deps 目录**：`deps()` 同步返回 manifest `inject` 声明的服务集（required / optional / available），宿主按 parent 链可达集解析；SDK 用它合成 `Deps`。未声明服务的调用 = trap（S3 响亮 × W5 D139）；已声明但运行期缺席 = `service-unavailable` Err；可选依赖静态缺席 = `ctx.service(name)` 返回 `None`。
+- **on-call 导出**：`on-call(service: string, method: string, args: list<u8>) -> result<list<u8>, error>` async；宿主按注册表路由到提供方实例；SDK 分发到 S1 的 catch-all `on_call`。提供方错误只许 `business`（W5 D138）；非 business = 宿主判 `core-contract-violation`。
+- **对账**：provide / inject / events 的启用期判定、判环、可见集 = W9；本章只定 ABI 与作者面。服务调用路径的 7 步（context-events §1）不变，只是「打包 CallService」换成了 import 调用。
+- **不立方法集 ABI**：方法名是契约数据（W2 D131 `provides.methods` 已消亡）；WIT 面只有 service / method 字符串 + TLV。强类型服务方法 = W7 / T10.14 演进位（S7）。
+
+### W3.7 D148 http：富类型请求 / 响应
+
+**D148 定案：`request` 单方法 + 富类型 record；4xx / 5xx = `Ok` 载荷；v1 响应进内存带预算，流式归 W6。**
+
+```wit
+interface http {
+  use errors.{error};
+  record request-params {
+    method: string,
+    url: string,
+    headers: list<tuple<string, string>>,
+    body: option<list<u8>>,
+    timeout-ms: option<u32>,
+  }
+  record response {
+    status: u16,
+    headers: list<tuple<string, string>>,
+    body: list<u8>,
+  }
+  request: async func(req: request-params) -> result<response, error>;
+}
+```
+
+- 平台封闭接口走 WIT 富类型（三分法①）；opts table 的 Luau 形态消亡。
+- `method` 缺省 GET 由 SDK 层给；URL 畸形 / 方法值非法 = `http-invalid` Err（运行期数据）；策略拒绝（域名白名单 / SSRF / 跨域重定向）= `http-policy` Err；超时 = `http-timeout`；连接 = `http-connect`；响应超预算 = `http-too-large`；兜底 = `http-error`（W5 D137）。
+- 4xx / 5xx = `Ok(response.status)`，不是错误（W5 判据①）；body = bytes。
+- 强制超时：`timeout-ms` 可覆盖，但宿主设上限；缺省 = 宿主配置（[seam-capabilities](seam-capabilities.md) §5.2）。透明解压、域名白名单、SSRF、跨域重定向重新对账原位（seam §5.2）。
+- v1 响应全量进内存带预算；下载流式 = W6（`stream<u8>` resource）；流式上传维持扩展位。
+
+### W3.8 D149 process：富类型与 resource 句柄
+
+**D149 定案：`exec` / `spawn` 富类型；`process-handle` = WIT resource；argv / command XOR；输出截断显式；chunk v1 = `list<u8>`。**
+
+```wit
+interface process {
+  use errors.{error};
+  record exec-request {
+    argv: option<list<string>>,
+    command: option<string>,
+    cwd: option<string>,
+    env: option<list<tuple<string, string>>>,
+    timeout-ms: option<u32>,
+  }
+  record exec-result {
+    code: s32,
+    stdout: list<u8>,
+    stderr: list<u8>,
+    stdout-truncated: bool,
+    stderr-truncated: bool,
+  }
+  record exit-status {
+    code: option<s32>,
+    signal: option<string>,
+  }
+  resource process-handle {
+    read-stdout: async func() -> result<option<list<u8>>, error>;
+    read-stderr: async func() -> result<option<list<u8>>, error>;
+    write-stdin: async func(data: list<u8>) -> result<_, error>;
+    signal: func(sig: string) -> result<_, error>;
+    wait: async func() -> result<exit-status, error>;
+    kill: func() -> result<_, error>;
+  }
+  exec: async func(req: exec-request) -> result<exec-result, error>;
+  spawn: async func(req: exec-request) -> result<process-handle, error>;
+}
+```
+
+- `argv` XOR `command`：给且只给一个；违约 = `core-contract-violation` Err（运行期值形状；W5 D139）。**shell 边界**：`command` 经 `sh -c`（有 shell，注入面 = 作者责任）；`argv` 直跑不过 shell。`cwd` 缺省 = 用户家目录（config-format D45 原位）；相对 cwd 同基解析；env = 核心 env + 覆盖（secrets 不在 env）；命令级审批 / 策略归插件层（[seam-capabilities](seam-capabilities.md) §5.2 支配关系）。
+- 强制超时；超时杀进程组；输出带预算；截断由 `stdout-truncated` / `stderr-truncated` 显式表达（不静默）。
+- `read-stdout` / `read-stderr` 返回 `option<list<u8>>`：`Some` = 一块，`None` = EOF（A5 D14.3 的 EOF 语义载体平移）；两路分流不合并。chunk v1 = `list<u8>`；W6 再评估 `stream<u8>`。
+- `wait` → `exit-status`：正常退出 = `code = Some`，信号终止 = `signal = Some`；两者互斥。
+- 句柄 = 账本条目；卸载 drain 杀进程组（无孤儿）；`signal` / `kill` 同步、`read` / `write` / `wait` async；Drop 句柄不杀进程（显式 `kill` / `wait`，宿主账本卸载兜底）。
+- 能力门 `process: true`（W2 D129）；未声明 = trap（W5 D139）。journal `process_spawn` / `process_exit` 不变（[seam-capabilities](seam-capabilities.md) §5.3）。
+
+### W3.9 D150 instance：mount / unmount
+
+**D150 定案：`mount(declaration)` 过 TLV，返回 `mount-handle` resource；声明校验失败 = `core-contract-violation`；子实例启用失败 = `core-mount-failed`；`mount: true` 门；Drop = best-effort 异步 unmount。**
+
+```wit
+interface instance {
+  use errors.{error};
+  resource mount-handle {
+    unmount: async func();
+    detach: func();
+  }
+  mount: async func(declaration: list<u8>) -> result<mount-handle, error>;
+}
+```
+
+- `instance` = 动态子树挂载面（[instance-model](instance-model.md) D63 / D64）；不是能力族，是编排面。`declaration` = TLV 编码的 `Value`（声明形状 = D61，含 `use` + `config:` overlay）；mount 执行 = 标准启用管线（部署索引解析 → config 合成校验 + 共享变量 / secret 解析 → inject 解析 → setup；D63 原位）。
+- 声明形状 / 校验失败 = `core-contract-violation` Err（运行期值形状；宿主侧校验，插件代码未跑）；`capabilities.mount: true` 缺省 = trap（W2 D129 / W5 D139）。零仪式插件无 mount 资格（W1.8 D123）。
+- `unmount` 走句柄（async，无错误面，**幂等**：已卸载 / 子实例已死 = 正常返回）；宿主失败 = host log + 强制 drop。父实例卸载 drain 子实例（D64）。**Drop 句柄 = 宿主 best-effort 异步 unmount**（入队 + host log（D72 人读面））；`detach()` 可放弃 Drop 语义（子实例留到父卸载）。这样 `let _ = mount(...)` 不会泄漏子实例；要确定性完成用显式 `unmount().await`。
+- **错误映射**：声明形状 / 校验失败 = `core-contract-violation`；子实例启用失败（setup Err / trap、依赖缺失、预算 / 并发上限） = `core-mount-failed`（W5 本批增补）；未声明 mount = trap。
+- **并发上限**：每父实例同时存活的子实例数 = 实现期配置（登记 T10.12）；超限 = `core-mount-failed`。
+- 返回句柄 = WIT resource（wasm 原生所有权）；不立 `unmount(id)` 自由函数（丢父子账本的所有权表达）。mount handle 服务面出口 / 跨实例输入 = 既有扩展位（D68 / D73），本章不启用。
+
+### W3.10 D151 async / sync 分类
+
+**D151 定案：metis 效应 import 全 async；只有纯登记 / 查询 / 立即本地工作 sync；private = WASI 0.3 async filesystem，作者面同为 async，不套同步逃生舱。**
+
+| 类别                                 | 接口 / 方法                                                                                                                                                                                                                                                                              |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| async（等待宿主 / 他人、需背压接纳） | `events.emit` / `serial` / `parallel` / `waterfall`；`services.call`；`timer.sleep`；`http.request`；`fs.*`（global）；`ctx.plugin_fs()`（private，WASI 0.3 async filesystem）；`process.exec` / `spawn` 与 `read-*` / `write-stdin` / `wait`；`instance.mount` / `mount-handle.unmount` |
+| sync（登记 / 查询 / 立即返回）       | `events.listen` / `unlisten`；`services.provide` / `deps`；`timer.after` / `every` / `cancel`；`process-handle.signal` / `kill`；`fs` 的路径接口（`home-dir` 等）                                                                                                                        |
+
+- papercut 7 只拒绝同步 **export**；同步 import 合法（S1 spike 的 `tick` 同步 import 已实证）。本表仍把效应调用做成 async，是为了让等待让出执行权、让背压有挂载点。
+- `emit` 是 async 但只 await 入队——不等监听者完成；`serial` / `parallel` / `waterfall` await 派发结果。
+- `timer.after` / `every` 是登记（sync），tick 回调是 async export（`on-timer`）；`sleep` 是 async import。
+- private 走 WASI 0.3 async filesystem，与 global 同为 async；guest crate 的 `std::fs` 是标准库同步 API 的适配层，不属于 metis 作者面。
+
+### W3.11 D152 投递纪律：背压、合并计数、卸载可见
+
+**D152 定案：投递路径不静默丢弃；满时只有两种可见结果——背压等待，或显式合并计数；卸载期残留进 journal。**
+
+| 通道                                           | 满时行为                                                                         | 丢弃可见性                                               |
+| ---------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| events（emit / serial / parallel / waterfall） | 邮箱满 = 发射方 await 背压；容量等待成圈 = `core-deadlock` Err；派发调用等待闸门 | 不丢；等待或类型化错误                                   |
+| services.call                                  | 在飞预算满 = 留在邮箱；调用方 deadline 到 = `service-timeout`                    | 不丢；`service-timeout` Err                              |
+| timer tick                                     | 每 timer 一个 pending + 合并计数；handler 未完结不并发重入                       | 不丢；下次 tick 带 `coalesced`                           |
+| 卸载（W4.5）                                   | 关闸后残留丢弃                                                                   | journal `unload_gate_closed` / `unload_killed`（既有面） |
+
+- **邮箱满不丢**：W4.3 的背压链原样——预算满留邮箱，邮箱满背压投递方；`emit` 的 await 是接纳点，不是监听者完成点。
+- **timer 不排无界队列**：每 timer 最多一个 pending；handler 未完结时的 tick 合并进计数，下一次投递 `coalesced` 告诉作者合并了多少。作者要每 tick 必达 = handler 保持短 / 显式并发；宿主不静默丢。
+- **卸载丢弃可见**：实例已死，作者不可观测；宿主 journal 记录关闸与强杀点（W4.5 D11.4 / D11.5），审计可查「哪条没处理完」。
+- **不立「丢弃回调」**：没有静默丢弃，就不需要 guest 侧丢弃通知；`coalesced` 是唯一合并面。
+- **`emit` 自投递的容量圈 = 显式错误**：容量等待进 W4.4 wait-for 图；成圈时 `emit` 返回 `core-deadlock` Err，不静默等待。
+
+### W3.12 D153 作者面 `Ctx` 与句柄
+
+**D153 定案：零尺寸 `Ctx`；编排面扁平、效应面访问器；所有钩子拿 `&Ctx`；id 一律包成句柄；`metis_plugin::raw` 是唯一 escape hatch。**
+
+- **Ctx 形态**：零尺寸 handle（可存进作者 struct）；不携带 FiberId——实例身份由宿主持有，guest 侧无需重复。宿主入口（生命周期 `setup` / `on_config` / `dispose`、`on_call`、SDK 的 `on_event` / `on_timer` 分发器）都拿 `&Ctx`，SDK 合成；作者面事件处理 = `on_event` catch-all，timer 回调 = `ctx.timer().after/every(ms, handler)` 注册闭包（无 `on_timer` 作者钩子）。
+- **组织**（A3.2 平移）：编排面扁平——`emit` / `serial` / `parallel` / `waterfall` / `on` / `provide` / `service` / `deps`；效应面访问器——`fs()` / `plugin_fs()` / `http()` / `timer()` / `process()` / `instance()`。命名空间在 `Ctx` 上恒定存在（纯代码插件同形）；未声明能力 = 调用时 trap 指路 manifest。
+- **句柄**（作者面不出现裸 `u64`）：`Service`（名字 + `call`）、`Listener`（`off()` / `detach()`）、`TimerHandle`（`cancel()` / `detach()`）、`MountHandle` / `ProcessHandle`（WIT resource，显式 unmount / kill；`MountHandle.detach()` 放弃 Drop 语义）。`Listener` / `TimerHandle` 的 `Drop` 调 sync 的 unlisten / cancel；`detach()` 把生命周期交给宿主账本。
+- **Deps**：`ctx.service(name) -> Option<Service>`——未声明 = trap；可选依赖静态缺席 = `None`；required 由激活门保证。`Deps` 目录由 `services.deps()` 合成，形状 = `{ name, required, available }`。
+- **Value / TLV**：服务 args / 返回、事件 payload、mount 声明 = `metis_plugin::Value`，SDK 编解码 TLV（T10.13）；平台封闭接口（fs / http / process / timer）用生成的富类型，作者不接触 WIT 名。
+- **原始绑定 escape hatch**：`metis_plugin::raw` 公开 re-export 生成绑定，文档标注「正常不需使用」；不进 prelude（plugin-sdk S6 原则③）。WASI 名不进作者面：`std::fs` / `std::time` 可直接用；CSPRNG 用 guest crate（`getrandom` / `rand`，底层 `wasi:random`）；SDK 便利 re-export = feature 扩展位（v1 不做）。
+- **trait 形状**（示意）：`async fn setup(&mut self, ctx: &Ctx, config: Value) -> Result<(), Error>`；`on_call(&mut self, ctx: &Ctx, service: &str, method: &str, args: Value) -> Result<Value, Error>`；`on_event(&mut self, ctx: &Ctx, name: &str, payload: Value) -> Result<Option<Value>, Error>`。timer 回调是闭包注册，不是 trait 钩子。具体宏展开归 T10.14。
+
+### W3.13 D154 能力门载体与 world 终态
+
+**D154 定案：能力门 = 宿主 import 实现内逐调用 fail-closed；未声明 = trap 指路 manifest；WASI 0.3 基线是基础设施白名单；v1 world 导出集 = 生命周期三导出 + `on-call` / `on-timer`（W8 再补 `on-event`）。**
+
+- **门载体**：固定 world 下所有 import 恒链接，链接期无法裁剪；门在宿主 import 实现内逐调用判定（S6 先例：Spin / Zed 均运行期门）。未声明 = trap（W5 D139），message 指路 manifest 字段；依赖方收 `service-unavailable`（D11.3）。
+- **门表**：
+
+| 面                                   | 门                                         | 缺省                                                           |
+| ------------------------------------ | ------------------------------------------ | -------------------------------------------------------------- |
+| `fs`（global）                       | `capabilities.fs: read / write`（W2 D129） | 无 global；相对路径 = `fs-invalid-path` Err；未声明调用 = trap |
+| private fs（WASI `wasi:filesystem`） | 无 metis 门（preopen）                     | 恒可用                                                         |
+| `http`                               | `capabilities.http` host 列表              | 无 host；调用 = trap                                           |
+| `process`                            | `capabilities.process: true`               | 拒绝；调用 = trap                                              |
+| `instance.mount`                     | `capabilities.mount: true`                 | 拒绝；调用 = trap                                              |
+| `timer`                              | 无                                         | 恒可用；`every` 最小间隔 = 政策                                |
+| `events` / `services`                | 无能力门（编排面）                         | 声明对账 = W9                                                  |
+
+- **WASI 0.3 基线白名单**：`wasi:clocks` / `wasi:random` / `wasi:filesystem`（async；preopen 与 `std::fs`）/ 以及 guest std 拖带的 WASI 0.3 导入，是宿主基础设施；宿主统一注册 wasmtime-wasi 0.3。W9 的进口对账把「std 拖带集 + 上述标准件」视为基线白名单，不计入作者能力面；作者手写其他 WASI import = 越权（词汇表外）。具体清单 SSOT = W9。wasip2 时代的 14 导入 papercut（补遗 6）是历史证据，0.3 基线由 T10.10 核实。
+- **world 终态**：v1 导出集 = `setup` / `on-config` / `dispose` / `on-call` / `on-timer`（全 async），W8 再补 `on-event`。`0.1.0` 尚未发布；本批补全 = 首个发布快照的编制，不是版本演进；首个冻结快照由 W10 记录。W1.3 的签名草图同批更新。
+- **不立编译期能力检查**：SDK 面不按 manifest 裁剪类型；作者面形状恒定（A3.2「出现规则」平移），越权调用 = 运行期 trap。编译期组合 world 维持扩展位（plugin-sdk S6）。
+
+### W3.14 A3 机制消亡清单（考古索引）
+
+每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 ADR-0026（已 superseded）。
+
+| 机制                                              | 死因                                                                         |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| ctx = 宿主构建的 frozen table / 递归只读 / 无元表 | wasm import 集 + Rust 类型；容器不再由宿主装配                               |
+| userdata 淘汰 / 烘焙方法集                        | WIT resource（process / mount）+ 生成绑定；无运行期方法表                    |
+| `ctx.on` 返回 Luau disposer 函数                  | `Listener` RAII + 宿主 listener 表                                           |
+| `deps` 第三参数                                   | `services.deps` 目录 + `Ctx::service`                                        |
+| `ctx.provide(key, 方法表)`                        | `provide(key)` + `on-call` catch-all；方法集归契约                           |
+| `ctx.exclusive` / `ctx.fanout`                    | guest async / SDK async mutex（W4.2）                                        |
+| `ctx.box` / `box(name)`                           | 盒概念消解（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）         |
+| `ctx.sql` / 私有 db                               | sqlite 撤回（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）       |
+| `ctx.workspace` / 三 scope                        | fs 两档（ADR-0039）                                                          |
+| `ctx.fs` / `ctx.global` 的 Luau 同步 / 两跳形态   | 统一 async `fs` / `ctx.plugin_fs()`（W3.3）                                  |
+| `ctx.http.request` opts table                     | WIT request record（W3.7）                                                   |
+| timer after / every 的宿主调 Luau 闭包            | `on-timer` export + `TimerHandle`（W3.4）                                    |
+| process 冻结表句柄                                | `process-handle` resource（W3.8）                                            |
+| `ctx.mount` 表句柄                                | `mount-handle` resource（W3.9）                                              |
+| int64 / buffer / UTF-8 裂缝                       | WIT s64 / `list<u8>` / `string`                                              |
+| require / `.luaurc` / `@lib`                      | [ADR-0038](../decisions/0038-module-system-require-supersede.md)             |
+| crypto 内建                                       | [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)（guest crate） |
+| 「方法名写错 = 字段不存在当场炸」                 | Rust 编译器 + 运行期 trap                                                    |
+| optional dependency 字段缺席                      | `Option<Service>`                                                            |
+| `ctx.once`                                        | 维持扩展位（组合写法）                                                       |
+| `plugin()` 糖 / 入口 table                        | W1（固定 world + SDK 宏）                                                    |
+| `ctx.on_config` 可选字段                          | W1 `on-config` 导出 + trait 默认实现                                         |
+
+**语义平移保留**：编排面扁平 / 效应面命名空间化（A3.2）；接口形状恒定、失败指路 manifest（A3.2 出现规则）；provide setup-only 与激活点原子注册（S2）；`Result` + kind 分支（W5）；timer 两条唤醒路径（sleep 直唤醒 / tick 投递，A3.6）；fs 两档（ADR-0039）；http 政策（seam §5.2）；process 账本与进程组杀（A3.10）；mount 启用管线（D63）；监听快照 / 注册序 / 逐项活性检查（ADR-0014）。
+
+### W3.15 联动登记汇总（章末）
+
+| 去向              | 内容                                                                                                                                                                                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1（T13-h）       | world 导出集补 `on-call` / `on-timer`（W1.3 签名草图同批更新；W8 再补 `on-event`）；生命周期三导出不变                                                                                                                                                                                    |
+| W2（T13-i）       | 消费 `capabilities.fs/http/process/mount`、`provides/inject/events`、`abi`；无 manifest 改动                                                                                                                                                                                              |
+| W4（T13-c）       | tick 投递走 W4.3 闸门；`emit` await 入队；投递不静默丢弃（W3.11）；W4.3「tick = 普通邮箱消息」增补为「每 timer pending + 合并计数」                                                                                                                                                       |
+| W5（T13-k）       | **已兑现（2026-10-19）**：所有 fallible import = `result<T, error>`；timer 无 Err 面；`fs-invalid-utf8` 保留（ABI bytes-only；SDK `read_text` 产生）；服务调用四态 + 服务路径 core 两格；mount 路径 `core-mount-failed`（mount 启用失败）；未声明能力 = trap；crypto 无错误面（ADR-0041） |
+| W6（T13-l）       | TLV 线编码；http / process / fs 大负载的 `stream<u8>` resource；process chunk 改写时点；resource 生命周期细则                                                                                                                                                                             |
+| W7（T13-m）       | 服务方法集与强类型生成（`types!()`）；无契约服务的 method-missing 退化                                                                                                                                                                                                                    |
+| W8（T13-n）       | `on-event(listener-id, name, payload)` 导出形状；事件名语义 / `internal/` 规则 / manifest `events` 对账                                                                                                                                                                                   |
+| W9（T13-o）       | import 清单 ⊆ 词汇表；provide / inject / events 对账；能力门判定（含 mount 例外）；WASI 0.3 基线 = clocks + random + filesystem（async）+ std 拖带集                                                                                                                                      |
+| W10（T13-p）      | package version 与首个发布快照；import / export 增补纪律；多版本共存                                                                                                                                                                                                                      |
+| T10.10            | 宿主 import 注册；wasmtime-wasi 0.3；preopen `/`；`on-call` / `on-timer` 导出调用                                                                                                                                                                                                         |
+| T10.11            | fs（global host-mediated / private WASI 0.3 async filesystem）/ http / process / timer 实现；crypto 撤回（ADR-0041）；预算 / TOCTOU 硬化；random = wasi:random                                                                                                                            |
+| T10.12            | 安装期 world 导出校验补 `on-call` / `on-timer`（W8 后补 `on-event`）；preopen 授予                                                                                                                                                                                                        |
+| T10.13            | TLV 编解码（服务 args / 返回、事件 payload、mount 声明）                                                                                                                                                                                                                                  |
+| T10.14            | `Ctx` / 句柄 / RAII / `metis_plugin::raw`；默认钩子；WASI 0.3 错误码 → fs kind 映射；CSPRNG = guest crate（`getrandom` / `rand`）；crypto 便利 re-export = feature 扩展位（v1 不做）                                                                                                      |
+| T10.15            | 脚手架不含 crypto；预检 world 导出集与 `wasm32-wasip3` target；`metis check` 的 import 提示                                                                                                                                                                                               |
+| seam-capabilities | §2.1 纯算件判据、§4.2 crypto 撤回、§5.2 fs 两档作者面、§5.3 能力映射、§6.1 W3 行兑现                                                                                                                                                                                                      |
+| service-registry  | per-call deadline 作者面 = `call(..., timeout-ms)`；provide 观测保留 S3 对账；deps 目录 = inject 声明集                                                                                                                                                                                   |
+| context-events    | 监听登记住宿主 + `Listener` RAII；`emit` await 入队；投递不丢弃                                                                                                                                                                                                                           |
+| instance-model    | `mount` / `unmount` 句柄形态 = `mount-handle` resource；Drop = best-effort 异步 unmount（host log）；`detach()` 放弃 Drop 语义；`core-mount-failed` 映射                                                                                                                                  |
+| plugin-sdk        | S6 三原则落地（生命周期实体 = resource、无状态 = ctx 方法、raw escape hatch）；`Ctx` / 句柄映射；crypto = 作者自加 crate                                                                                                                                                                  |
+| journal           | 不新增 kind；卸载丢弃可见 = `unload_gate_closed` / `unload_killed`；`process_spawn` / `process_exit` 不变                                                                                                                                                                                 |
+| ADR-0041          | crypto 能力撤回（局部 supersede ADR-0025 §4 crypto 项 / ADR-0024 §4 crypto 行结论面）                                                                                                                                                                                                     |
+| wasm-research     | 补遗 8：crypto 内建件撤回（ADR-0041）；补遗 9：目标 WASI 0.3（private fs async 面）；技术事实保留                                                                                                                                                                                         |
+| design-review     | 补遗 1：crypto 撤回（ADR-0041）                                                                                                                                                                                                                                                           |
+| 实现期配置        | timer `every` 最小间隔；http 超时 / 预算；fs 读写预算；process 输出预算；message 长度上限；在飞任务预算；private fs 读预算                                                                                                                                                                |
+| 扩展位            | 强类型服务方法 / 事件方法（S7）；http 流式上传；fs 流式与 walk / glob（guest 组合）；`ctx.once`；WIT resource 化 listener / timer；instance list / describe；crypto 便利 re-export（feature）                                                                                             |
+
+---
+
 ## W4 async 与交错语义
 
 ### W4.0 边界与前提
@@ -455,7 +858,7 @@ events:
 
 **挂起点重定义**：挂起点 = guest 任务的任意 await 处。旧 ABI 的「挂起点 = ctx 方法调用处」是同一语义的解释器时代表述——那时一切挂起必经宿主；现在语言设施自管。宿主只见 import 边界的挂起与唤醒（await import 完成 = 宿主可控唤醒源）；guest 内部 await 宿主不可见、无需见。
 
-**实证地基**（S2 = [wasm-research](../research/wasm-research.md) 补遗 7，wasmtime 49.0.3 / wit-bindgen 0.63 / wasm32-wasip2）：
+**实证地基**（S2 = [wasm-research](../research/wasm-research.md) 补遗 7，wasmtime 49.0.3 / wit-bindgen 0.63 / wasm32-wasip2——取证环境；目标 WASI 0.3）：
 
 - **R1 同实例重入**：单宿主线程 `run_concurrent` 内并发两调同一实例 async export（500 ms 与 100 ms 挂起），墙钟 ≈ 500 ms（非串行 ≈ 600 ms），交错日志序 = start 1 → start 2 → end 2 → end 1——第二条调用在第一条挂起期间进入同一实例并先完成。
 - **R2 共享堆与原子性**：两条在飞任务共享同一线性内存堆；无 await 的读改写两次 = 2（挂起点间原子）；跨挂起点 read-modify-write 并发两调 = 丢失更新（终值 1 非 2）——危险形状实证，即 async mutex 的全部动机。
@@ -482,16 +885,16 @@ events:
 - **worker 语义**：worker 空闲取邮箱消息，经闸门接纳后投递，任务立即起跑；import 完成 = 唤醒源直接唤醒对应 guest 任务，不经邮箱、不经闸门。宿主侧没有「就绪恢复」调度对象——A4 单可调度队列 FIFO（D8.1）的问题形（恢复 vs 新消息的优先级之争、tie-break、两级队列）随载体整体消解；原被否项「完成优先」的饿死分析（流式长读插队致热更等待无界）随之失去对象。热更/卸载不进投递队列（关闸 = 停接纳，W4.5），等待硬上界结论由卸载时序兑现，不再由队列规范兑现。
 - **预算闸门（A4 D8.2 平移）**：预算只挡「邮箱消息 → 投递」的接纳——每实例在飞 async 任务数封顶（数值 = 实现期配置，登记 = W4.7）；预算满 = 新消息留邮箱，背压链 = 邮箱满 → 投递方背压/超时（[context-events](context-events.md) 既有政策）→ 服务调用方 deadline 收场（service-registry S5）。完成永不挡 → 在飞必然收敛 → 预算必然释放；超限政策 = 纯回压不立响亮档（A4 D10.2 拍板原位：回压把瞬态尖峰变成延迟，响亮把它变成用户可见错误——尖峰是常态，错误化 = 误伤）。
 - **ADR-0014 兼容注**：单派发者保序承诺（同一监听者收件序 = 派发入邮箱序）= 邮箱层性质，不受重入影响——承诺的是收件序，非处理完成序（A4 既有注平移）。
-- **timer 处置平移（A4 D1.4）**：tick = 普通邮箱消息，与其他消息同等走闸门，不立特殊政策。积压面 = 在飞任务数（稳态界 ≈ 到达率 × 平均延迟；每条在飞任务持 guest 栈与捕获态）；兜底 = `every` 最小间隔政策（seam §5.2）+ 写码期教具（W4.4 层二）。
+- **timer 处置平移（A4 D1.4）**：tick 走同一闸门，但投递形态按 W3 D145 细化——每 timer 一个 pending 标记 + 合并计数（非重叠：上一个 handler 未完结时后续 tick 合并），`on-timer(id, coalesced)` 把合并次数交给作者；**邮箱满不丢、合并可见**。积压面 = 在飞任务数（稳态界 ≈ 到达率 × 平均延迟；每条在飞任务持 guest 栈与捕获态）；兜底 = `every` 最小间隔政策（seam §5.2）+ 写码期教具（W4.4 层二）。
 - **在飞即成本**：高频事件源回调写短；怕自撞 = SDK async mutex（A4「在飞协程」成本条的载体词平移）。
 
 ### W4.4 D96 跨插件死锁与保险丝
 
 **D96 定案：跨插件死锁四层处置平移；插件内等待面宿主不立 deadline；fail-fast 清单按宿主可见面重订。**
 
-- **D1.7 四层平移**：① 启用期 manifest 依赖图禁环（不动；WIT 形态归 W9 章）；② 写码期教具 = 形状教材归 SDK lints 与 Creator 文档（AST lint 管线随载体消亡 = [wasm-first-design-review](../research/wasm-first-design-review.md) A8；三形状载体中立，于 Rust 同样成立：跨 await 读改写 / 持锁等跨插件调用 / `every` 回调挂起未自锁）；③ 运行期 wait-for 图（宿主全见跨插件等待——服务调用与事件链；收窄写实：插件内名字等待随宿主零同步原语退出图的节点集，除非 W4.2 扩展位上报激活）；④ 超时 = 最后保险丝（[ADR-0011](../decisions/0011-actor-execution-model.md) 三层保险既有面）。
+- **D1.7 四层平移**：① 启用期 manifest 依赖图禁环（不动；WIT 形态归 W9 章）；② 写码期教具 = 形状教材归 SDK lints 与 Creator 文档（AST lint 管线随载体消亡 = [wasm-first-design-review](../research/wasm-first-design-review.md) A8；三形状载体中立，于 Rust 同样成立：跨 await 读改写 / 持锁等跨插件调用 / `every` 回调挂起未自锁）；③ 运行期 wait-for 图（宿主全见跨插件等待——服务调用、事件链与邮箱容量等待（`emit` 入队，W3 D146）；收窄写实：插件内名字等待随宿主零同步原语退出图的节点集，除非 W4.2 扩展位上报激活）；④ 超时 = 最后保险丝（[ADR-0011](../decisions/0011-actor-execution-model.md) 三层保险既有面）。
 - **插件内等待面盘点（A4 D10.1 平移）**：fan-out join 与 exclusive 排队 = guest 内部面，宿主不见不立 deadline（guest 侧结构化纪律 = SDK）；流 `read()` 挂起 = 唯一真无界源的性质不变（作者自开自流、可见可控），处置 = W6 资源面登记（per-read timeout 扩展位随章平移）。不立的理由平移：能定出原则性数值的形状都已有 deadline，剩下的是合法长等，任何统一数值都是拍脑袋；兜底三件套 = 在飞预算记账 + 卸载强杀（W4.5）+ 成环检测（层三）。
-- **fail-fast 清单（宿主可见面重订）**：wait-for 圈闭合（当场报错 + 整圈路径 + fail-open 解圈 = [ADR-0014](../decisions/0014-dispatch-semantics.md)）；卸载期注册新账（W4.5）；未声明能力调用 = 两层：import 清单 ⊆ SDK 封闭词汇表 = 编译期结构事实（[wasm-first-design-review](../research/wasm-first-design-review.md) B1）；manifest 能力声明 = 运行期门 fail-closed，越权 = trap（W5 D139）；不可转换值跨界（W6 面）。A4 清单的插件内四项消亡或归 SDK：exclusive 嵌套 / 自家人进名（SDK 类型与纪律面）；被登记线程裸 yield（无对应物——宿主无「无登记挂起」可检，观测点缺失即消亡理由）；fan-out 子任务未随 handler 完结（guest 结构化纪律，宿主无观测点）。
+- **fail-fast 清单（宿主可见面重订）**：wait-for 圈闭合（含邮箱容量等待；当场报错 + 整圈路径 + fail-open 解圈 = [ADR-0014](../decisions/0014-dispatch-semantics.md)）；卸载期注册新账（W4.5）；未声明能力调用 = 两层：import 清单 ⊆ SDK 封闭词汇表 = 编译期结构事实（[wasm-first-design-review](../research/wasm-first-design-review.md) B1）；manifest 能力声明 = 运行期门 fail-closed，越权 = trap（W5 D139）；不可转换值跨界（W6 面）。A4 清单的插件内四项消亡或归 SDK：exclusive 嵌套 / 自家人进名（SDK 类型与纪律面）；被登记线程裸 yield（无对应物——宿主无「无登记挂起」可检，观测点缺失即消亡理由）；fan-out 子任务未随 handler 完结（guest 结构化纪律，宿主无观测点）。
 - **兜底保险丝层平移**：单步执行硬截断 = fuel/epoch 计量（wasmtime 原生件，实测 1.022× = [ADR-0024](../decisions/0024-carrier-layering.md) §8；[ADR-0011](../decisions/0011-actor-execution-model.md)「防堵 executor」语义不动，机制自 interrupt 回调换血——Status 注同批落地）；服务调用 deadline（service-registry S5）/ bounded 邮箱 + 在飞预算回压（W4.3）/ 加载总预算（W1 章面）/ drain 总预算（[fiber](fiber.md) §10）。
 
 ### W4.5 D97 卸载与在飞任务交接（2026-10-18 五段化）
@@ -609,6 +1012,7 @@ interface errors {
     // 宿主框架族
     core-deadlock,
     core-contract-violation,
+    core-mount-failed,
     // provider-defined
     business,
   }
@@ -628,30 +1032,31 @@ interface errors {
 
 **D137 定案：族 = fs / http / process / service / core / business；`sql.*` 与 `box.trap` 死亡；timer 无 Err 面。**
 
-| 族       | kind                      | 触发                                                                                               | 备注                                                                                          |
-| -------- | ------------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| fs       | `fs-not-found`            | read / list / delete 目标不存在                                                                    | A5 原位                                                                                       |
-|          | `fs-permission-denied`    | OS 层拒绝（EACCES / EPERM / EROFS / ENOTCAPABLE，动作相同 = 放弃）                                 | private preopen 逃逸同格                                                                      |
-|          | `fs-invalid-path`         | global 档两段式解析拒绝全族：逃逸 / 豁免命中 / 循环 / 超长；TOCTOU 竞态窗口同格                    | message 通用化，不点名豁免命中；完整原因进 journal（D140）                                    |
-|          | `fs-invalid-utf8`         | 文本读取的 UTF-8 校验失败                                                                          | W3 若选 bytes-only 读取，本格在 WIT 包冻结前删除                                              |
-|          | `fs-invalid-type`         | read 目录 / list 文件                                                                              | A5 原位                                                                                       |
-|          | `fs-too-large`            | read 预算超限                                                                                      | 预算数值归 T10.11                                                                             |
-|          | `fs-io`                   | 兜底（message = OS 原文，按 D89 脱敏）                                                             | 开放空间诚实兜底格                                                                            |
-| http     | `http-timeout`            | 强制超时命中（与 `service-timeout` 不同族：彼 = 服务调用 deadline，此 = 外部请求超时）             | A5 原位                                                                                       |
-|          | `http-connect`            | DNS / TCP / TLS / 连接中断一格（动作相同）                                                         | A5 原位                                                                                       |
-|          | `http-policy`             | 域名白名单 / SSRF / 跨域重定向拒绝（部署者数据 → Err）                                             | 与未声明能力的 loud 两界不混（W5.4）                                                          |
-|          | `http-too-large`          | 响应预算超限                                                                                       | A5 原位                                                                                       |
-|          | `http-invalid`            | URL 畸形等值层参数错误                                                                             | 参数形状错仍走响亮（WIT 类型面静态排除）                                                      |
-|          | `http-error`              | 兜底：响应畸形 / 解压失败 / 重定向异常                                                             | 开放空间诚实兜底格                                                                            |
-| process  | `process-spawn-failed`    | 命令不存在 / 权限 / fork 失败                                                                      | A5 原位                                                                                       |
-|          | `process-timeout`         | exec 强制超时杀进程组                                                                              | A5 原位                                                                                       |
-|          | `process-gone`            | write / signal 已退出进程（高频竞态）                                                              | read 在进程死后 = 正常 EOF，不算错误                                                          |
-| service  | `service-unavailable`     | 提供方缺席 / 崩溃 / 卸载窗口；可选依赖常态答案                                                     | ADR-0018 S5；D11.3 即错即回                                                                   |
-|          | `service-method-missing`  | 方法名不存在（宿主查注册表拦下，不走消息）                                                         | ADR-0018 S5                                                                                   |
-|          | `service-timeout`         | 服务调用 deadline / 提供方被 fuel / epoch 截断                                                     | ADR-0018 S5                                                                                   |
-| core     | `core-deadlock`           | wait-for 圈闭合（W4.4 层三）；message 带整圈路径（按实现期上限截断）                               | 宿主检测 + fail-open 解圈；不占服务族第五格                                                   |
-|          | `core-contract-violation` | 运行期契约 / 方向违约：服务参数或返回值形状不符、emit payload 不符、guest 导出返回非 business kind | journal `contract_violation`；message 人读，结构化细节住 journal                              |
-| business | `business`                | guest 起源的业务错误（服务 handler 的业务失败 / 生命周期钩子与事件 listener 的唯一合法导出 kind）  | `data` = TLV Value；服务路径形状 SSOT = 服务契约（W7/W9）；非服务路径由 SDK 约定（通常 none） |
+| 族       | kind                      | 触发                                                                                                    | 备注                                                                                          |
+| -------- | ------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| fs       | `fs-not-found`            | read / list / delete 目标不存在                                                                         | A5 原位                                                                                       |
+|          | `fs-permission-denied`    | OS 层拒绝（EACCES / EPERM / EROFS / ENOTCAPABLE，动作相同 = 放弃）                                      | private preopen 逃逸同格                                                                      |
+|          | `fs-invalid-path`         | global 档两段式解析拒绝全族：相对路径（无根可相对）/ 逃逸 / 豁免命中 / 循环 / 超长；TOCTOU 竞态窗口同格 | message 通用化，不点名豁免命中；完整原因进 journal（D140）                                    |
+|          | `fs-invalid-utf8`         | 文本读取的 UTF-8 校验失败                                                                               | **已兑现（W3 D144）**：ABI bytes-only；SDK `read_text` 产生；保留                             |
+|          | `fs-invalid-type`         | read 目录 / list 文件                                                                                   | A5 原位                                                                                       |
+|          | `fs-too-large`            | read 预算超限                                                                                           | 预算数值归 T10.11                                                                             |
+|          | `fs-io`                   | 兜底（message = OS 原文，按 D89 脱敏）                                                                  | 开放空间诚实兜底格                                                                            |
+| http     | `http-timeout`            | 强制超时命中（与 `service-timeout` 不同族：彼 = 服务调用 deadline，此 = 外部请求超时）                  | A5 原位                                                                                       |
+|          | `http-connect`            | DNS / TCP / TLS / 连接中断一格（动作相同）                                                              | A5 原位                                                                                       |
+|          | `http-policy`             | 域名白名单 / SSRF / 跨域重定向拒绝（部署者数据 → Err）                                                  | 与未声明能力的 loud 两界不混（W5.4）                                                          |
+|          | `http-too-large`          | 响应预算超限                                                                                            | A5 原位                                                                                       |
+|          | `http-invalid`            | URL 畸形等值层参数错误                                                                                  | 参数形状错仍走响亮（WIT 类型面静态排除）                                                      |
+|          | `http-error`              | 兜底：响应畸形 / 解压失败 / 重定向异常                                                                  | 开放空间诚实兜底格                                                                            |
+| process  | `process-spawn-failed`    | 命令不存在 / 权限 / fork 失败                                                                           | A5 原位                                                                                       |
+|          | `process-timeout`         | exec 强制超时杀进程组                                                                                   | A5 原位                                                                                       |
+|          | `process-gone`            | write / signal 已退出进程（高频竞态）                                                                   | read 在进程死后 = 正常 EOF，不算错误                                                          |
+| service  | `service-unavailable`     | 提供方缺席 / 崩溃 / 卸载窗口；可选依赖常态答案                                                          | ADR-0018 S5；D11.3 即错即回                                                                   |
+|          | `service-method-missing`  | 方法名不存在（契约已知时宿主查注册表拦下，不走消息）                                                    | 无契约服务 = guest catch-all 返回 `business`（W3 D147 退化格）                                |
+|          | `service-timeout`         | 服务调用 deadline / 提供方被 fuel / epoch 截断                                                          | ADR-0018 S5                                                                                   |
+| core     | `core-deadlock`           | wait-for 圈闭合（W4.4 层三）；message 带整圈路径（按实现期上限截断）                                    | 宿主检测 + fail-open 解圈；不占服务族第五格                                                   |
+|          | `core-contract-violation` | 运行期契约 / 方向违约：服务参数或返回值形状不符、emit payload 不符、guest 导出返回非 business kind      | journal `contract_violation`；message 人读，结构化细节住 journal                              |
+|          | `core-mount-failed`       | mount 的启用管线失败：声明有效但子实例未激活（setup Err / trap、依赖缺失、预算 / 并发上限）             | W3 D150；message 带子实例名与原因；unmount 幂等                                               |
+| business | `business`                | guest 起源的业务错误（服务 handler 的业务失败 / 生命周期钩子与事件 listener 的唯一合法导出 kind）       | `data` = TLV Value；服务路径形状 SSOT = 服务契约（W7/W9）；非服务路径由 SDK 约定（通常 none） |
 
 - **三条分界判据平移**（A5 D14.1）：① `Err` vs `Ok` 内状态字段看载荷是否完整成立——HTTP 4xx/5xx、进程非零 exit = `Ok` 载荷分支，状态码 / exit code 不进 kind；② `Err` vs 响亮报错看静态可否查——契约违反 = loud（W5.4），运行期数据决定 = `Err`；③ kind 细分粒度看调用方动作是否不同，开放空间（OS / 网络 / 进程）必设诚实兜底格。
 - **死亡项**：`sql.*` 族随 sqlite 能力撤回永久死亡（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)；DB = guest crate + private fs）；`box.trap` 随盒概念消解（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）——插件 trap = 实例死亡 + journal `vm_trap`，在飞调用方收 `service-unavailable`（D11.3），不立 guest 可见的 trap kind；timer 无 Err 面，参数非法走响亮（W5.4）。
@@ -672,21 +1077,21 @@ interface errors {
 
 **D139 定案：调用契约违反（静态可查的 API 误用，含 timer 参数越界 / 卸载期注册）= trap；运行期交互 / 形状失败 = `core-*` Err；运行期数据失败 = 族 Err。**
 
-| 情形                                                                   | 载体                                                                                                                              |
-| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 未声明能力调用（manifest 门：fs global / http / process / mount 缺省） | trap——宿主 import 拒绝，实例 Failed，journal `vm_trap`；依赖方收 `service-unavailable`                                            |
-| Unloading 期新注册「比我长寿」的账（监听 / provide / timer）           | trap——实例本就在卸载，无额外损失（W4.5 D11.2）                                                                                    |
-| timer 参数非法（`every` 低于最小间隔等）                               | trap——参数非法 = 契约违反，A5 timer「无 Err 面」平移                                                                              |
-| import 参数形状错（WIT 类型面已静态排除；服务 TLV 参数运行期违约）     | `core-contract-violation` Err——调用方统一失败 / 告警；违约为参数侧还是返回侧由 message + journal 指示（v1 不提供机器可分支细节）  |
-| 服务返回形状违约 / emit payload 违约                                   | `core-contract-violation` Err + journal `contract_violation`（D19.1 / D22.4 的运行期校验点存活）                                  |
-| wait-for 圈闭合                                                        | `core-deadlock` Err 给调用方（W4.4 fail-open 解圈；message 带整圈路径）                                                           |
-| 运行期数据失败（文件不存在 / 网络失败 / 进程退出等）                   | 对应族 Err                                                                                                                        |
-| 事件 listener 失败                                                     | emit / serial / waterfall = fail-open：journal `listener_error`，不进控制流；parallel = 逐项 `result` 收集（A5 D15.2 / ADR-0014） |
-| guest trap（panic / abort / fuel / epoch 截断自身）                    | 实例死亡；journal `vm_trap`；在飞调用方按 D11.3 收 `service-unavailable`                                                          |
-| `setup` 返回 Err / trap                                                | 加载失败，实例即弃（W1.5 D120）                                                                                                   |
-| `on-config` 返回 Err / trap                                            | 重挂载（W1.3 D118 / config-format D42）                                                                                           |
-| `dispose` 返回 Err / trap                                              | 记日志，不中断后续清理（W1.6 D121）                                                                                               |
-| manifest / config / 安装校验失败                                       | 宿主侧响亮（miette / 启用期拒），不经 guest 错误通道（W2 D133 / W1.5）                                                            |
+| 情形                                                                                         | 载体                                                                                                                              |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 未声明能力调用（manifest 门：fs global / http / process / mount 缺省）                       | trap——宿主 import 拒绝，实例 Failed，journal `vm_trap`；依赖方收 `service-unavailable`                                            |
+| Unloading 期新注册「比我长寿」的账（监听 / provide / timer）                                 | trap——实例本就在卸载，无额外损失（W4.5 D11.2）                                                                                    |
+| timer 参数非法（`every` 低于最小间隔等）                                                     | trap——参数非法 = 契约违反，A5 timer「无 Err 面」平移                                                                              |
+| import 参数形状错（WIT 类型面已静态排除；服务 TLV 参数运行期违约、process argv/command XOR） | `core-contract-violation` Err；fs 路径值错误归 `fs-invalid-path`（W3 D144）；违约为参数侧还是返回侧由 message + journal 指示      |
+| 服务返回形状违约 / emit payload 违约                                                         | `core-contract-violation` Err + journal `contract_violation`（D19.1 / D22.4 的运行期校验点存活）                                  |
+| wait-for 圈闭合                                                                              | `core-deadlock` Err 给调用方（W4.4 fail-open 解圈；message 带整圈路径）                                                           |
+| 运行期数据失败（文件不存在 / 网络失败 / 进程退出等）                                         | 对应族 Err                                                                                                                        |
+| 事件 listener 失败                                                                           | emit / serial / waterfall = fail-open：journal `listener_error`，不进控制流；parallel = 逐项 `result` 收集（A5 D15.2 / ADR-0014） |
+| guest trap（panic / abort / fuel / epoch 截断自身）                                          | 实例死亡；journal `vm_trap`；在飞调用方按 D11.3 收 `service-unavailable`                                                          |
+| `setup` 返回 Err / trap                                                                      | 加载失败，实例即弃（W1.5 D120）                                                                                                   |
+| `on-config` 返回 Err / trap                                                                  | 重挂载（W1.3 D118 / config-format D42）                                                                                           |
+| `dispose` 返回 Err / trap                                                                    | 记日志，不中断后续清理（W1.6 D121）                                                                                               |
+| manifest / config / 安装校验失败                                                             | 宿主侧响亮（miette / 启用期拒），不经 guest 错误通道（W2 D133 / W1.5）                                                            |
 
 - **为何「响亮」= trap**：wasm 没有可恢复的 guest 异常；guest panic = abort = trap = 实例死亡。这是载体的诚实事实，也是 A5「契约违反不进 Result」的忠实兑现——trap 不可被 `Result` 分支吞掉。代价明记 = 可用性：一个未声明能力调用会杀死插件，依赖方收 `service-unavailable`；作者应在开发期用 `metis check` 与 SDK 类型面排除。
 - **为何 deadlock 与运行期形状违约不 trap**：它们是运行期交互结果，不是静态作者错；W4.4 明确「当场报错 + 整圈路径 + fail-open 解圈」，返回 `core-deadlock` 让调用方解圈，比杀实例更符合 fail-open；形状违约的调用方 / 提供方可能因升级竞态而持有旧契约，返回 `core-contract-violation` 让调用方统一失败 / 告警，具体违约侧由 message + journal 指示。
@@ -739,26 +1144,26 @@ interface errors {
 
 ### W5.8 联动登记汇总（章末）
 
-| 去向              | 内容                                                                                                                                                                                                                                             |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| W1（T13-h）       | **已兑现（2026-10-19）**：`error` 类型 = D136；W1.3 生命周期签名确认；`setup` Err / trap = 加载失败（W1.5）；`dispose` Err / trap = 记日志继续（W1.6）                                                                                           |
-| W2（T13-i）       | **已兑现（2026-10-19）**：manifest 校验错误 = 宿主侧响亮，不经 guest 错误通道（D133）；生命周期 `error` 类型 = D136                                                                                                                              |
-| W3（T13-j）       | 所有 fallible import 返回 `result<T, error>`；能力门未声明 = trap（D139）；fs / http / process 错误映射；timer 无 Err 面；`mount` 未声明 = trap；服务调用返回 service / business / core 族；冻结前确认 `fs-invalid-utf8` 去留（bytes-only 则删） |
-| W4（T13-c）       | **已兑现（2026-10-19）**：W4.4 fail-fast 错误面 = D137 / D139——wait-for = `core-deadlock`；卸载期新账 = trap；D11.3 = `service-unavailable`                                                                                                      |
-| W6（T13-l）       | 流式 read 的 EOF 表示与错误复用属主族（A5 D14.3 语义）；resource 句柄错误复用本类型；business data = TLV（与 W6 线编码同源）                                                                                                                     |
-| W7（T13-m）       | business data 形状 SSOT = 服务契约；运行期形状违约 = `core-contract-violation`；`data` 承载 = TLV                                                                                                                                                |
-| W8（T13-n）       | listener 错误封套 = 本类型；emit 校验违约 = `core-contract-violation` Err + journal（D139 运行期形状失败格）；不新增错误族                                                                                                                       |
-| W9（T13-o）       | 能力对账 + 运行期门；未声明能力 = trap；契约运行期校验点 = `core-contract-violation`                                                                                                                                                             |
-| W10（T13-p）      | `error-kind` 增补 = 新 WIT package version（封闭 enum 的破坏性变更）；跨版本共存时宿主按 `abi` 使用对应版本绑定，不得把新 kind 送入旧版；无独立错误版本号                                                                                        |
-| journal           | 不新增 kind；`listener_error` / `vm_trap` / `contract_violation` / `fs_invalid_path_detail` 原位承接；错误 kind 落盘用 kebab-case 规范名                                                                                                         |
-| seam-capabilities | §6.1 W5 行兑现：能力失败 `result` 形态 + service 四态；`fs-invalid-path` message 通用化政策                                                                                                                                                      |
-| plugin-sdk        | **已兑现（2026-10-19）**：D102 三格封套不变；`ErrorKind` 1:1；guest 导出只许 business；`?` 习语                                                                                                                                                  |
-| service-registry  | ADR-0018 S5 四态 = `service-unavailable` / `service-method-missing` / `service-timeout` + 共享 `business`；core 族不占第五格；调用方可见集合 = 四态 + core 两格                                                                                  |
-| T10.10            | trap → 实例 Failed + journal `vm_trap`；在飞调用方 `service-unavailable`                                                                                                                                                                         |
-| T10.11            | 能力错误映射（fs / http / process）；未声明能力 trap；timer 参数 trap                                                                                                                                                                            |
-| T10.13            | business data = TLV Value（`metis-codec`）                                                                                                                                                                                                       |
-| T10.14            | `Error` / `ErrorKind` 类型与构造器；SDK 文档（服务四态 + core 两格、business-only 导出、message 不分支）                                                                                                                                         |
-| Creator 文档      | 作者契约五条（W5.6）：`?` / kind 分支 / business-only 导出 / business data 契约形状 / trap 不可捕获；「族 → 建议动作」表按 kind 清单重写                                                                                                         |
-| 实现期配置        | message 长度上限（宿主侧截断 + journal 注记；登记 T10.10 / T10.11 / T10.14）；core-deadlock 路径同受该上限；business data 预算沿用 W6 / T10.13                                                                                                   |
-| 扩展位            | 非 business 族的结构化 `data` 不立（将来需要走 package version）；`retryable` 维持不立；per-family data = 扩展位                                                                                                                                 |
-| ADR               | 不新增；A5 语义继承（ADR-0026 已 superseded）；ADR-0018 S5 四态不动（调用方可见集合 = 四态 + core 两格，见 W5.2）                                                                                                                                |
+| 去向              | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1（T13-h）       | **已兑现（2026-10-19）**：`error` 类型 = D136；W1.3 生命周期签名确认；`setup` Err / trap = 加载失败（W1.5）；`dispose` Err / trap = 记日志继续（W1.6）                                                                                                                                                                                                                                                                                                                 |
+| W2（T13-i）       | **已兑现（2026-10-19）**：manifest 校验错误 = 宿主侧响亮，不经 guest 错误通道（D133）；生命周期 `error` 类型 = D136                                                                                                                                                                                                                                                                                                                                                    |
+| W3（T13-j）       | **已兑现（2026-10-19）= W3 D142–D154**：所有 fallible import 返回 `result<T, error>`；能力门未声明 = trap（D139）；fs / http / process 错误映射；timer 无 Err 面（tick 合并计数可见）；`mount` 未声明 = trap；服务调用返回 service / business / core 族；`fs-invalid-utf8` **保留**（ABI bytes-only，SDK `read_text` 产生）；`core-mount-failed` 增补（mount 启用失败）；crypto 撤回 = [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)，无 crypto 错误面 |
+| W4（T13-c）       | **已兑现（2026-10-19）**：W4.4 fail-fast 错误面 = D137 / D139——wait-for = `core-deadlock`；卸载期新账 = trap；D11.3 = `service-unavailable`                                                                                                                                                                                                                                                                                                                            |
+| W6（T13-l）       | 流式 read 的 EOF 表示与错误复用属主族（A5 D14.3 语义）；resource 句柄错误复用本类型；business data = TLV（与 W6 线编码同源）                                                                                                                                                                                                                                                                                                                                           |
+| W7（T13-m）       | business data 形状 SSOT = 服务契约；运行期形状违约 = `core-contract-violation`；`data` 承载 = TLV                                                                                                                                                                                                                                                                                                                                                                      |
+| W8（T13-n）       | listener 错误封套 = 本类型；emit 校验违约 = `core-contract-violation` Err + journal（D139 运行期形状失败格）；不新增错误族                                                                                                                                                                                                                                                                                                                                             |
+| W9（T13-o）       | 能力对账 + 运行期门；未声明能力 = trap；契约运行期校验点 = `core-contract-violation`                                                                                                                                                                                                                                                                                                                                                                                   |
+| W10（T13-p）      | `error-kind` 增补 = 新 WIT package version（封闭 enum 的破坏性变更）；跨版本共存时宿主按 `abi` 使用对应版本绑定，不得把新 kind 送入旧版；无独立错误版本号                                                                                                                                                                                                                                                                                                              |
+| journal           | 不新增 kind；`listener_error` / `vm_trap` / `contract_violation` / `fs_invalid_path_detail` 原位承接；错误 kind 落盘用 kebab-case 规范名                                                                                                                                                                                                                                                                                                                               |
+| seam-capabilities | §6.1 W5 行兑现：能力失败 `result` 形态 + service 四态；`fs-invalid-path` message 通用化政策                                                                                                                                                                                                                                                                                                                                                                            |
+| plugin-sdk        | **已兑现（2026-10-19）**：D102 三格封套不变；`ErrorKind` 1:1；guest 导出只许 business；`?` 习语                                                                                                                                                                                                                                                                                                                                                                        |
+| service-registry  | ADR-0018 S5 四态 = `service-unavailable` / `service-method-missing` / `service-timeout` + 共享 `business`；core 族不占第五格；调用方可见集合 = 四态 + core 两格（服务调用路径）                                                                                                                                                                                                                                                                                        |
+| T10.10            | trap → 实例 Failed + journal `vm_trap`；在飞调用方 `service-unavailable`                                                                                                                                                                                                                                                                                                                                                                                               |
+| T10.11            | 能力错误映射（fs / http / process）；未声明能力 trap；timer 参数 trap                                                                                                                                                                                                                                                                                                                                                                                                  |
+| T10.13            | business data = TLV Value（`metis-codec`）                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| T10.14            | `Error` / `ErrorKind` 类型与构造器；SDK 文档（服务四态 + 服务路径 core 两格、business-only 导出、message 不分支）                                                                                                                                                                                                                                                                                                                                                      |
+| Creator 文档      | 作者契约五条（W5.6）：`?` / kind 分支 / business-only 导出 / business data 契约形状 / trap 不可捕获；「族 → 建议动作」表按 kind 清单重写                                                                                                                                                                                                                                                                                                                               |
+| 实现期配置        | message 长度上限（宿主侧截断 + journal 注记；登记 T10.10 / T10.11 / T10.14）；core-deadlock 路径同受该上限；business data 预算沿用 W6 / T10.13                                                                                                                                                                                                                                                                                                                         |
+| 扩展位            | 非 business 族的结构化 `data` 不立（将来需要走 package version）；`retryable` 维持不立；per-family data = 扩展位                                                                                                                                                                                                                                                                                                                                                       |
+| ADR               | 不新增；A5 语义继承（ADR-0026 已 superseded）；ADR-0018 S5 四态不动（调用方可见集合 = 四态 + core 两格（服务调用路径），见 W5.2）                                                                                                                                                                                                                                                                                                                                      |

@@ -219,20 +219,20 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 
 ### S3.7 联动登记（S3）
 
-| 去向                                   | 内容                                                                                                                   |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| ADR-0017                               | 汇合登记兑现 = D66（spawn 第一真实用户 = mount）；Status 行注见 ADR-0028                                               |
-| ADR-0013                               | 强制复审点 D7 半兑现 = D66；D2 半（isolate/intercept 复审）= D69；Status 行注见 ADR-0028                               |
-| ADR-0010                               | 子 fiber = 父的 effect——实例面兑现 = D64                                                                               |
-| [context-events](context-events.md) §6 | D7 汇合点行指向本文件                                                                                                  |
-| [wit-abi](wit-abi.md) W2 章（T13-i）   | **已兑现（2026-10-19）**：`capabilities.mount: true` 键 = D129；ADR-0028 批次 #1                                       |
-| [wit-abi](wit-abi.md) W3 章（T13-j）   | `ctx.mount`/`unmount` 方法族与句柄形态                                                                                 |
-| [wit-abi](wit-abi.md) W9 章（T13-o）   | mount 时启用管线复用（inject 三分原样）= D63；编排面能力门立场（mount = 第一个例外）                                   |
-| 种子稿待决 #2/#3/#5                    | 结案 = D62/D65                                                                                                         |
-| 消解②                                  | 坐实 = D65                                                                                                             |
-| S4                                     | 实例配置 overlay 合成校验细则 = D67；epoch 失效波及政策 = D70；服务解析边界/isolate 复审 = D68/D69；journal 字段 = D72 |
-| Creator 文档                           | 声明住处两档引导（D62）；`mount` 能力门作者指南（D63）                                                                 |
-| 实现期清单                             | mount/unmount API 与启用管线复用；声明校验器（素材约束 = 装配单 ⊆ 检查）；mount 消耗预算数值                           |
+| 去向                                   | 内容                                                                                                                                                                                                                                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ADR-0017                               | 汇合登记兑现 = D66（spawn 第一真实用户 = mount）；Status 行注见 ADR-0028                                                                                                                                                                                                                   |
+| ADR-0013                               | 强制复审点 D7 半兑现 = D66；D2 半（isolate/intercept 复审）= D69；Status 行注见 ADR-0028                                                                                                                                                                                                   |
+| ADR-0010                               | 子 fiber = 父的 effect——实例面兑现 = D64                                                                                                                                                                                                                                                   |
+| [context-events](context-events.md) §6 | D7 汇合点行指向本文件                                                                                                                                                                                                                                                                      |
+| [wit-abi](wit-abi.md) W2 章（T13-i）   | **已兑现（2026-10-19）**：`capabilities.mount: true` 键 = D129；ADR-0028 批次 #1                                                                                                                                                                                                           |
+| [wit-abi](wit-abi.md) W3 章（T13-j）   | **已兑现（2026-10-19）= W3 D150**：`instance.mount(declaration: list<u8>) -> mount-handle`（TLV Value）；`mount-handle.unmount()` async + 幂等；**Drop 句柄 = best-effort 异步 unmount**（host log；`detach()` 放弃 Drop 语义）；子实例启用失败 = `core-mount-failed`；父卸载 drain 子实例 |
+| [wit-abi](wit-abi.md) W9 章（T13-o）   | mount 时启用管线复用（inject 三分原样）= D63；编排面能力门立场（mount = 第一个例外）                                                                                                                                                                                                       |
+| 种子稿待决 #2/#3/#5                    | 结案 = D62/D65                                                                                                                                                                                                                                                                             |
+| 消解②                                  | 坐实 = D65                                                                                                                                                                                                                                                                                 |
+| S4                                     | 实例配置 overlay 合成校验细则 = D67；epoch 失效波及政策 = D70；服务解析边界/isolate 复审 = D68/D69；journal 字段 = D72                                                                                                                                                                     |
+| Creator 文档                           | 声明住处两档引导（D62）；`mount` 能力门作者指南（D63）                                                                                                                                                                                                                                     |
+| 实现期清单                             | mount/unmount API 与启用管线复用；声明校验器（素材约束 = 装配单 ⊆ 检查）；mount 消耗预算数值                                                                                                                                                                                               |
 
 ## S4 实例配置与隔离
 

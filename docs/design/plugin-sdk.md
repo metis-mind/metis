@@ -18,6 +18,8 @@
 
 作者写 `struct` 持有实例状态 + `impl Plugin`；trait 钩子族（生命周期 setup/dispose、on_event/on_call/on_config）全默认实现，作者只覆写所需钩子。实例状态 = struct 本体，每实例一份，由 setup 构造——与实例模型（[ADR-0028](../decisions/0028-instance-model.md)）一等对齐。按名分发 v1 = catch-all（`on_event(name, payload: Value)` 形态），按事件/服务生成强类型方法 = 演进位（S7）。最小插件 = 空 struct + 一个覆写方法，约 15–20 行。
 
+**W3 细化（2026-10-19）**：事件兴趣用 `ctx.on(name)` 登记（返回 `Listener` RAII；同名去重 + 引用计数，一个实例一个宿主条目），处理走 `on_event` catch-all；timer 用 `ctx.timer().after/every(ms, handler)` 注册闭包，无 `on_timer` trait 钩子（SDK 的 `on-timer` 导出是内部分发器）。
+
 淘汰项 = Spin/Extism 谱系的自由函数宏（每导出点一个 fn）：实例状态被推给全局变量，与实例模型和 W4 同实例重入（共享堆，D93）结构性冲突——Zed 的 `static mut EXTENSION` 全局单例被先例调研点名为同一坑（[sdk-precedent-survey](../research/sdk-precedent-survey.md) §2.6）。先例地基：Zed `Extension` trait 全默认方法（唯一必需项 = `new()`）、默认值分「未实现即错」与「空即合理」两语义档位；proxy-wasm 全默认钩子族 + 只覆写所需。
 
 不归本节：钩子族清单填实 = [wit-abi](wit-abi.md) W1（setup/dispose/on-config 形态 = D118）/ W3（ctx 与 on_call）/ W8（on_event 与静态声明）三章。薄插件仪式感地板（ADR-0034 风险 W2）分工：作者手写面 = `lib.rs` 单文件 + manifest 声明；crate-type/target/钉版依赖藏进脚手架模板，归 T13-e / T10.15。
@@ -36,7 +38,7 @@ wit-bindgen 的 `generate!` / `export!` 与 Guest impl 全住 `metis-plugin` cra
 
 wit-bindgen = `metis-plugin` 的**私有钉版依赖**（Zed 先例：作者不见 wit-bindgen；版本随 SDK 统一演进）——ADR-0034 风险 W3 钉版纪律（wit-bindgen/wasm-tools/wasmtime 对齐）在 SDK 侧的落点。内建件便利 re-export（serde_json 等）= feature 面（design-review B2 登记），v1 不做。
 
-wasip2 std 无条件拖带 14 个 WASI 0.2 导入（[wasm-research](../research/wasm-research.md) 补遗 6 papercut 1：零 IO guest 也迫使宿主注册 wasmtime-wasi p2）——v1 接受现状，宿主统一注册 wasmtime-wasi p2 为标配（归 T10.10）；no_std / build-std 裁剪 = 扩展位，触发器 = 插件二进制体积/冷启动投诉成串。
+目标 = **WASI 0.3**（2026-10-19 维护者确认）；guest std 拖带的 WASI 0.3 基线导入（clocks / random / filesystem async 等）由宿主统一链接 wasmtime-wasi 0.3（归 T10.10）；WASI 基线白名单 = W3 D154 / W9 的进口对账面，SDK 不暴露 WASI 名。`wasm32-wasip3` target / std p3 迁移的工具链落地归 T10.10 / T10.15（ADR-0034 W7）；wasip2 时代的 14 导入 papercut（[wasm-research](../research/wasm-research.md) 补遗 6）为历史证据，0.3 基线由 T10.10 核实。no_std / build-std 裁剪 = 扩展位，触发器 = 插件二进制体积/冷启动投诉成串。
 
 ## S4 D101 异步面 = 全 async trait + futures 门面 + Exclusive 助手（2026-10-17 定案，T13-d 拍板）
 
@@ -46,7 +48,7 @@ trait 方法全 `async fn`（Rust 原生 async fn in trait）。fanout = guest �
 
 ## S5 D102 错误面 = Result 贯穿 + 三格封套 Error（2026-10-17 定案，T13-d 拍板）
 
-作者面 = `Result<T, metis_plugin::Error>` 贯穿一切效应调用与钩子返回。`Error` = 三格封套：kind 封闭枚举 + message + `data: Option<Value>`（[wasm-first-design-review](../research/wasm-first-design-review.md) B5：err 封套语义全存活，形态类型化）；kind 定控制流——「禁 message 匹配做控制流」从纪律变结构（编译器强制）。服务四态（unavailable / method_missing / timeout / business）是 kind 枚举的服务子集；完整枚举 + `core-*` 两格 = [wit-abi](wit-abi.md) W5 D136–D141。guest 导出只许 `business`（W5 D138）。
+作者面 = `Result<T, metis_plugin::Error>` 贯穿一切效应调用与钩子返回。`Error` = 三格封套：kind 封闭枚举 + message + `data: Option<Value>`（[wasm-first-design-review](../research/wasm-first-design-review.md) B5：err 封套语义全存活，形态类型化）；kind 定控制流——「禁 message 匹配做控制流」从纪律变结构（编译器强制）。服务四态（unavailable / method_missing / timeout / business）是 kind 枚举的服务子集；完整枚举 + core 族三格（deadlock / contract-violation / mount-failed）= [wit-abi](wit-abi.md) W5 D136–D141。guest 导出只许 `business`（W5 D138）。
 
 淘汰项 = proxy-wasm 模式：host 失败大量 `.unwrap()` → guest trap（wasm 下 panic = abort = 杀实例，靠宿主重启兜底）——WIT `result` 一等错误通道下，失败以 `Result` 贯穿作者面（[sdk-precedent-survey](../research/sdk-precedent-survey.md) §1.6）。
 
@@ -59,7 +61,7 @@ ADR-0034 §4「world 固定，能力白名单由 manifest 声明对账，作者�
 - world = 单一固定，import 词汇表封闭。「作者无法越权加 import」= 编译期结构事实：SDK 绑定之外无符号可链接；手工添加的进口在启用期对账被机械抠出——B1 集合包含判定的准确含义 = 组件 import 清单 ⊆ SDK 封闭词汇表（防越权加 import），粒度到接口、不到能力实例。
 - 能力白名单 = manifest 声明 → 运行期能力门 fail-closed + 启用期对账（信任模型骨架 = design-review C8 存活）；越权调用 = trap（[wit-abi](wit-abi.md) W5 D139），不是 S5 类型化错误——S5 只覆盖已声明但运行期失败的路径。先例 = Spin（声明全在 manifest、SDK 零编译期检查、越权 = 「Destination not allowed」运行期类型化错误）与 Zed（运行期 CapabilityGranter 门控）——两大先例均选运行期门，SDK 面不设编译期能力检查机器。
 
-映射风格三原则（本节定原则，具体接口集归 W3 章 = T13-j）：① 有生命周期实体（连接/存储）= 句柄 `open()` 形态（Spin `key_value::Store::open_default()` 先例）；② 无状态服务 = ctx 方法/自由函数（Spin `llm::infer` / `variables::get` 先例）；③ 原始生成绑定保留 escape hatch 但标注「正常不需使用」（Spin rustdoc 先例）。生效层细化（运行期门 vs 链接期条件拒绝）同归 W3 章。
+映射风格三原则（本节定原则，具体接口集归 W3 章 = T13-j；**已兑现 = W3 D142–D154**，2026-10-19）：① 有生命周期实体（连接/存储）= 句柄 / resource 形态（Spin `key_value::Store::open_default()` 先例；metis = `process-handle` / `mount-handle` / `Listener` / `TimerHandle`）；② 无状态服务 = ctx 方法/自由函数（Spin `llm::infer` / `variables::get` 先例；metis = `ctx.fs()` / `ctx.http()` / `ctx.timer()` / `ctx.service()` 等）；③ 原始生成绑定保留 escape hatch 但标注「正常不需使用」（Spin rustdoc 先例；metis = `metis_plugin::raw`）。生效层 = 运行期门（固定 world，宿主 import 实现逐调用 fail-closed；W3 D154）。
 
 扩展位 = manifest 声明 → 编译期模块化组合 world（越权 = 编译期不存在）：先例无此形态；W2 已落地（2026-10-19），维持扩展位不启用——world 固定 = wit-abi W1.2 D117，能力声明 = wit-abi W2.5 D129 的运行期门。
 
@@ -71,17 +73,17 @@ ADR-0034 §4「world 固定，能力白名单由 manifest 声明对账，作者�
 
 ## 联动登记汇总（章末）
 
-| 去向           | 登记内容                                                                                                                                                                       |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| W1 章（T13-h） | **已兑现（2026-10-18）**：WIT 目录 = `crates/metis-plugin/wit/`（D117）；生命周期钩子 = `setup` / `on-config` / `dispose`（D118）                                              |
-| W2 章（T13-i） | **已兑现（2026-10-19）= wit-abi W2 D125–D134**：能力声明节 = D129；编译期组合 world 维持扩展位（不启用）                                                                       |
-| W3 章（T13-j） | ctx import 接口集具体化 S6 映射三原则；能力生效层细化；escape hatch 标注                                                                                                       |
-| W5 章（T13-k） | **已兑现（2026-10-19）**：错误底层承载 = [wit-abi](wit-abi.md) W5 D136–D141；S5 作者面投影不变（三格封套 + `ErrorKind` 1:1），S5/S6 的 kind 面与越权错误已按 W5 D137/D139 同步 |
-| W7 章（T13-m） | 瘦身形状 DSL 解析器 = S7 `types!()` 输入                                                                                                                                       |
-| W8 章（T13-n） | 事件静态声明 → S1 catch-all 的强类型演进位                                                                                                                                     |
-| T10.13         | metis-codec = Value/TLV 双 target 依赖（S3/S7）                                                                                                                                |
-| T10.14         | S1–S7 实现站；D11 声明随站                                                                                                                                                     |
-| T13-e/T10.15   | 薄插件地板承接（S1）：脚手架模板藏 crate-type/target/钉版依赖                                                                                                                  |
+| 去向           | 登记内容                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1 章（T13-h） | **已兑现（2026-10-18）**：WIT 目录 = `crates/metis-plugin/wit/`（D117）；生命周期钩子 = `setup` / `on-config` / `dispose`（D118）                                                                                                                                                                                                                                                                                         |
+| W2 章（T13-i） | **已兑现（2026-10-19）= wit-abi W2 D125–D134**：能力声明节 = D129；编译期组合 world 维持扩展位（不启用）                                                                                                                                                                                                                                                                                                                  |
+| W3 章（T13-j） | **已兑现（2026-10-19）= W3 D142–D154**：metis 功能 import = 7 个（`events` / `services` / `timer` / `http` / `fs` / `process` / `instance`），private fs = WASI 0.3 `wasi:filesystem`（作者面 `ctx.plugin_fs()`）；S6 三原则落地（resource / ctx 方法 / `metis_plugin::raw`）；能力层 = 运行期门；`Ctx` 零尺寸 + 句柄 RAII；crypto 撤回 = [ADR-0041](../decisions/0041-crypto-capability-withdrawal.md)（作者自加 crate） |
+| W5 章（T13-k） | **已兑现（2026-10-19）**：错误底层承载 = [wit-abi](wit-abi.md) W5 D136–D141；S5 作者面投影不变（三格封套 + `ErrorKind` 1:1），S5/S6 的 kind 面与越权错误已按 W5 D137/D139 同步                                                                                                                                                                                                                                            |
+| W7 章（T13-m） | 瘦身形状 DSL 解析器 = S7 `types!()` 输入                                                                                                                                                                                                                                                                                                                                                                                  |
+| W8 章（T13-n） | 事件静态声明 → S1 catch-all 的强类型演进位                                                                                                                                                                                                                                                                                                                                                                                |
+| T10.13         | metis-codec = Value/TLV 双 target 依赖（S3/S7）                                                                                                                                                                                                                                                                                                                                                                           |
+| T10.14         | S1–S7 实现站；D11 声明随站                                                                                                                                                                                                                                                                                                                                                                                                |
+| T13-e/T10.15   | 薄插件地板承接（S1）：脚手架模板藏 crate-type/target/钉版依赖                                                                                                                                                                                                                                                                                                                                                             |
 
 ## 扩展位登记（五条）
 

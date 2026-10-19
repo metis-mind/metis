@@ -80,7 +80,7 @@
 **D108 定案：v1 内置 Rust 适配器；manifest 不引入任意 `build.command`；`metis build` 输出可部署包目录。**
 
 - **适配器选择**：按工程标记识别——`Cargo.toml` → Rust 适配器；后续语言各加内置适配器（jco / TinyGo / componentize-py 等），由 metis 统一实现。manifest 的自由 `build.command` = 扩展位（触发器 = 真实自定义工具链需求；启用时必须标记「不可缓存 / 不可远端复现」）。
-- **Rust 调用**：`cargo build --profile metis --target wasm32-wasip2 --locked`（profile 定义 = D112；首次无 lockfile 可先生成，`dist` 级构建要求 lockfile 已提交）；环境变量与 `RUSTFLAGS` 由构建管线显式控制，不继承作者的随机环境。
+- **Rust 调用**：`cargo build --profile metis --target wasm32-wasip3 --locked`（profile 定义 = D112；首次无 lockfile 可先生成，`dist` 级构建要求 lockfile 已提交）；环境变量与 `RUSTFLAGS` 由构建管线显式控制，不继承作者的随机环境。
 - **构建输出目录**：`dist/<name>/` = `manifest.yml` + 组件 wasm + `lib/`（可选）+ 可选 `build-info` 诊断 sidecar；安装事务只消费可安装子集（manifest + 组件 + `lib/`，过滤 `build-info`）。组件文件名与包布局以 W1 为准。
 - **manifest-less 源码**：D35 的零仪式形态保留——源码可以没有 `manifest.yml`；构建时合成最小 manifest（`version: 0.1.0` + `abi: <构建时的 WIT package version>`，无 `name`、无能力声明）；安装目录名 = crate 名 / `dist/<name>`。`metis build` 产出的包内始终有 manifest（部署根形态统一）；部署根仍接受手工放置的无 manifest 零仪式包（[wit-abi](wit-abi.md) W1.8 D123；W2 D132）。
 - **SDK 依赖来源**：v1 脚手架生成指向 metis 检出目录的 path 依赖（`metis new --sdk-path <metis-checkout>`，默认按 metis 二进制位置推断），并在生成时写入 SDK 版本与 WIT 文件 hash；发布/分发形态（crates.io / git 依赖）随 marketplace 立项，触发 = 首个外部作者或分发需求。
@@ -142,7 +142,7 @@
 
 **D112 定案：统一预检 + 脚手架版本单一来源 + dev/dist 同 profile + 确定性 `metis.build` section。**
 
-- **预检**（`metis check` / `build` / `dev` 共同）：rustc / cargo、`wasm-component-ld`、`wasm-tools`、wit-bindgen 版本、`wasm32-wasip2` target 在场、插件 manifest 声明的 WIT package version vs 宿主 ABI 版本、发布级构建的 lockfile 在场。SDK SemVer 只作诊断，不作 ABI 兼容判定。失败 = miette 三段式（code + 说明 + help，如 `rustup target add wasm32-wasip2`）；**不自动安装**。
+- **预检**（`metis check` / `build` / `dev` 共同）：rustc / cargo、`wasm-component-ld`、`wasm-tools`、wit-bindgen 版本、`wasm32-wasip3` target 在场（WASI 0.3；2026-10-19 维护者确认）、插件 manifest 声明的 WIT package version vs 宿主 ABI 版本、发布级构建的 lockfile 在场。SDK SemVer 只作诊断，不作 ABI 兼容判定。失败 = miette 三段式（code + 说明 + help，如 `rustup target add wasm32-wasip3`）；**不自动安装**。
 - **脚手架版本来源**：`metis new` 的 `rust-toolchain.toml`、SDK 依赖版本、`.cargo/config.toml` 从 metis 二进制自身的构建常量生成（单一来源），不在模板里手写版本号。
 - **profile**：dev 与发布级构建共用优化 profile `metis`（继承 `release`）；不做 dev-only debug/未优化分叉，避免「dev 能跑、发布件行为不同」与缓存分叉。具体 `debug` / `strip` / `codegen-units` / `incremental` 值在 T10.15 以可复现测试钉定并写入脚手架。
 - **产物元数据**：构建完成后用 `wasm-encoder` 在 component 层追加 `metis.build` custom section；内容 = canonical JSON（键排序、无空白、无 timestamp、无绝对路径）：`pipeline_version`、`source_sha256`、`sdk_version`、`wit_package_version`、`target`、`profile`、`toolchain_version`（仅版本，不含 host / path）。追加前剥离所有同名 section，校验恰好一条；`metis.build` 是诊断 / 溯源面，不是信任锚，签名 / attestation 单独绑定产物。若后续有 strip/optimize 步骤，重新追加并校验在场。复现比较 = 剥离该 section 后的规范化 digest（D114）。
@@ -207,8 +207,8 @@
   Cargo.lock              # 首次构建生成
   src/lib.rs              # struct + impl Plugin 骨架（一个示例钩子）
   manifest.yml            # 最小骨架；字段形状 = wit-abi W2 D125–D134
-  rust-toolchain.toml     # channel + targets = ["wasm32-wasip2"]，版本由 metis 构建常量生成
-  .cargo/config.toml      # [build] target = "wasm32-wasip2"
+  rust-toolchain.toml     # channel + targets = ["wasm32-wasip3"]，版本由 metis 构建常量生成
+  .cargo/config.toml      # [build] target = "wasm32-wasip3"
   .gitignore              # target/、.metis/、dist/
   README.md               # 最小插件 + 构建/运行说明
 ```
