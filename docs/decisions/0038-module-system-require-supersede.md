@@ -1,6 +1,6 @@
 # 0038. 模块系统与 require 纪律 supersede（wasm-first 承接）
 
-- Status: accepted（整篇 supersede [ADR-0003](0003-module-require-discipline.md)；载体前提 = [ADR-0034](0034-wasm-first-carrier.md)）
+- Status: accepted（整篇 supersede [ADR-0003](0003-module-require-discipline.md)；载体前提 = [ADR-0034](0034-wasm-first-carrier.md)；`lib/` 契约包的载体措辞由 [ADR-0044](0044-contract-package-type-sources.md) 更新为 `contract.yml` + 文档（2026-10-19），模块系统消亡的决策本体不变）
 - Date: 2026-10-19
 
 ## Context

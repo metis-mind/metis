@@ -151,3 +151,7 @@
 ## 补遗 2（2026-10-19）：目标 WASI 版本 = 0.3
 
 §7「新增 SDK 站输入增补」中的「wasip2 std 拖带 14 个导入的 world 收敛（补遗 6 papercut 1）」按本补遗读：wasip2 是 S1/S2 spike 的取证环境，不是目标；当前目标 = **WASI 0.3**（[wasm-research](wasm-research.md) 补遗 9）。SDK 站输入相应改为「WASI 0.3 std 拖带导入集的 world 收敛」，具体清单 SSOT = wit-abi W9 进口对账。§0 / §7 的 wasip2 表述为历史证据，正文不改写。
+
+## 补遗 3（2026-10-19）：契约包载体与 W7 定案
+
+§2 A2 的「`lib/` 契约包数据职能转 WIT 包」与 §6 E5 的「config / 服务签名面转 WIT」按本补遗读：W7 定案 = 契约包 = `lib/<name>/contract.yml` + 文档（[wit-abi](../design/wit-abi.md) D164；[ADR-0044](../decisions/0044-contract-package-type-sources.md)）；WIT 只承载平台固定 world。config `type:` 与服务方法 Value 形状保留在瘦身 DSL（D166 / D167）；「转 WIT」的死面 = ABI 级「每方法一 WIT 导出」，被 `on-call(service, method, payload)` 取代（W3 D147）。§2 / §6 的预期面按本补遗读，正文不改写。

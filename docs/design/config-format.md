@@ -50,14 +50,14 @@
   overlay.yml               # agent overlay 层（机器唯一可写的配置树文件，C3 详谈）
   secrets.yml               # secrets store（豁免①；形态与纪律 = D46/D47）
   values.yml                # 共享变量（非秘密；C6.4 D135）
-  lib/                      # 部署级契约包（WIT 包；W7 章 = T13-m）
+  lib/                      # 部署级契约包（contract.yml + 文档；W7 章 = T13-m）
   journal/                  # journal 段文件（豁免②；细节 = journal.md J4 = D90/D91）
   plugins/
     foo/
       manifest.yml          # 可选：无 = 零仪式插件（D35）
       config.yml            # 部署区：配置值稀疏覆盖（D36）
       plugin.wasm           # 组件产物（文件名 = W1 章 SSOT）
-      lib/                  # 随包契约（WIT 包）
+      lib/                  # 随包契约（contract.yml + 文档）
       data/                 # 运行期区
         fs/                 # private scope 根（ctx.fs 挂载点；插件自带 DB 也住这里）
 ```
@@ -65,7 +65,7 @@
 - **插件私有数据同居插件目录**：fs 私域根 = `data/fs/`；插件自带 DB（SQLite / redb / sled 等）由插件自己在 private fs 内管理，核心不代持 DB 句柄（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）。淘汰集中数据根（`data/plugins/<name>/` 分居）：同居让「一个插件的全部」= 一个目录，卸载处置（C7）与备份/迁移粒度顺手。
 - **global scope 豁免清单物理落点** = `secrets.yml` + `journal/` 两处（[seam-capabilities](seam-capabilities.md) §5.2 两条豁免）；其余部署根 global 正常可达（维护/调试正道不变）。
 - **版本管理纪律**：部署根可整体入库（部署即代码）；gitignore = `secrets.yml`、`journal/`、`plugins/*/data/`；工具面脚手架生成 `.gitignore`。
-- **契约包无运行期布线文件**：`lib/` 与插件随包 WIT 契约包由 loader 扫描；不存在运行期模块别名文件（跨插件代码共享 = 编译期依赖，[service-registry](service-registry.md) §7）。
+- **契约包无运行期布线文件**：`lib/` 与插件随包契约包由 loader 扫描；不存在运行期模块别名文件（跨插件代码共享 = 编译期依赖，[service-registry](service-registry.md) §7）。
 
 ### C1.2 D30 配置树单文件制
 

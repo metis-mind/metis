@@ -1,6 +1,6 @@
 # 0019. Crate 划分与 lib/ 模块体系
 
-- Status: accepted
+- Status: accepted（C3 lib 模块体系整篇由 [ADR-0044](0044-contract-package-type-sources.md) supersede（2026-10-19）：`@lib` alias / `.luaurc` / require 包装器 / lib 两层代码库 / 作者 lib 来源 / lib 代码护栏死亡；`lib/` 只保留契约数据职能。C1 的布局原则（纯度边界即 crate 边界、依赖单向）与 C2 的纯度原则（fiber-core 不碰执行器 / FFI）继续有效；具体 crate 清单随 T13-b 修订（`metis-luau` 删除、`metis-component` 建立），C2 的载体名以 [ADR-0034](0034-wasm-first-carrier.md) 为准）
 - Date: 2026-10-02
 
 ## Context

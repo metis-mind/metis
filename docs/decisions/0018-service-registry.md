@@ -1,6 +1,6 @@
 # 0018. 服务注册表与 inject 设计
 
-- Status: accepted（四格由 [ADR-0026](0026-luau-abi.md) 局部取代/细化（2026-10-10，supersede 批次 #2–#5）：S5 `Err(Unavailable)` 落点细化 = 可选依赖常驻缺席走 deps 字段不存在（结构性 nil），该错误归运行期窗口；S5 依赖环「等待环只超时」收窄 = required 依赖环启用期硬拒；S3「加载响亮失败」与 S2「重复 key 静态扫描」的时机措辞精确化 = 启用期；S6「插件服务 v1 文档约定起步」补可选升级通道 = 插件随包契约 `contract.yml`）
+- Status: accepted（四格由 [ADR-0026](0026-luau-abi.md) 局部取代/细化（2026-10-10，supersede 批次 #2–#5）：S5 `Err(Unavailable)` 落点细化 = 可选依赖常驻缺席走 deps 字段不存在（结构性 nil），该错误归运行期窗口；S5 依赖环「等待环只超时」收窄 = required 依赖环启用期硬拒；S3「加载响亮失败」与 S2「重复 key 静态扫描」的时机措辞精确化 = 启用期；S6「插件服务 v1 文档约定起步」补可选升级通道 = 插件随包契约 `contract.yml`；S6 的 manifest 方法集与「插件服务文档约定起步」两格由 [ADR-0044](0044-contract-package-type-sources.md) 局部 supersede（2026-10-19：方法集住契约；Seam 三角、框架级契约必须有包、演化规则存活））
 - Date: 2026-10-02
 
 ## Context
