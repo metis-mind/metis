@@ -194,7 +194,7 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 - **API 族**：`ctx.mount(declaration) -> handle`（编排面新方法族）；句柄供 unmount（D64）。declaration 的编码 = TLV `Value`（[wit-abi](wit-abi.md) W6 D160/D162：mount 声明不走 blob 车道）；不透明句柄形态 = `mount-handle` resource（W3 D150）。
 - **能力门立 `mount: true`**（capabilities map 新键，`process: true` 同形）：mount = 元权限（激活代码运行）——D26 编排面不立门的间接化论证到此断开：间接化管「调用已激活的」，mount 是「激活新的」。fail-closed 缺省（未声明调用 = 运行时响亮指路 manifest，W3 章原样）；零仪式插件无资格（W1 章原样）；审批面三栏并示同栏可见（W9 章原样）。
 - **淘汰**：不立门走编排面惯例（D26）——对称性在「激活新代码」处断开，严格制定调下显式门更合身。
-- **演进纪律**：capabilities 词汇 additive 增补 → WIT package version 演进（[wit-abi](wit-abi.md) W10 章 = T13-p）；正式进字段面 = [ADR-0028](../decisions/0028-instance-model.md) 批次 #1。
+- **演进纪律**：capabilities 词汇 additive 增补 → WIT package version 演进（[wit-abi](wit-abi.md) W10 D188 已兑现）；正式进字段面 = [ADR-0028](../decisions/0028-instance-model.md) 批次 #1。
 - **mount 执行 = 标准启用管线**：部署索引解析 → config 合成校验（含共享变量解析，含 secret；C6.4 D135 / 细则 = D67）→ inject 解析（W9 章三分原样）→ setup。与 boot/热更同一条筋。mount 频率面 = 每会话一次量级（非高频）；mount 消耗（编译 + setup）预算归实现期清单。
 
 ### S3.4 D64 生命周期 = 父子账本 + 显式 unmount
@@ -334,7 +334,7 @@ plugins: # list 形——允许同 key 多实例（各带不同 overlay）
 - **冻结形态**：新建 [ADR-0028](../decisions/0028-instance-model.md)（五站紧凑重述 + 演进纪律承接 + supersede 批次 7 条）；本文档转 living-under-freeze（头部状态行指向 ADR-0028；细则澄清继续沉淀，语义变更走 0028 演进纪律）。
 - **批次 7 条**：冻结面见 [ADR-0028](../decisions/0028-instance-model.md)（capabilities + `mount` 键、秘密解析源、判定面同作用域化、journal 属主与实例字段结案、撞名复审、fleet 扩展、触发器兑现）。
 - **Status 行注**（不进批次条目）：ADR-0013（D2 复审点结案 = D68/D69）/ ADR-0017（D7 汇合结案 = D66）。
-- **演进纪律承接不立新**：ABI 面随 WIT package version（additive → 版本演进，W10 章）；机制面破坏式 = 新 ADR supersede；living doc 保持 living；扩展位/触发器以本文档各站联动登记汇总表为 SSOT。
+- **演进纪律承接不立新**：ABI 面随 WIT package version（additive → 版本演进，W10 D188 已兑现）；机制面破坏式 = 新 ADR supersede；living doc 保持 living；扩展位/触发器以本文档各站联动登记汇总表为 SSOT。
 
 ### S5.3 联动登记（S5）
 

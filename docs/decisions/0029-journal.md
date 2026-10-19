@@ -1,6 +1,6 @@
 # 0029. Journal 冻结（J1–J6：核心操作/审计日志）与既有 ADR 局部 supersede 批次
 
-- Status: accepted（2026-10-18 局部 supersede：D78 kind 表 `fanout_cancelled` 格 = [ADR-0035](0035-journal-fanout-cancelled-supersede.md)（wasm 载体吸收，W4.2/W4.6）；2026-10-19 局部 supersede：sqlite 能力撤回 = [ADR-0039](0039-fs-capability-two-tier.md)（D78/J2 的 sql 族与 fs/sql 表述失效，DB 写入归 private fs）；正文其余不变）
+- Status: accepted（2026-10-18 局部 supersede：D78 kind 表 `fanout_cancelled` 格 = [ADR-0035](0035-journal-fanout-cancelled-supersede.md)（wasm 载体吸收，W4.2/W4.6）；2026-10-19 局部 supersede：sqlite 能力撤回 = [ADR-0039](0039-fs-capability-two-tier.md)（D78/J2 的 sql 族与 fs/sql 表述失效，DB 写入归 private fs）；2026-10-19 版本载体注：D92 / 演进纪律 1 / Consequences 的 `abi_rev` 措辞 = 历史载体，现载体 = WIT package version（[ADR-0034](0034-wasm-first-carrier.md) §3 + [wit-abi](../design/wit-abi.md) W10 D187–D188），正文冻结不动；其余不变）
 - Date: 2026-10-13
 
 ## Context

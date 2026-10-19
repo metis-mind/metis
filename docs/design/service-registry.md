@@ -163,7 +163,7 @@ Provider/Consumer 两角已锁（§2/§3：manifest 双声明 + 只认 key + 无
 
 （部署根布局 SSOT = [config-format](config-format.md) §C1.1 D29：`metis.yml` 单文件、插件 = 目录单形态、`secrets.yml`/`journal/`/`overlay.yml` 等件。）
 
-- 框架级契约包随核心版本演进（v1 monorepo 内 `lib/`；契约包 SSOT 入仓，钉版纪律 = W10 章）
+- 框架级契约包随核心版本演进（v1 monorepo 内 `lib/`；契约包 SSOT 入仓）；契约包版本面 = W7 D165 / W10 D191，工具链钉版纪律 = W10 D192 已兑现
 - **契约包无运行期模块副本**：跨插件代码共享 = 编译期依赖；`lib/` 只承载契约数据（`contract.yml` + 文档），不承载可执行模块——不存在「各插件看到不同世界」的模块状态问题
 - 契约变更 = 契约版本（单整数）+ 规范化形状比较 → 动态消费者走反向索引级联重启用 / 编译期消费者须重编译（随包契约同名冲突，[wit-abi](wit-abi.md) W7 D171）；管理员级变更走审批；v1 lib 无独立版本号（契约版本 ≡ 核心版本 + 生态契约 `version:` 字段，W7 章）
 - **v1 无包管理**：插件 = 目录，安装 = 放文件 + 配置树登记（走 Creator 审批事务）。各语言包管理生态（Cargo / npm 等）属 guest 侧；分发时代按 [ADR-0004](../decisions/0004-plugin-forms.md) 登记长回——包 = manifest + 组件 + 依赖声明（机器可读，依赖解析数据基础白送），安装 = fetch + verify + Creator 事务，主要用户是 agent 自己

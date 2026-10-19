@@ -1,6 +1,6 @@
 # 0022. Value 增加 Int(i64)：Luau 原生整数对接
 
-- Status: accepted（Decision「过渡纪律」条由 [ADR-0026](0026-luau-abi.md) 结案（2026-10-10，supersede 批次 #6）：整数链路已通（FFlag + raw push 收口），2⁵³ 过渡映射未启用即退役；「ABI 版本纪律归 tooling 议题」已兑现 = manifest `abi_rev` 单整数 min 语义；Consequences「`Bytes` 变体维持扩展位登记」行由 [ADR-0042](0042-value-bytes.md) 局部取代（2026-10-19）；Luau 原生整数对接论据由 [wit-abi](../design/wit-abi.md) W6 章换血为 WIT `s64` + TLV Int tag 论据（2026-10-19，决策本体不变））
+- Status: accepted（Decision「过渡纪律」条由 [ADR-0026](0026-luau-abi.md) 结案（2026-10-10，supersede 批次 #6）：整数链路已通（FFlag + raw push 收口），2⁵³ 过渡映射未启用即退役；「ABI 版本纪律归 tooling 议题」已兑现 = manifest `abi_rev` 单整数 min 语义；Consequences「`Bytes` 变体维持扩展位登记」行由 [ADR-0042](0042-value-bytes.md) 局部取代（2026-10-19）；Luau 原生整数对接论据由 [wit-abi](../design/wit-abi.md) W6 章换血为 WIT `s64` + TLV Int tag 论据（2026-10-19，决策本体不变）；2026-10-19 版本载体注：`abi_rev` 单整数 min 语义已由 WIT package version 承接（[ADR-0034](0034-wasm-first-carrier.md) §3 + [wit-abi](../design/wit-abi.md) W10 D187–D188），正文冻结不动）
 - Date: 2026-10-03
 
 ## Context

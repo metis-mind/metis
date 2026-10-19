@@ -329,7 +329,7 @@
   1. **「新代码重跑旧史」首个真实需求**——自我修改审批的实证化：用历史输入验证新插件版本的行为差（Fowler bug-fix 重放场景）；
   2. **agent 层 eval/确定性重放需求**实锤到插件层机器不够（需 host 注入点虚拟化边界）；
   3. **崩溃后连续性损失被证实不可接受**（fresh-start 的代价从理论变痛点）。
-- **重开时复活资产**（留档原位，不重建）：调研 §7 映射 replay 面（M2 边界录制 / M3 行为化发散判定 / M9 对外网关纪律）；kind 表扩族（D78 撤销记录的边界输入类 + `nondeterminism_read` 类；生成型秘密加密议题随之复活）；wasm 盒 IO 全走 host imports = 天然可录制（wasm-research §5.7）；wasmtime 确定性工具箱（fuel/wasi-virt/NaN 规范化，ADR-0024 Consequences 留档）。ABI 面演进走 WIT package version 既定通道（W10 章）。
+- **重开时复活资产**（留档原位，不重建）：调研 §7 映射 replay 面（M2 边界录制 / M3 行为化发散判定 / M9 对外网关纪律）；kind 表扩族（D78 撤销记录的边界输入类 + `nondeterminism_read` 类；生成型秘密加密议题随之复活）；wasm 盒 IO 全走 host imports = 天然可录制（wasm-research §5.7）；wasmtime 确定性工具箱（fuel/wasi-virt/NaN 规范化，ADR-0024 Consequences 留档）。ABI 面演进走 WIT package version 既定通道（W10 D188 已兑现）。
 - **J5 缓议转扩展位**（同批确认）：插件面 journal 查询接口不立；部署者消费 = jq/文本工具直读段文件（D90 布局为此优化：时间有序文件名 + 头行版本 + 纯 JSONL）。
 
 ### J6.2 冻结登记

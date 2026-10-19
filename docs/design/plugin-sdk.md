@@ -1,6 +1,6 @@
 # Metis — 插件 SDK 作者面设计（living doc）
 
-> 状态：living design doc——2026-10-17 开章（T13-d SDK 形态议题批拍板写入：七项形态定案 = S1–S7（D98–D104）；第八项 = 固化去处定案，无 D 号——本文件开章 + [sdk-precedent-survey](../research/sdk-precedent-survey.md) 落盘即其兑现）。本文档 = 插件作者面（`metis-plugin` crate 的宏形状、trait 族、异步与错误习语、类型生成）的 SSOT；ABI 层（宿主 ↔ 组件边界）= [wit-abi](wit-abi.md) W 系列，本文档住其上一层——ABI 走钉版纪律（W10 章），作者面随语义演进，分层防单一文档膨胀（[doc-lifecycle](doc-lifecycle.md)）。
+> 状态：living design doc——2026-10-17 开章（T13-d SDK 形态议题批拍板写入：七项形态定案 = S1–S7（D98–D104）；第八项 = 固化去处定案，无 D 号——本文件开章 + [sdk-precedent-survey](../research/sdk-precedent-survey.md) 落盘即其兑现）。本文档 = 插件作者面（`metis-plugin` crate 的宏形状、trait 族、异步与错误习语、类型生成）的 SSOT；ABI 层（宿主 ↔ 组件边界）= [wit-abi](wit-abi.md) W 系列，本文档住其上一层——ABI 走钉版纪律（W10 D192 已兑现），作者面随语义演进，分层防单一文档膨胀（[doc-lifecycle](doc-lifecycle.md)）。
 > 前提（已定不议）：插件唯一载体 = wasm 组件、作者不见 WASI/WIT、`#[metis::plugin]` + trait 实现形态（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §1/§4）；接口数据三分法与 E3/E4 拍板（2026-10-16，SSOT = [台账](../backlog.md) T13 状态行）；实例内执行模型 = [wit-abi](wit-abi.md) W4 章（D93–D97）。
 > 证据基线：[sdk-precedent-survey](../research/sdk-precedent-survey.md)（proxy-wasm / zed_extension_api / Spin / Extism PDK 宏藏 ABI 机制四路调研，2026-10-17）；[wasm-research](../research/wasm-research.md) 补遗 6/7（S1/S2 spike：guest 样板 31 行、同实例重入实证）。
 > Last reviewed: 2026-10
@@ -36,7 +36,7 @@ wit-bindgen 的 `generate!` / `export!` 与 Guest impl 全住 `metis-plugin` cra
 
 拓扑 = `crates/metis-plugin`（作者面 facade：Plugin trait / ctx / Error / Exclusive / futures 门面，内藏 WIT 绑定）+ `crates/metis-plugin-macros`（proc-macro——属性宏发布受 Rust 强制：proc-macro 与普通代码不能同 crate 发布；Spin/Extism 同此两 crate 形态）。Value/TLV 依赖 `metis-codec`（T10.13，宿主/guest 双 target）。
 
-wit-bindgen = `metis-plugin` 的**私有钉版依赖**（Zed 先例：作者不见 wit-bindgen；版本随 SDK 统一演进）——ADR-0034 风险 W3 钉版纪律（wit-bindgen/wasm-tools/wasmtime 对齐）在 SDK 侧的落点。内建件便利 re-export（serde_json 等）= feature 面（design-review B2 登记），v1 不做。
+wit-bindgen = `metis-plugin` 的**私有钉版依赖**（Zed 先例：作者不见 wit-bindgen；版本随 SDK 统一演进）——ADR-0034 风险 W3 钉版纪律（wit-bindgen/wasm-tools/wasmtime 对齐）在 SDK 侧的落点（W10 D192 已兑现）。内建件便利 re-export（serde_json 等）= feature 面（design-review B2 登记），v1 不做。
 
 目标 = **WASI 0.3**（2026-10-19 维护者确认）；guest std 拖带的 WASI 0.3 基线导入（clocks / random / filesystem async 等）由宿主统一链接 wasmtime-wasi 0.3（归 T10.10）；WASI 基线白名单 = W3 D154 / W9 的进口对账面，SDK 不暴露 WASI 名。`wasm32-wasip3` target / std p3 迁移的工具链落地归 T10.10 / T10.15（ADR-0034 W7）；wasip2 时代的 14 导入 papercut（[wasm-research](../research/wasm-research.md) 补遗 6）为历史证据，0.3 基线由 T10.10 核实。no_std / build-std 裁剪 = 扩展位，触发器 = 插件二进制体积/冷启动投诉成串。
 

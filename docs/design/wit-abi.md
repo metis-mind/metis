@@ -33,7 +33,7 @@
 | W7  | 契约与类型来源（① 平台封闭面 = WIT 富类型原生；A7 半消融 = E5 拍板：瘦身形状 DSL 继承 Value 形状面）                              | A7                          | ✅ 2026-10-19（D163–D172） |
 | W8  | 事件静态声明（扁平名 + `internal/` 保留；声明 = 审批面；`on-event` 导出）                                                         | A8                          | ✅ 2026-10-19（D173–D179） |
 | W9  | deps/provide 与能力门（进口对账机械化）                                                                                           | A9                          | ✅ 2026-10-19（D180–D185） |
-| W10 | 工具形态与 ABI 版本纪律（WIT package version 承接 abi_rev）                                                                       | A10                         | 未开始                     |
+| W10 | 工具形态与 ABI 版本纪律（WIT package version 承接 abi_rev）                                                                       | A10                         | ✅ 2026-10-19（D186–D193） |
 
 ---
 
@@ -75,11 +75,11 @@
 
 **D117 定案：package = `metis:plugin@<abi-version>`，world = `plugin`，WIT SSOT = `crates/metis-plugin/wit/`。**
 
-- **名字**：package `metis:plugin`，world `plugin`，v1 版本号 `0.1.0`。版本号语义、比较规则与兼容判定 = W10 章；本章只定名字与版本字符串的住处。
+- **名字**：package `metis:plugin`，world `plugin`，v1 版本号 `0.1.0`。版本号语义、比较规则与兼容判定 = W10 D187；本章只定名字与版本字符串的住处。
 - **物理位置**：WIT 目录住 SDK crate（`crates/metis-plugin/wit/`）——SDK 是作者实际依赖、将来要按 crate 发布的单元，Cargo 只打包 crate 目录内的文件，WIT 放在里面才能随 SDK 一起走。宿主 `metis-component` 以源码路径引用同一目录生成绑定（Zed 式两视角：guest 只对当前版本生成，宿主对全部支持版本生成）；两组绑定必须来自同一目录树，禁止拷贝第二份。这是工作区内源码级路径引用，不产生 Cargo 依赖（`metis-component` 不依赖 guest 侧 SDK）；若宿主 crate 将来需要独立发布，再评估中立 WIT crate 或构建期复制。
 - **文件按章拆**：规划中 `plugin.wit`（world + 生命周期导出）；后续 `error.wit`（W5）、`ctx.wit`（W3）、`events.wit`（W3 import 面 + W8 声明面）、`blob.wit` / `streams.wit` / `payload.wit`（W6）加入同一 package 目录。WIT 允许多文件同包。
-- **固定 world**：单一 world，import 词汇表在一个 package version 内封闭（[plugin-sdk](plugin-sdk.md) S6 已定）；增补 import / export = 新 package version（W10）。宿主与插件不生成按能力裁剪的 world（编译期组合 world = 扩展位，前提 = W2 落地）。
-- **版本快照**：v1 只有一个 ABI 版本；多版本共存形态（每个支持版本一份 WIT 目录、宿主全量生成）归 W10。旧组件与新宿主的兼容判定 = manifest 声明的 package version ≤ 宿主支持版本（比较语义 W10）。
+- **固定 world**：单一 world，import 词汇表在一个 package version 内封闭（[plugin-sdk](plugin-sdk.md) S6 已定）；增补 import / export = 新 package version（W10 D188）。宿主与插件不生成按能力裁剪的 world（编译期组合 world = 扩展位，前提 = W2 落地）。
+- **版本快照**：W10 D189 定 = `crates/metis-plugin/wit/<version>/` 每支持版本一个子目录，guest 只对当前快照生成、宿主对全部支持快照生成；D190 定首个冻结快照。旧组件与新宿主的兼容判定 = W10 D187 三合一（声明 / 结构 / 词汇表；本条原「≤ 宿主支持版本」按「∈ 集合」读，下界 = `0.1.0`、上界 = `current`）。
 
 ### W1.3 D118 生命周期导出集与入口契约
 
@@ -100,13 +100,13 @@ world plugin {
 }
 ```
 
-- **W3 增补（2026-10-19）**：`on-call` / `on-timer` 是非生命周期导出，随 W3 D147 / D145 加入 v1 world；`on-event` = W8 D177。`0.1.0` 尚未发布，本节草图与 W3 同批补全 = 首个发布快照的编制（W10 冻结）；发布后的增补才适用「新 package version」纪律。**W6 增补（2026-10-19）**：`on-call` 的 args / 返回改 `payload`（D160）；config 仍是 TLV。**W8 增补（2026-10-19）**：`on-event` 定形并进入 required 导出集（D177）；SDK 默认 `Ok(None)`。
+- **W3 增补（2026-10-19）**：`on-call` / `on-timer` 是非生命周期导出，随 W3 D147 / D145 加入 v1 world；`on-event` = W8 D177。`0.1.0` 尚未发布，本节草图与 W3 同批补全 = 首个发布快照的编制（W10 D190）；发布后的增补才适用「新 package version」纪律。**W6 增补（2026-10-19）**：`on-call` 的 args / 返回改 `payload`（D160）；config 仍是 TLV。**W8 增补（2026-10-19）**：`on-event` 定形并进入 required 导出集（D177）；SDK 默认 `Ok(None)`。
 
 - **`setup(config)`**：拿启用期合成并冻结的完整配置（config-format D36 管线产物：校验 → 秘密解析 → 默认值合成），成功返回 = 实例可以进入 Active。返回 `error` = 加载失败（W1.5）。
 - **`on-config(config)`**：配置热更新通道（config-format D42）。`Ok(true)` = live-apply 成交；`Ok(false)` / `Err` / trap = 重挂载。默认实现 = `Ok(false)`（SDK 补全），所以「没实现」与「拒绝吸收」是同一行为。
 - **`dispose()`**：唯一的手动清理通道（A1.2 平移）。在飞任务结算后由宿主调用（W1.6）；可 await ctx 效应调用；错误 / trap 记日志、不中断后续清理。
 - **无 ctx 参数**：ctx = 宿主 import 接口集（W3）；SDK 在作者面合成 `Ctx`，作者签名形如 `async fn setup(&mut self, ctx: &Ctx, config: Value) -> Result<(), Error>`。ABI 不重复传递宿主能力表。
-- **world 导出集在单一 package version 内封闭**：组件必须导出生命周期三者与 W3 的 `on-call` / `on-timer` / `on-event`（W8 D177）；缺任一 = 安装期 world 不匹配错误。作者面的「可选钩子」= trait 默认方法，不是缺失导出。发布后的增补 = 新 package version（W10）。
+- **world 导出集在单一 package version 内封闭**：组件必须导出生命周期三者与 W3 的 `on-call` / `on-timer` / `on-event`（W8 D177）；缺任一 = 安装期 world 不匹配错误。作者面的「可选钩子」= trait 默认方法，不是缺失导出。发布后的增补 = 新 package version（W10 D188）。
 - **元数据唯一去处 = manifest**：组件 custom section 不作声明面（A1.1「table 字段集封闭」的载体平移）。
 
 ### W1.4 D119 入口执行时序与激活门
@@ -160,7 +160,7 @@ world plugin {
 
 - 物理形态：`plugins/<name>/plugin.wasm`（缺省名；零仪式无 manifest，故不可改名），无 `manifest.yml`。经 `metis build` 产出的零仪式源码包带合成的最小 manifest（[build-pipeline](build-pipeline.md) D108），不改变本节 ABI 面。
 - ABI 面不变：三个生命周期导出恒在场（SDK 默认补全）；config = 空 map；无 config schema、无能力声明面；private fs 结构性授予读写（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）；global / http / process / mount 等效应能力 fail-closed；imports 仍按固定 world 对账；无 provide/inject；不可 mount（config-format D35；[instance-model](instance-model.md) D63）。
-- 兼容判定：无 manifest 即无 package version 声明面；零仪式组件只在结构匹配宿主当前 world 时被接受（world 不匹配 = 安装错误）。ABI 版本演进后，旧零仪式包须加 manifest 声明版本（W2/W10）。
+- 兼容判定：无 manifest 即无 package version 声明面；零仪式组件只在结构匹配宿主当前 world 时被接受（world 不匹配 = 安装错误）。ABI 版本演进后，旧零仪式包须加 manifest 声明版本（W2/W10 D187：零仪式仅当前快照）。
 - 手写组件的导出集必须匹配 world；缺导出 = 安装期错误，不因零仪式放宽。
 - 成长路径：加 `manifest.yml`，组件文件不动；能力面按 manifest 声明启用。
 
@@ -200,7 +200,7 @@ world plugin {
 | W7（T13-m）    | **已兑现（2026-10-19）= W7 D163–D172**：随包契约 `lib/`（包内容区的一部分，D35）；W1 只定 `manifest.yml` + 组件文件 + `lib/` 的包布局边界                                                                        |
 | W8（T13-n）    | **已兑现（2026-10-19）= W8 D173–D179**：`on-event` 定形并进入 required 导出集；事件名 / `internal/` / 声明语义 / emit 校验 / 形状生命周期由 W8 承接（D118 的 additive 增补完成）                                 |
 | W9（T13-o）    | **已兑现（2026-10-19）= W9 D180–D185**：安装期结构事实（导出集 / import 词汇表 / 组件文件）与启用期五格分界；W1.1 / W1.3 的「安装错误」按「检出并记录」读（W9.1）                                                |
-| W10（T13-p）   | package version 的数值与比较、多版本快照、ABI 版本纪律（D117）                                                                                                                                                   |
+| W10（T13-p）   | **已兑现（2026-10-19）= W10 D186–D193**：ABI 面清单；版本载体与三合一接受；bump 纪律；快照布局与多版本共存；首个冻结快照；版本面独立；钉版纪律；工具面判定落点                                                   |
 | T10.10         | 实例化 / Store 限额 / fuel / epoch；加载预算与 dispose 预算的数值；`.cwasm` 缓存                                                                                                                                 |
 | T10.12         | 安装期 start / world 校验；包内容复制与未知文件处置；卸载                                                                                                                                                        |
 | T10.14         | SDK 默认实现（`setup` = `Ok(())`、`on-config` = `Ok(false)`、`dispose` = `Ok(())`、`on-event` = `Ok(None)`）；作者面签名；`Ctx` 合成                                                                             |
@@ -211,7 +211,7 @@ world plugin {
 | plugin-sdk     | S2 WIT 目录确认（D117）；S1 生命周期钩子形态（D118）；`on_config` 归 W1                                                                                                                                          |
 | ADR-0005       | Consequences 成本账局部取代（[ADR-0037](../decisions/0037-component-instance-cost-ledger.md)，D124）                                                                                                             |
 | 实现期配置     | 加载总预算（W1.5）；`dispose` 墙钟预算（W1.6）                                                                                                                                                                   |
-| 扩展位         | 编译期组合 world（S6 登记，W2 已落地后维持不启用）；多组件包（W1/W2 包布局面）；多 ABI 版本共存（W10）                                                                                                           |
+| 扩展位         | 编译期组合 world（S6 登记，W2 已落地后维持不启用）；多组件包（W1/W2 包布局面）；多 ABI 版本共存（W10 D189 已兑现）                                                                                               |
 
 ---
 
@@ -246,27 +246,27 @@ world plugin {
 - 边界：manifest = 插件的自述（作者意图 + 元数据）；配置值住 `config.yml`（[config-format](config-format.md) D36）；装配单住 `metis.yml`（D31/D32）；身份 = 目录名（W1.1 D116）。
 - 未知字段（顶层与嵌套同政策）= 响亮报错，带字段路径 +「core 版本过旧？」提示；重复键 = parser 响亮；空 manifest = 合法（全部缺省）。
 - manifest 永不由机器重写；构建合成最小 manifest 是唯一例外（W2.8 D132）。组件 custom section（`metis.build`）只作诊断 / 溯源，不是元数据 SSOT（W1.1；[build-pipeline](build-pipeline.md) D112）。
-- 不立 manifest 自身的版本号；字段集演进随 WIT package version（W10）。
+- 不立 manifest 自身的版本号；字段集演进随 WIT package version（W10 D188）。
 - 读取时序：安装期解析 / 未知字段与类型校验 / 结构事实（world、import 词汇表）/ 登记部署索引；语义对账（config 校验、秘密解析、inject / provides / events 对账）= 启用期；能力门 = 运行期逐调用（对账时机两分 = W9 D180；config-format §0.2 同判；W2.9 D133）。
 
 ### W2.2 D126 顶层字段全集与身份
 
 **D126 定案：顶层字段 = 封闭集；`name` 不立；身份恒 = 目录名。**
 
-| 字段           | 缺省          | 一句                                             |
-| -------------- | ------------- | ------------------------------------------------ |
-| `description`  | 无            | 审批 / 展示用文本                                |
-| `version`      | 无            | 插件分发版本（semver 约束归任务 9）              |
-| `abi`          | 无            | 组件构建所对的 WIT package version（比较归 W10） |
-| `component`    | `plugin.wasm` | 包内组件文件（形状 = W1.1 D116）                 |
-| `config`       | 无            | config schema（W2.4 D128）                       |
-| `capabilities` | 无            | 能力声明（W2.5 D129）                            |
-| `provides`     | 无            | 服务面（W2.7 D131）                              |
-| `inject`       | 无            | 依赖面（W2.7 D131）                              |
-| `events`       | 无            | 事件声明面（W2.7 D131）                          |
+| 字段           | 缺省          | 一句                                                  |
+| -------------- | ------------- | ----------------------------------------------------- |
+| `description`  | 无            | 审批 / 展示用文本                                     |
+| `version`      | 无            | 插件分发版本（semver 约束归任务 9）                   |
+| `abi`          | 无            | 组件构建所对的 WIT package version（比较归 W10 D187） |
+| `component`    | `plugin.wasm` | 包内组件文件（形状 = W1.1 D116）                      |
+| `config`       | 无            | config schema（W2.4 D128）                            |
+| `capabilities` | 无            | 能力声明（W2.5 D129）                                 |
+| `provides`     | 无            | 服务面（W2.7 D131）                                   |
+| `inject`       | 无            | 依赖面（W2.7 D131）                                   |
+| `events`       | 无            | 事件声明面（W2.7 D131）                               |
 
 - **`name` 不立**：身份恒 = 目录名（config-format D31；W1.1 D116）；crate 名只决定构建输出目录 / 安装目录名。
-- 不在表内的顶层字段 = 未知字段响亮；嵌套条目同理。新增字段 = WIT package version additive（W10），不另立 manifest 版本机制。
+- 不在表内的顶层字段 = 未知字段响亮；嵌套条目同理。新增字段 = WIT package version additive（W10 D188），不另立 manifest 版本机制。
 - 零仪式 = 无 manifest，ABI 面同 W1.8 D123；空 manifest 全缺省合法；成长路径 = 加 `manifest.yml`，组件文件不动。
 - 有意不收：marketplace 元数据（authors / license / repository）归任务 9；`runtime` / `min_core` / `schedule` 不立（W2.11）；自由 `build.command` = build-pipeline D108 扩展位，不启用。
 
@@ -326,7 +326,7 @@ capabilities:
 - `process` / `mount` 值为布尔：`true` = 启用；`false` / 缺省 = 无能力（拒绝）。timer 无门；纯算件无需声明。
 - **sqlite 不立**：`sqlite` 键 = 未知字段响亮。宿主不代持 DB 句柄、不提供 SQL 方法族 / `sql.*` 错误族 / `sql_call` / `sql_result` journal kind 的新设计面。插件需要数据库时自带 guest crate（SQLite / redb / sled 等），库文件住 `data/fs/` 内，由插件自己管理 schema、迁移与生命周期；private fs 隐式读写使这条路径无需能力声明。
 - **mount**：`true` = 允许调用 `ctx.mount` 创建子树实例（激活新代码的元权限；[instance-model](instance-model.md) §S3.3 D63；[ADR-0028](../decisions/0028-instance-model.md) 批次 #1）；`false` / 缺省 = 拒绝。它是编排面能力门的第一个例外（当前唯一）。
-- 声明是作者意图；运行期门 fail-closed；能力词汇 additive 增补 = WIT package version（W10）。审批面逐条展示；global 最高档。
+- 声明是作者意图；运行期门 fail-closed；能力词汇 additive 增补 = WIT package version（W10 D188）。审批面逐条展示；global 最高档。
 
 ### W2.6 D130 命名根撤回
 
@@ -366,7 +366,7 @@ events:
 
 **D132 定案：`abi` = 可选 WIT package version 声明；`version` = 插件分发版本；`abi_rev` 消亡。**
 
-- `abi` = 可选字符串，组件构建所对的 `metis:plugin` WIT package version（如 `"0.1.0"`）；比较 / 接受条件 = W10。缺省 = 无版本声明；接受条件 = 结构匹配宿主当前 world（与零仪式同规则）。
+- `abi` = 可选字符串，组件构建所对的 `metis:plugin` WIT package version（如 `"0.1.0"`）；比较 / 接受条件 = W10 D187 三合一（声明 / 结构 / 词汇表）。缺省 = 无版本声明；接受条件 = 结构匹配宿主当前 world（与零仪式同规则）。
 - `version` = 插件自身分发版本，可选；v1 不强制 semver（任务 9）；不是身份，与 `abi` 无关。
 - `description` = 可选自由文本。
 - 构建合成最小 manifest = `version: 0.1.0` + `abi: <构建时的 WIT package version>`；不含 `name`；安装目录名取 crate 名 / `dist/<name>`（[build-pipeline](build-pipeline.md) D108 同步）。
@@ -425,7 +425,7 @@ events:
 | W7（T13-m）     | **已兑现（2026-10-19）= W7 D163–D172**：`type:` 表达式语法与词汇（D166）；契约包格式 / 三来源合并（D164/D165）；`provides.contract` 与 `@N`（D165）；作者自定义服务 / 事件 schema 的住处（D167）；作者类型由 `types!()` 生成（D170） |
 | W8（T13-n）     | **已兑现（2026-10-19）= W8 D173–D179**：事件名语义 / `internal/` 规则 / 声明强制程度 / 形状总表 / emit 校验 / `on-event`；manifest 只列名字，形状住契约                                                                              |
 | W9（T13-o）     | **已兑现（2026-10-19）= W9 D180–D185**：inject / provides / events 对账形态；能力门（含 `mount` 例外）；import 清单 ⊆ 宿主词汇表；方法集对账消亡；失败聚合；`metis check` 范围                                                       |
-| W10（T13-p）    | `abi` 的数值与比较；manifest 字段集 / 能力词汇 additive 演进纪律                                                                                                                                                                     |
+| W10（T13-p）    | **已兑现（2026-10-19）= W10 D186–D193**：`abi` 的精确声明与三合一接受（D187）；manifest 字段集 / 能力词汇演进 = D188；manifest 版本机制仍不立                                                                                        |
 | config-format   | D36 配置管线按 `config` schema 消费；共享变量 = `{ $value: "name" }`（含 secret；C6.4 D135 / [ADR-0040](../decisions/0040-config-shared-variables.md)）；fs 两档（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)）          |
 | build-pipeline  | D108 合成最小 manifest = `version` + `abi`（无 `name`）；脚手架按 W2 字段集生成；组件文件名 = D116                                                                                                                                   |
 | plugin-sdk      | S6 能力白名单 = manifest `capabilities` 声明源；编译期组合 world 维持扩展位（W2 已落地后仍不启用）                                                                                                                                   |
@@ -795,7 +795,7 @@ interface instance {
 | `streams`                            | 随属主（fs / http）；无独立门              | 无属主调用 = trap；reader / writer 不跨实例                    |
 
 - **WASI 0.3 基线白名单**：`wasi:clocks` / `wasi:random` / `wasi:filesystem`（async；preopen 与 `std::fs`）/ 以及 guest std 拖带的 WASI 0.3 导入，是宿主基础设施；宿主统一注册 wasmtime-wasi 0.3。W9 的进口对账把「std 拖带集 + 上述标准件」视为基线白名单，不计入作者能力面；作者手写其他 WASI import = 越权（词汇表外）。具体清单 SSOT = W9。wasip2 时代的 14 导入 papercut（补遗 6）是历史证据，0.3 基线由 T10.10 核实。
-- **world 终态**：v1 导出集 = `setup` / `on-config` / `dispose` / `on-call` / `on-timer` / `on-event`（全 async；`on-event` = W8 D177）。`0.1.0` 尚未发布；本批补全 = 首个发布快照的编制，不是版本演进；首个冻结快照由 W10 记录。W1.3 的签名草图同批更新。
+- **world 终态**：v1 导出集 = `setup` / `on-config` / `dispose` / `on-call` / `on-timer` / `on-event`（全 async；`on-event` = W8 D177）。`0.1.0` 尚未发布；本批补全 = 首个发布快照的编制，不是版本演进；首个冻结快照由 W10 D190 记录（本章收官时 `0.1.0` = 当前快照、未冻结）。W1.3 的签名草图同批更新。
 - **不立编译期能力检查**：SDK 面不按 manifest 裁剪类型；作者面形状恒定（A3.2「出现规则」平移），越权调用 = 运行期 trap。编译期组合 world 维持扩展位（plugin-sdk S6）。
 
 ### W3.14 A3 机制消亡清单（考古索引）
@@ -841,7 +841,7 @@ interface instance {
 | W7（T13-m）       | **已兑现（2026-10-19）= W7 D163–D172**：服务方法集 = 契约数据（D167）；强类型生成 = `types!()`（D170）；无契约服务的 method-missing 退化保留（D167 / D169）                                                                                                                                                                         |
 | W8（T13-n）       | **已兑现（2026-10-19）= W8 D173–D179**：`on-event(listener-id, name, payload: payload)` 定形并进入 required 导出集；事件名语义 / `internal/` 规则 / 声明面 / emit 校验 / 形状生命周期；`emit` / `on-event` 的 payload = W6 双车道变体                                                                                               |
 | W9（T13-o）       | **已兑现（2026-10-19）= W9 D180–D185**：import 清单 ⊆ 词汇表（含 `blobs` / `streams` / `payloads`）；provide / inject / events 对账；能力门判定（含 mount 例外）；blob 无门 / streams 随属主；WASI 0.3 基线 = clocks + random + filesystem（async）+ std 拖带集（逐条以宿主注册集为准）                                             |
-| W10（T13-p）      | package version 与首个发布快照；import / export 增补纪律；多版本共存                                                                                                                                                                                                                                                                |
+| W10（T13-p）      | **已兑现（2026-10-19）= W10 D186–D193**：package version 与首个冻结快照（D187 / D190）；import / export 增补纪律（D188）；多版本共存与逐快照词汇表（D189）                                                                                                                                                                          |
 | T10.10            | 宿主 import 注册；wasmtime-wasi 0.3；preopen `/`；`on-call` / `on-timer` / `on-event` 导出调用；blob / reader / writer 资源表与跨 Store 重物化                                                                                                                                                                                      |
 | T10.11            | fs（global host-mediated / private WASI 0.3 async filesystem）/ http / process / timer 实现；crypto 撤回（ADR-0041）；预算 / TOCTOU 硬化；random = wasi:random；`open-read` / `open-write` / `download`；blob 创建 / collect                                                                                                        |
 | T10.12            | 安装期 world 导出校验补 `on-call` / `on-timer` / `on-event`；preopen 授予                                                                                                                                                                                                                                                           |
@@ -1051,7 +1051,7 @@ interface errors {
 - **`data` 纪律**：仅 `business` 使用；其余 kind 恒 `none`，宿主不读，SDK 不对非 business 暴露 data 语义。封闭族不需要结构化 data——message 足够，完整诊断进 journal。
 - **族分组是命名约定**：kind 名的族前缀（`fs-` / `http-` / `process-` / `service-` / `core-`）只作分组与审计检索，不是类型分层；封闭 enum 已提供穷尽匹配。
 - **选扁平 record 而非嵌套 variant**：A5 的三字段分工是设计本体，D102 作者面已冻结为同一封套；ABI 与作者面同形，避免第二套 SSOT 与 SDK 扁平整形层。代价明记 = 非 business 的 `data` 组合在结构上合法但被纪律禁止（宿主不读、SDK 不暴露）。
-- **类型住处**：`crates/metis-plugin/wit/error.wit` 的 `interface errors`（W1.2 D117 的文件按章拆）；world 与各 import interface 以 `use errors.{error}` 引用，W3 落地 import 接口时同源引用。不立独立错误版本号；kind 增补随 WIT package version（W10）。
+- **类型住处**：`crates/metis-plugin/wit/<version>/error.wit` 的 `interface errors`（W1.2 D117 的文件按章拆；版本子目录 = W10 D189）；world 与各 import interface 以 `use errors.{error}` 引用，W3 落地 import 接口时同源引用。不立独立错误版本号；kind 增补随 WIT package version（W10 D188）。
 - **message**：必填字符串；宿主生成时给出非空摘要；guest business 错误可给空串，SDK 补默认文案。错误消息永不参与控制流（分支只对 `error-kind`）。
 
 ### W5.2 D137 错误族清单
@@ -1088,7 +1088,7 @@ interface errors {
 - **三条分界判据平移**（A5 D14.1）：① `Err` vs `Ok` 内状态字段看载荷是否完整成立——HTTP 4xx/5xx、进程非零 exit = `Ok` 载荷分支，状态码 / exit code 不进 kind；② `Err` vs 响亮报错看静态可否查——契约违反 = loud（W5.4），运行期数据决定 = `Err`；③ kind 细分粒度看调用方动作是否不同，开放空间（OS / 网络 / 进程）必设诚实兜底格。
 - **死亡项**：`sql.*` 族随 sqlite 能力撤回永久死亡（[ADR-0039](../decisions/0039-fs-capability-two-tier.md)；DB = guest crate + private fs）；`box.trap` 随盒概念消解（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §2）——插件 trap = 实例死亡 + journal `vm_trap`，在飞调用方收 `service-unavailable`（D11.3），不立 guest 可见的 trap kind；timer 无 Err 面，参数非法走响亮（W5.4）。
 - **service 四态不立第五格**：`service-unavailable` / `service-method-missing` / `service-timeout` + 共享 `business` 即 ADR-0018 S5 四态；服务调用路径的调用方可见错误集合 = 这四格 + `core-deadlock` / `core-contract-violation`（宿主框架族）。`core-*` 不改变服务注册表语义，也不占服务族第五格；ADR-0018 正文与 Status 不动。
-- **封闭枚举演进**：新增 kind = 新 WIT package version（W10）；不做开放字符串，也不在 guest 侧枚举未知 kind 的透传槽——跨版本共存时宿主按 `abi` 使用对应版本绑定（W5.3 / W10），旧版绑定不接收新版 kind。
+- **封闭枚举演进**：新增 kind = 新 WIT package version（W10 D188）；不做开放字符串，也不在 guest 侧枚举未知 kind 的透传槽——跨版本共存时宿主按 `abi` 使用对应版本绑定（W5.3 / W10 D189），旧版绑定不接收新版 kind。
 
 ### W5.3 D138 方向性：宿主↔guest
 
@@ -1098,7 +1098,7 @@ interface errors {
 - **export（guest→host）**：生命周期钩子、服务 handler、事件 listener 的 `Err` 只许 `business`；`data` = TLV Value（服务路径 = 契约形状；生命周期 / 事件路径 = SDK 约定，通常 none）。SDK 在作者面只提供 `Error::business(data)` 作为导出错误构造入口（具体 API 归 T10.14），文档同条。
 - **非 business 的导出错误 = 方向违约**：宿主不静默降级为 business，而是判 `core-contract-violation` 并按出口处置——服务 handler → 调用方收该格 + journal `contract_violation`；`setup` → 加载失败（W1.5），日志记违约；`on-config` → 重挂载（W1.3），日志记违约；`dispose` → 记日志、继续 drain（W1.6）；事件 listener → emit / serial / waterfall = `listener_error` + `contract_violation`，fail-open；parallel = 该项结果计 `core-contract-violation`（A5 D15.2 / ADR-0014）。
 - **不立两个 WIT 类型**（`host-error` / `guest-error`）：一个封套是 A5 的设计本体；方向纪律在宿主一处归一即可；两个类型不带来安全收益（business data 本就是任意 TLV），却让 W1.3 签名与 SDK 映射双份。
-- **跨版本 kind 面**：`error-kind` 是封闭 enum，新增 case = 破坏性变更；跨版本共存（W10）时宿主按组件声明的 `abi` 使用对应版本的 WIT 绑定，不得把新版 kind 送进旧版绑定。多版本快照 / 翻译责任 = W10 章（登记见 W5.8）。
+- **跨版本 kind 面**：`error-kind` 是封闭 enum，新增 case = 源码面破坏式（W10 D188）；跨版本共存（W10 D189）时宿主按组件声明的 `abi` 使用对应版本的 WIT 绑定，不得把新版 kind 送进旧版绑定；宿主侧新失败按该快照的投影表落到既有 kind（W10 D188）。
 
 ### W5.4 D139 响亮 vs Result 的 wasm 载体
 
@@ -1182,7 +1182,7 @@ interface errors {
 | W7（T13-m）       | **已兑现（2026-10-19）= W7 D163–D172**：business data 形状 SSOT = 契约 `errors:`（D167）；运行期形状违约 = `core-contract-violation`（D169）；`data` 承载 = TLV（D166）                                                                                                                                                                                                                                                                                                |
 | W8（T13-n）       | **已兑现（2026-10-19）= W8 D173–D179**：listener 错误封套 = 本类型；emit 校验违约 = `core-contract-violation` Err + journal（D139 运行期形状失败格）；`internal/*` 冒用 = trap（`vm_trap`）；不新增错误族                                                                                                                                                                                                                                                              |
 | W9（T13-o）       | **已兑现（2026-10-19）= W9 D180–D185**：能力对账 + 运行期门；未声明能力 = trap；契约运行期校验点 = `core-contract-violation`；manifest 缺省 vs 部署拒绝两界不混                                                                                                                                                                                                                                                                                                        |
-| W10（T13-p）      | `error-kind` 增补 = 新 WIT package version（封闭 enum 的破坏性变更）；跨版本共存时宿主按 `abi` 使用对应版本绑定，不得把新 kind 送入旧版；无独立错误版本号                                                                                                                                                                                                                                                                                                              |
+| W10（T13-p）      | **已兑现（2026-10-19）= W10 D186–D193**：`error-kind` 增补 = 新快照（D188）；跨版本按声明绑定、不把新 kind 送入旧版（D189）；无独立错误版本号                                                                                                                                                                                                                                                                                                                          |
 | journal           | 不新增 kind；`listener_error` / `vm_trap` / `contract_violation` / `fs_invalid_path_detail` 原位承接；错误 kind 落盘用 kebab-case 规范名                                                                                                                                                                                                                                                                                                                               |
 | seam-capabilities | §6.1 W5 行兑现：能力失败 `result` 形态 + service 四态；`fs-invalid-path` message 通用化政策                                                                                                                                                                                                                                                                                                                                                                            |
 | plugin-sdk        | **已兑现（2026-10-19）**：D102 三格封套不变；`ErrorKind` 1:1；guest 导出只许 business；`?` 习语                                                                                                                                                                                                                                                                                                                                                                        |
@@ -1265,11 +1265,11 @@ interface errors {
   - 类型全集 = `Null / Bool / Float(f64) / Int(i64) / String / Bytes / Array / Map`（W6.3/W6.4）；自描述，无外部 schema 即可解码；
   - compact：varint 长度 / 计数，小整数内联，字符串 / 字节 / 容器 = tag + 长度 + 载荷；
   - canonical：Map 键按 UTF-8 字节序排序、最短 varint、禁重复键、`f64` 固定编码——**同一 `Value` 树 → 同一字节序列**；
-  - 每载荷带格式版本字段；不识版本 = **解码前**失败（config = 启用期响亮失败；服务 / emit / mount = `core-contract-violation` Err，W6.8）；格式版本与 WIT package version 独立（前者管字节布局，后者管接口集；演进纪律分别归 T10.13 / W10）；
+  - 每载荷带格式版本字段；不识版本 = **解码前**失败（config = 启用期响亮失败；服务 / emit / mount = `core-contract-violation` Err，W6.8）；格式版本与 WIT package version 独立（前者管字节布局，后者管接口集；演进纪律分别归 T10.13 / W10 D191）；
   - 预算为形状：条目数 / 嵌套深度 / 总字节；数值 = 实现期配置（T10.13）；超限 = 边界错误（W6.8），不做部分解码后静默截断；
   - `Map` 键只允许 UTF-8 字符串；`Array` / `Map` 严格二分（混合 / 稀疏 / 非字符串键 = 边界错误）。
 - **两种解码模式，同一线格式**：动态 `Value` / `ValueRef<'a>`；契约已知时 typed decode（W7 `types!()` 生成 `T::decode`）。不为 typed 面另立紧凑格式——标签成本可忽略，双格式会分裂版本与测试面。
-- **字节布局**：tag 位分配、版本号数值、varint 细节 = T10.13 实现期定稿；冻结时点 = 首插件发布前（W10 记录首个快照）。W6 只冻结上述语义与解码顺序。
+- **字节布局**：tag 位分配、版本号数值、varint 细节 = T10.13 实现期定稿；冻结时点 = 首插件发布前（W10 D190 记录首个快照）。W6 只冻结上述语义与解码顺序。
 - **淘汰**：CBOR deterministic 子集（标准但与既有 `list<u8>` 琐碎签名 / 自有位分配纪律冲突，且引入第三方 codec 依赖）；typed-first WIT 服务接口（重开 E2①；宿主动态路由 + 静态 world 生成问题）；WIT 扁平节点表（ABI 形状膨胀、拷贝面更大）。
 
 ### W6.3 D157 Value 类型映射与严格制
@@ -1388,7 +1388,7 @@ interface services {
 - **服务调用**：args / 返回 = 单个 payload；`blob` 所有权随调用转移，发送方需要保留时自行 `duplicate`；提供方返回 `blob` 时调用方获得 own 句柄。
 - **不变面**：`setup` / `on-config` 的 config = `list<u8>` TLV；`instance.mount` 声明 = `list<u8>` TLV；W5 `error.data` = `option<list<u8>>` TLV（business 错误不放 blob）；`on-timer` 无 payload。
 - **作者面**：SDK 映射 `Payload::Value(Value)` / `Payload::Blob(Blob)`；`Value::Bytes` 是 value 车道内的小二进制，blob 是独立车道。
-- **兼容性**：`0.1.0` 未发布，本批改签名 = 首个发布快照的编制；发布后增补 = 新 package version（W10）。
+- **兼容性**：`0.1.0` 未发布，本批改签名 = 首个发布快照的编制；冻结后的增补 = 新 package version（W10 D188；冻结触发 = D190）。
 
 ### W6.7 D161 resource 生命周期与跨实例边界
 
@@ -1474,7 +1474,7 @@ interface services {
 | W7（T13-m）       | **已兑现（2026-10-19）= W7 D163–D172**：契约形状 = typed decode 的 schema 来源（D167/D170）；`ValueRef<'a>` / `T::decode` 消费同一线格式；blob payload 不做形状校验（D169）；契约包 = `contract.yml` + 文档（D164）                                                                                                |
 | W8（T13-n）       | **已兑现（2026-10-19）= W8 D173–D179**：`on-event` / emit 的 payload = `payload` 变体；listener 返回 `option<payload>`；blob 车道不参与形状校验；链值所有权按 W6 D161；事件名 / `internal/` / 声明语义不变                                                                                                         |
 | W9（T13-o）       | **已兑现（2026-10-19）= W9 D180–D185**：进口对账词汇表 += `blobs` / `streams` / `payloads`；blob 无能力门；reader/writer 走 fs/http 门；跨实例只读 blob = 结构允许，可变资源仍拒                                                                                                                                   |
-| W10（T13-p）      | 本批 = 首个发布快照编制（0.1.0 未发布）；新增接口 / payload 变体在同一 package version 内落定；发布后增补 = 新版本                                                                                                                                                                                                 |
+| W10（T13-p）      | **已兑现（2026-10-19）= W10 D186–D193**：本批 = 首个发布快照编制（`0.1.0` 未发布，D190）；新增接口 / payload 变体在同一 package version 内落定（D188）；TLV 版本面独立（D191）                                                                                                                                     |
 | T10.10            | 组件运行时：每实例 `ResourceTable`；blob 注册表（`Arc` + 引用计数）；跨 Store 句柄重物化（S3 补遗 10）；blob / reader / writer 析构；预算                                                                                                                                                                          |
 | T10.11            | fs `open-read` / `open-write`（global host-mediated；private 走 WASI 0.3）；http `download`；blob 创建 / collect；预算 / 卸载强 close                                                                                                                                                                              |
 | T10.12            | 安装期 world 导出校验补 `payload`；preopen 授予不变；mount 声明仍 TLV                                                                                                                                                                                                                                              |
@@ -1528,7 +1528,7 @@ interface services {
   - **大负载** = blob / byte-reader / byte-writer（W6 D159）；不做形状描述，内容 opaque。
 - `Value` 的承重面 = 宿主在不知道 schema 时仍需能路由 / 校验 / 记录 / 脱敏：config 通用树（overlay / diff / 结构相等 / 错误路径）、动态服务路由与 contractless 服务、开放事件与 contractless 事件、business data、journal payload、`any` 槽。WIT 是静态、非递归、无 `map` / `any`，不能替代这一面。
 - 作者面：契约已知的类型由 `types!()` 生成（D170）；作者只在 `any` 槽与 contractless 动态路径接触 `Value`。平台 import 的 WIT 绑定由 wit-bindgen 生成并由 SDK 隐藏（[plugin-sdk](plugin-sdk.md) S2 / S6）。
-- **不立第四种形态**：任何新类型面必须归入三格之一；新增 = 新 ABI package version（W10）。
+- **不立第四种形态**：任何新类型面必须归入三格之一；新增 = 新 ABI package version（W10 D188）。
 - **递归写实**：契约类型非递归——类型引用成环 = 启用期响亮（A7 D21.4 语义原位）；运行期 `Value` 可任意嵌套，但契约只描述有限形状；任意深度动态树 = `any`（不做形状校验）。
 
 ### W7.2 D164 契约包形态与身份
@@ -1559,7 +1559,7 @@ interface services {
 - 引用来源类别与写法不符 = 启用期响亮：生态契约漏 `@N`、内嵌 / 随包契约带 `@N`、`@N` 与 `version:` 不符三格同判。
 - 同名规则：规范化后结构相等（`any` 相容规则见 D168）则共存（契约竞标）；两个具体形状不等 = 启用期响亮并指名对手方与差异位置；引用永远按契约名，不按插件名（Seam 三角，[ADR-0018](../decisions/0018-service-registry.md) S6）。
 - 三来源逻辑合并 = 不搬文件、不进模块系统；安装期登记部署索引，判定在启用期（D168；W9 承接 provides / inject / events 面）。
-- 契约版本与 WIT package version 独立：前者管契约数据，后者管 ABI 接口集（W10）；两者不互相推导。
+- 契约版本与 WIT package version 独立：前者管契约数据，后者管 ABI 接口集（W10 D191）；两者不互相推导。
 
 ### W7.4 D166 瘦身形状 DSL：语法与词汇
 
@@ -1592,7 +1592,7 @@ interface services {
 - `bytes` 只允许出现在 `types:` / `methods:` / `errors:` / `events:`；config `type:` 直接出现或经类型引用展开后出现 = 响亮；config 可达的 `types:` 不得含 `bytes`（YAML 无法产生 Bytes，W6 D157）。
 - 严格制：`integer` ≠ `number`，无隐式 coercion；`array` / `map` 严格二分；record 字段封闭；`map` 键只允许字符串。
 - 类型引用展开 + 环检测；成环 / 未知 = 启用期响亮；引用不带版本钉（版本钉 = `provides.contract` 的 `@N`，D165）。
-- 词汇 / 产生式演进 = 新 ABI package version（W10）；parser 实现期细则（空白、转义、字面量）归 T10.3。
+- 词汇 / 产生式演进 = 新 ABI package version（W10 D188）；parser 实现期细则（空白、转义、字面量）归 T10.3。
 - `any` 兼容一切（递归子位置）；`any` 不参与形状校验；同名多声明合并时具体形状胜出（A8 D22.2 原位，D168）。
 
 ### W7.5 D167 契约文件节结构
@@ -1734,7 +1734,7 @@ events:
 | W6（T13-l）      | typed decode 的 schema 来源 = 契约（D170）；TLV 线格式不变；blob payload 不做形状校验（D169）                                                                                                                                                           |
 | W8（T13-n）      | **已兑现（2026-10-19）= W8 D173–D179**：事件名语义 / `internal/` 规则 / 声明面 / `on-event` 最终形状；事件形状总表 = 全部契约 `events:` 派生（D165 / D167）；emit 校验违约 = `core-contract-violation` Err + journal（D169）；形状生命周期与降级 = D179 |
 | W9（T13-o）      | **已兑现（2026-10-19）= W9 D180–D185**：provides / inject / events 对账与能力门；契约引用缺失两分、同名判定、`@N` 校验的判定面（D168）；import 清单 ⊆ 宿主词汇表；方法集 = 契约数据（D183）                                                             |
-| W10（T13-p）     | DSL 词汇 / 产生式演进 = 新 ABI package version；契约版本与 WIT package version 独立（D165 / D166）                                                                                                                                                      |
+| W10（T13-p）     | **已兑现（2026-10-19）= W10 D186–D193**：DSL 词汇 / 产生式演进 = 新快照（D188）；契约版本与 WIT package version 独立（D191）                                                                                                                            |
 | config-format    | D29 `lib/` 行按 D164 修正；D36 配置校验消费 `type:` DSL（D166 / D169）；D43 级联机器复用（D171）                                                                                                                                                        |
 | service-registry | §7「契约包 = WIT 包」按 D164 修正；S6 局部 supersede（D172）；§7 生命周期措辞按 D171 修正（动态消费者级联 / 编译期消费者重编译）；Seam 三角 / 加方法兼容规则存活                                                                                        |
 | plugin-sdk       | S7 `types!()` 覆盖契约四节 + config schema（D170）；S1 / S7 的强类型演进位兑现                                                                                                                                                                          |
@@ -1784,7 +1784,7 @@ events:
 - **无实例作用域**：事件直上租户事件总线；同租户跨实例互相可见，按 payload 字段过滤是监听者责任（instance-model D71）。
 - **载体事实**：WIT 面只有 `string name`，事件名无法进 world 静态面（E5 拍板）；声明面 = manifest，形状面 = 契约。
 - **人读面转义**：事件名不立字符集文法，但进 journal / 审批 diff 等展示面时按展示层规则转义控制字符与非 ASCII 混淆字符；键空间本身不收紧（不引入第二套名字语法）。
-- **值错误载体**：空名 / 超长名复用 `core-contract-violation`（封闭枚举里最接近的格）；若将来值错误族成串，走 W10 新 kind 议题，不在此另立。
+- **值错误载体**：空名 / 超长名复用 `core-contract-violation`（封闭枚举里最接近的格）；若将来值错误族成串，走新 package version（W10 D188）的新 kind 议题，不在此另立。
 
 ### W8.2 D174 声明面语义与强制程度
 
@@ -1908,7 +1908,7 @@ export on-event: async func(listener-id: u64, name: string, payload: payload) ->
 | W6（T13-l）              | **已兑现（2026-10-19）**：`payload` 双车道；blob 不参与形状校验；`on-event` 返回 `option<payload>`；链值所有权按 D161                                                                                            |
 | W7（T13-m）              | **已兑现（2026-10-19）**：总表 = 契约 `events:` 并集；D168 同名规则；D171 生命周期；D169 事件校验点由 W8 钉死                                                                                                    |
 | W9（T13-o）              | **已兑现（2026-10-19）= W9 D180–D185**：机械化对账 = provides / inject / events（publish 出处缺失两分、`internal/` 规则、import 清单 ⊆ 词汇表）；W8 只定语义                                                     |
-| W10（T13-p）             | `on-event` 导出 / WIT 面演进 = 新 WIT package version；事件名 / 声明面词汇 = manifest 字段集演进纪律（`internal/*` 词汇增补同）                                                                                  |
+| W10（T13-p）             | **已兑现（2026-10-19）= W10 D186–D193**：`on-event` 导出 / WIT 面演进 = 新快照（D188）；事件名 / 声明面词汇 = manifest 字段集演进纪律（`internal/*` 词汇增补同）                                                 |
 | T10.3                    | 契约解析 / 事件总表合并 / 规范化 / 引用展开 / 记忆化预算                                                                                                                                                         |
 | T10.4                    | 派发器；总表消费；emit 校验；`on-event` 调用与 listener 表；`internal/plugin` / `internal/status` 的 payload 形状与发射点                                                                                        |
 | T10.10 / T10.11          | 宿主 import 实现；`internal/*` 冒用拦截；事件名长度预算                                                                                                                                                          |
@@ -1971,7 +1971,7 @@ export on-event: async func(listener-id: u64, name: string, payload: payload) ->
 
 - **词汇表** = `metis:plugin@<宿主支持版本>` 的 import 接口集 + WASI 0.3 基线（W9.3）。metis 侧 = W3 D143 的 9 个功能接口（`events` / `services` / `timer` / `http` / `fs` / `process` / `instance` / `blobs` / `streams`）与 3 个类型接口（`errors` / `fs-types` / `payloads`）。
 - **粒度 = 包 + 接口**（W3 D143）：接口身份即封闭，函数级不单独判定；聚合 `ctx` 接口不立（W3 D143 原位）。
-- **判定**：安装期解析 import 清单并对照宿主词汇表；任一条目不属于上述集合 = 索引记录为不可用（原因写明包名 / 接口名与「词汇表外」），被启用时以记录原因响亮（W9.1 的两分政策）。`metis:plugin` 的版本比较 = W10；多版本共存时每个支持版本各一份词汇表（W10）。
+- **判定**：安装期解析 import 清单并对照宿主词汇表；任一条目不属于上述集合 = 索引记录为不可用（原因写明包名 / 接口名与「词汇表外」），被启用时以记录原因响亮（W9.1 的两分政策）。`metis:plugin` 的版本比较 = W10 D187；多版本共存时每个支持版本各一份词汇表（W10 D189）。
 - **B1 口径写实**：固定 world 不裁剪（W3 D143）——所有 metis 功能接口恒在 import 清单，宿主恒链接；因此 import 清单不能证明「代码实际用了哪个能力」。B1 的「集合包含」= 词汇表闭包，不是能力漂移检测。D28.3 #1–#3（能力漂移 / scope 键↔命名空间 / 盒对账）死亡的理由 = wasm 无源码扫描面（W8 D174 同批），不是 import 能证明能力使用。
 - **能力授权唯一来源 = manifest `capabilities`**（W2 D129）；未声明调用 = trap（W5 D139），message 指路 manifest 字段。import 存在不等于授权；capability 声明存在也不因 import 缺失而失效（未使用的声明合法）。
 - **收益**：手写 / 外来 / 跨版本组件引入词汇表外的包或接口 = 启用时可读错误，而不是实例化时的 linker 报错。SDK 产物的 import 面恒为固定 world，索引展示只在上述异常组件上有信息量。
@@ -1985,7 +1985,7 @@ export on-event: async func(listener-id: u64, name: string, payload: payload) ->
 - **std 拖带集**：被钉版 Rust toolchain 的 `std` 无条件拖带、且宿主 wasmtime-wasi 0.3 已注册的接口，视为基线；不计入作者能力面。逐条清单 = 宿主构建期的注册集记录（T10.10），`metis check` 与部署索引复用同一份记录。
 - **未确认项**：WASI 0.3 std 的精确逐条拖带集受 toolchain pin 影响，本文档不枚举；确认方式 = T10.10 以宿主注册集实测并登记。wasip2 的 14 导入（[wasm-research](../research/wasm-research.md) 补遗 6 papercut 1）为历史证据，不作为 0.3 基线。
 - **基线内接口 = 基础设施白名单，不是能力**；作者手写基线外的 WASI import = 词汇表外（W9.2），安装期记录 / 启用时响亮。
-- **演进**：基线增补（工具链升级带来新拖带接口）不触发 `metis:plugin` package version——WASI 基线不是 metis ABI 面；宿主注册集随 T10.10 的 wasmtime / toolchain 升级变化，插件按宿主实际注册集判定。
+- **演进**：基线增补（工具链升级带来新拖带接口）不触发 `metis:plugin` package version——WASI 基线不是 metis ABI 面；宿主注册集随 T10.10 的 wasmtime / toolchain 升级变化。**W10 注（2026-10-19）**：每个 WIT 快照的 `vocabulary.yml` 记下冻结时的基线版本集（W10 D189）；宿主实际注册集 ⊇ 该集合 = 该快照可服务；宿主升级删旧 WASI 版本 = 对旧插件的事实性破坏（W10 D191）。
 - **private fs 边界**：preopen 授予 = T10.12；基线白名单不等于任意路径可读（WASI preopen 只给 `plugins/<name>/data/fs/`，ADR-0039）。
 
 ### W9.4 A9 D25.1 原位：inject 三分与可见集
@@ -2114,7 +2114,7 @@ export on-event: async func(listener-id: u64, name: string, payload: payload) ->
 | W7（T13-m）       | **已兑现（2026-10-19）**：契约引用两分、`@N`、规范化形状、生命周期；方法集 = 契约数据（D183）                                                                            |
 | W8（T13-n）       | **已兑现（2026-10-19）**：publish 出处两分、`internal/*` 规则、listen 不判；本章机械化（W9.8）                                                                           |
 | W4（T13-c）       | **原位**：卸载期新注册 = trap（W4.5）；wait-for 图（W4.4 D96）不属本章；对账判定与投递时序解耦                                                                           |
-| W10（T13-p）      | package version 比较、词汇表演进、多版本共存；WASI 基线不随 package version（W9.3）                                                                                      |
+| W10（T13-p）      | **已兑现（2026-10-19）= W10 D186–D193**：package version 比较（D187）；词汇表演进（D188）与多版本共存（D189）；WASI 基线不随 package version（D191）                     |
 | T10.3             | 契约解析 / 规范化比较 / 引用展开 / 反向索引                                                                                                                              |
 | T10.7             | 启用管线五格判定；Pending 唤醒；撞名；判环；provide 履行对账                                                                                                             |
 | T10.9             | 部署索引；组件类型解析与 import / export 清单记录；D52 判环预演                                                                                                          |
@@ -2132,3 +2132,201 @@ export on-event: async func(listener-id: u64, name: string, payload: payload) ->
 | 实现期配置        | 词汇表版本映射；WASI 0.3 基线逐条记录；对账失败清单条数上限                                                                                                              |
 | 扩展位            | 编译期组合 world；能力使用的静态证明（需新声明面）；跨作用域可见性清单                                                                                                   |
 | ADR               | 不新增；A9 为归档设计文档（非 ADR）；ADR-0018 S1「方法集入注册表」按「宿主从契约载入」原样兑现（D183），S2 / S3 机制不变；兑现记录住本章联动行                           |
+
+## W10 工具形态与 ABI 版本纪律
+
+### W10.0 边界与前提
+
+本章定：ABI 面清单（什么算 ABI）；版本载体与接受条件；演进与 bump 纪律；快照布局与多版本共存；首个冻结快照；版本面各自独立；钉版纪律；工具面残留与判定落点；A10 机制消亡清单。不归本章：命令面形态 = [build-pipeline](build-pipeline.md) D105/D106/D112；WIT 接口形状 = W1/W3/W6；manifest 字段形状 = W2；按版本的路由与绑定生成实现 = T10.10；TLV 位分配与格式版本数值 = T10.13；journal 格式 = [journal](journal.md) J4.2；契约版本 `@N` = W7 D165；SDK 作者面 = [plugin-sdk](plugin-sdk.md)；marketplace 分发与 semver 约束 = 任务 9。
+
+前提（已定不议）：WIT package version 承接 `abi_rev` 纪律（[ADR-0034](../decisions/0034-wasm-first-carrier.md) §3）；package 名与住处 = W1.2 D117；manifest `abi` 可选声明 = W2.8 D132；声明 ≠ 观察（W2.9 D133）；安装期结构事实 / 启用期跨实体两分（W9.1 D180）；源码扫描面不存在（W9.2 B1 口径）；工具链钉版 = ADR-0034 风险 W3。A10（[luau-abi](luau-abi.md) §A10，归档）为语义平移源：D27 组（版本纪律）在本章重做，D28 组（工具面）大半已由 T13-d / T13-e 消费。
+
+拍板（2026-10-19，维护者全按推荐）：八项形态决策 = D186–D193；ADR 处置 = 不新开 ADR（原则已由 ADR-0034 §3 冻结，本章 = 细化），只给 [ADR-0025](../decisions/0025-seam-capabilities.md) + 五篇既有 ADR（0022 / 0024 / 0027 / 0028 / 0029）加 Status 局部注。版本纪律的冻结原则面 = ADR-0034 §3；本章 = living 细化——若将来需要外部承诺的不可变面，另开 ADR。
+
+| 节     | 议题                         | 状态               |
+| ------ | ---------------------------- | ------------------ |
+| W10.1  | ABI 面清单                   | ✅ D186 2026-10-19 |
+| W10.2  | 版本载体与接受条件           | ✅ D187 2026-10-19 |
+| W10.3  | 演进与 bump 纪律             | ✅ D188 2026-10-19 |
+| W10.4  | 快照布局与多版本共存         | ✅ D189 2026-10-19 |
+| W10.5  | 首个冻结快照                 | ✅ D190 2026-10-19 |
+| W10.6  | 版本面各自独立               | ✅ D191 2026-10-19 |
+| W10.7  | 钉版纪律                     | ✅ D192 2026-10-19 |
+| W10.8  | 工具面残留与判定落点         | ✅ D193 2026-10-19 |
+| W10.9  | A10 机制消亡清单（考古索引） | ✅ 2026-10-19      |
+| W10.10 | 联动登记汇总（章末）         | ✅ 2026-10-19      |
+
+### W10.1 D186 ABI 面清单
+
+**D186 定案：ABI 判据 = 跨边界且写进文档承诺的语义；两面 = 宿主↔插件接口面、字节面。**
+
+- **宿主↔插件接口面**：固定 world 的 import / export 接口集与签名（WIT 文本，W1/W3）；`error-kind` 封闭枚举（W5）；事件名语义（`internal/*` 保留与命名纪律，W8）；可观测投递语义（每监听者收件序、timer 合并计数、邮箱满不丢，W3 D152；这些是跨边界承诺，变更按 D188 走）；能力词汇表（W2 D129）；manifest 字段集与未知字段政策（W2）；契约形状 DSL 的词汇 / 产生式与契约节结构（W7）。
+- **字节面**：TLV canonical 编码语义与格式版本（W6 D156）；tag 位分配、版本号数值与 varint 细节 = T10.13 实现期钉定，冻结时点见 W10.5。
+- **不进 ABI**：确定性面（调度规则 / 在飞预算 = 实现期配置，W4.3；A10 D27.1 的确定性面已随 replay 不立缩没，W4.6）；journal 落盘格式（自带头行版本，J4.2 D90）；契约包数据版本 `@N`（W7 D165）；SDK crate semver（诊断面，plugin-sdk S3 / build-pipeline D112）；CLI 输出与 `--json` 事件；`metis.build` section 与快照 hash（诊断 / 溯源，非信任锚）；组件 custom section；WASI 0.3 基线版本（不是 metis ABI 版本，但是准入词汇表的一部分；版本面归宿主工具链，W9.3 / D191）；一切实现内部。
+- 判据取 A10 D27.1 的语义，但确定性面不承接（W4.6：replay 不立 + guest 内调度宿主不可冻结）；「跨边界」的边界在 wasm 化后 = 固定 world + 组件文件边界，不再有源码 / 运行时两重边界。
+
+### W10.2 D187 版本载体与接受条件
+
+**D187 定案：唯一接口面 ABI 版本载体 = WIT package version（`metis:plugin@MAJOR.MINOR.PATCH`）；manifest `abi` = 精确版本声明；接受 = 声明 ∈ 宿主支持快照集 + 结构匹配该快照 + import 清单 ⊆ 该版本词汇表。字节面版本 = TLV 格式版本，独立判定（D191 / W6 D156）。**
+
+- **载体**：package 名 `metis:plugin`，版本串住 WIT 包声明与快照目录名（D189）；manifest `abi` 是可选的精确版本字符串（W2.8 D132），不是最低版本、不是范围。对常规组件（import 名带版本）声明是冗余的显式意图（审批面 / 预检面）；对无 metis import 的极简组件，它是唯一路由信号。
+- **接受条件三合一**（结构缺陷按 W9.1 两分：安装期检出并记录，被启用时以记录原因响亮；直接安装并启用时即响亮）：
+  1. 声明版本 ∈ 宿主支持快照集（枚举集合，见下）；
+  2. 组件结构匹配该快照：导出集齐全；import 名字中的 `metis:plugin/...@X.Y.Z` 后缀可读出时，读出的版本是该快照版本（world 顶层导出函数名不带版本后缀，导出集按该快照的 world 形状核对）；签名级匹配由组件模型在链接 / 实例化时校验（类型不符 = 安装 / 实例化错误，不靠字符串比较）；
+  3. 组件 import 清单 ⊆ 该快照的词汇表清单（metis 接口 + 冻结时记下的 WASI 基线版本集；W9.2 D181；清单住处 = D189）。
+- **声明 ≠ 观察**（D133）：`abi` 是作者意图；结构可读出契约版本时，读出的版本是事实——与声明不一致 = 响亮，不按任何一方静默胜出。组件不含 metis import、读不出契约版本时，声明是唯一路由信号（明记代价：这是「无可观察的版本标记」，不是静默放行；导出集与类型级校验仍然执行）；审批 / 诊断面必须区分「声明值」与「结构验证通过」，此类组件标「仅声明 / 未验证」。
+- **支持集** = 已冻结快照 + 当前快照的**枚举集合**（v1 = `{0.1.0}`）；创建新快照时，被取代的旧快照必须补写 `wit.sha256`（D189），否则支持集出现空洞；`floor` / `current` 只作诊断描述，不是区间判定（`0.1.5` 不在集合内即拒绝，尽管它在数值区间内）。无 sunset（集合只增不减）。W1.2 的「声明版本 ≤ 宿主支持版本」按「∈ 集合」读。
+- **有 manifest 但无 `abi`**：与零仪式同规则——结构匹配**当前**快照；要路由到旧快照必须写 `abi`（W2.8 D132）。
+- **两个方向**：旧组件（**带 `abi` 声明**）+ 新宿主 = 接受（旧快照在支持集内）；无声明的零仪式包只匹配当前快照（W1.8）；新组件 + 旧宿主 = 拒绝，报错给「声明版本 / 支持集 / 升级核心或按 X 重建」。
+- **严格格式**：只收 `MAJOR.MINOR.PATCH`；范围、caret、通配、预发布、build metadata 一律 manifest 校验响亮拒绝（三面措辞一致，D133）。
+- **零仪式包**（W1.8 D123）：无声明面，只按结构匹配**当前**快照；旧版本必须加 manifest `abi` 才能被路由——声明面同时是审批面（部署者看得见「这个包要求哪版 ABI」）。
+- **min 语义不复活**：A10 D27.2 的「最低 rev」是 Luau 宿主「源码插件按当前规则跑」的产物；wasm 组件按所对版本路由，声明必须精确，否则「按哪份绑定链接」无解。
+
+### W10.3 D188 演进与 bump 纪律
+
+**D188 定案：任何 ABI 可见改动 = 新 package version + 新快照；0.x 窗口内一律 MINOR bump，1.0.0 后 additive → MINOR、破坏式 → MAJOR；PATCH 位保留不使用——WIT 文本不动 = 不 bump。**
+
+- **快照不可变**：已冻结快照（D190）不得原地修改；改动一律新版本目录。
+- **分类**：
+  - **additive**（旧插件二进制照跑；用新东西的插件需要新宿主）：新增 import 接口 / 新增导出 / 新增可选 manifest 字段 / 新增契约 DSL 词汇或产生式 / 新增能力词。
+  - **破坏式**（旧插件源码不改不能重编译；旧二进制仍因快照保留而可跑）：删除或改名接口 / 导出 / manifest 字段；改签名或字段形状；删或增 `error-kind` case（封闭 enum 的穷尽匹配被打破 = 源码面破坏，W5.2）；改既有名字的语义（含事件名语义、契约形状语义）。
+- **版本号规则**：0.x 窗口 = 任何 ABI 可见改动 bump MINOR（`0.(y+1).0`）；1.0.0 后 additive = MINOR、破坏式 = MAJOR。**PATCH 位保留但不使用**：WIT 文本不动 = 版本不动（不 bump）；一旦改动包含 package version 串即 = 新快照，走 MINOR / MAJOR。实现 / 文档 / 诊断改动不产生新版本。1.0.0 时点不在本章承诺（维护者拍板）。
+- **二进制兼容 vs 源码兼容**：v1 无 sunset，旧快照恒保留，因此破坏式变更不打断已安装的旧二进制；它只意味着「按新快照重建源码要改」。这条把 semver 的「破坏」从运行期事故降为编译期迁移成本。
+- **不 bump 的情形**：工具链 / 实现升级不改 WIT 文本与 TLV 布局（D192）；TLV 布局变更走 TLV 格式版本（D191），不自动 bump package version；契约 `@N` 与 SDK semver 各自独立（D191）。
+- **新 `error-kind`**：属 ABI 可见且源码面破坏式（封闭枚举），按本条开新快照；宿主按组件声明版本使用对应绑定，不把新 kind 送进旧绑定（W5.3 D138）。
+- **宿主侧错误投影**：旧快照的 `error-kind` 是封闭枚举；宿主为旧快照服务时，内部新失败必须投影到该快照已有的 kind——按失败族选最近的既有格（如 fs 归 `fs-io`、http 归 `http-error`、service 归 `service-unavailable`），无法归类才落 `core-contract-violation`；投影表随该快照的绑定实现。这不是跨版本协议翻译（组件之间不互译），是旧绑定的封闭枚举对宿主实现的约束；代价 = 旧插件可能拿到较粗的 kind，长期解法 = sunset。
+- **SDK 投影选项**：若作者面把 `ErrorKind` 改成 `#[non_exhaustive]`，新增 kind 可重分类为 additive（源码面不再穷尽匹配）；这需要 SDK 面决策（plugin-sdk S5），本章按现 D102 封闭枚举分类为源码面破坏式。
+- **sunset（提高 floor / 删旧快照）** = 扩展位，v1 不立（A10 扩展位平移）。
+
+### W10.4 D189 快照布局与多版本共存
+
+**D189 定案：WIT 快照 = `crates/metis-plugin/wit/<version>/`，当前版本 = 最新快照；guest 只对当前快照生成绑定，宿主对全部支持快照生成；不立跨版本翻译层。**
+
+- **布局**：W1.2 的 `crates/metis-plugin/wit/` 为根；每个支持版本一个子目录 `wit/<MAJOR.MINOR.PATCH>/`，目录内 `package metis:plugin@<version>;`，目录名与包声明版本必须一致（测试校验），`CURRENT_ABI` 必须等于最新目录名（测试校验）。同目录另落 `vocabulary.yml` = 该快照的进口对账清单（metis 接口清单 + 冻结时的 WASI 基线版本集），**冻结前**由 T10.10 维护、冻结后只读并纳入 hash；它不是 WIT 文本，不参与绑定生成。`0.1.0` 为当前唯一快照；不另存「current 副本」。
+- **生成面**：guest 侧 SDK 只对 `CURRENT_ABI` 生成（作者永远只见当前）；宿主 `metis-component` 对支持集内全部快照生成，按版本各一份绑定。两组绑定同出 `wit/` 树，禁止拷贝（W1.2 D117）。
+- **路由**：按 D187 的结构版本 + 声明版本选快照；不立跨版本协议翻译 / 垫片（组件之间不互译）；宿主为旧快照服务时按 D188 的投影规则产生该快照内的 kind。每个快照各有一份 `vocabulary.yml`，进口对账按所选快照判（W9.2）。
+- **零仪式**：只匹配当前快照（D187；W1.8）。
+- **实现核对项（未验证）**：同一宿主 crate 内多版本同名 package 的 `bindgen!` 共存形态（`with` 映射 vs 每版本独立模块）归 T10.10；设计层只冻结「逐版本绑定 + 无协议翻译层」。
+- **快照 hash**：冻结时在目录内写 `wit.sha256`（排序后的相对路径 + 内容的规范化摘要；**只排除 `wit.sha256` 自身**；`vocabulary.yml` 与 WIT 树一并纳入）。未冻结快照不写；被取代时补写（D187）。用途 = 冻结不可变性的测试锚 + 诊断身份（脚手架与 `metis.build.wit_sha256` 记录，D108 / D112），不是信任锚，也不参与 ABI 判定。
+
+### W10.5 D190 首个冻结快照
+
+**D190 定案：`0.1.0` 的冻结触发 = 首个外部分发（marketplace 收录或非 monorepo 作者发布 / 分发）之前；冻结物 = D186 的两面全集；冻结后目录不可变。**
+
+- **触发与责任人**：执行者 = 维护者（发布前检查单）；触发观测 = marketplace 收录 / 外部分发流程（任务 9）；「外部分发」含 `metis-plugin` crate 发布（SDK 随 crate 携带 WIT 树，W1.2）。核心不自动检测外部事件，唯一状态面 = 台账登记。**冻结前置 = 冻结物全部在场**（WIT 树 / TLV 位布局 / manifest·能力·DSL·事件规则 / `vocabulary.yml`）；任一不在场 = 冻结不成立，外部分发阻塞。若外部分发已发生而未冻结 = 发布事故：立即补冻结，`0.1.0` 不得原地改，后续改动开新快照。
+- **冻结物清单**（= D186 接口面 + 字节面全集）：
+  - `wit/0.1.0/` 的 WIT 文本树（world + 各 interface）；
+  - TLV 格式版本与位布局（T10.13 的交付；W6 D156 的语义面已冻结）；
+  - `error-kind` 封闭枚举（W5 D137）；
+  - manifest 字段集与未知字段政策（W2 D126）；
+  - 能力词汇表（W2 D129）；
+  - 契约形状 DSL 词汇 / 产生式与契约节结构（W7 D166 / D167）；
+  - 事件名规则与 `internal/*` 保留（W8 D173）；
+  - 可观测投递语义（每监听者收件序、timer 合并计数、邮箱满不丢，W3 D152）；
+  - `vocabulary.yml` 的 WASI 基线版本集（D189）。
+- **机制**：冻结事件 = 写入 `wit/0.1.0/wit.sha256`（排除自身；覆盖 WIT 树 + `vocabulary.yml`）+ 本章与台账各记一笔（日期 + hash + 冻结 commit）；此后目录只读，任何改动开新快照（D188）。非 WIT 冻结项（TLV 位布局 / manifest·能力·DSL·事件规则）不由该 hash 钉：TLV 由 T10.13 的格式版本与位布局常量钉，其余项由本章 D 号 + 同一冻结 commit 的评审记录钉（无法机器化，明记）。
+- **校验**：hash 测试（重算当前目录与 `wit.sha256` 比对）归 T10.14 的实现义务，测试形态，不动门禁面。它防失误，不防同一 commit 里同时改目录与 hash 的蓄意改写；后者靠评审纪律与 git 史（`git diff <冻结 commit> -- wit/0.1.0`）。若需要机器强制冻结目录的 git 史 = 门禁面变更（ASK）登记为扩展位，v1 不做。
+- **现状（2026-10-19 本章收官）**：`0.1.0` = 当前快照、**尚未冻结**；冻结为待触发项，在首个外部分发前执行。W1.3 / W3.13 / W6.2 / W6.6 的「首个发布快照由 W10 记录」以此为准。
+
+### W10.6 D191 版本面各自独立
+
+**D191 定案：六个版本面互不同步、各 bump 各的；不立统一版本号；只有 WIT package version 参与 ABI 接受判定。**
+
+| 面               | 载体                           | 管什么         | 演进 / 归属                          |
+| ---------------- | ------------------------------ | -------------- | ------------------------------------ |
+| WIT package      | `metis:plugin@X.Y.Z`           | ABI 接口集     | 本章 D187 / D188                     |
+| TLV 格式         | 载荷内版本字段 + T10.13 位分配 | Value 字节布局 | T10.13；与 WIT 版本独立（W6 D156）   |
+| journal 格式     | 段文件头行 `{"v":1,...}`       | 落盘格式       | J4.2 D90；独立                       |
+| 契约版本         | `@N`                           | 契约数据形状   | W7 D165；独立                        |
+| SDK crate semver | `metis-plugin` 版本            | 作者面 API     | plugin-sdk S3；诊断面，不作 ABI 判定 |
+| 构建管线版本     | `metis.build.pipeline_version` | 构建溯源       | build-pipeline D112；独立            |
+
+- WASI 0.3 基线版本是宿主词汇表事实，不是 metis ABI 版本（W9.3）；每个快照的 `vocabulary.yml` 记录冻结时的基线版本集（D189），进口对账按它判（D187）。宿主升级若删除旧 WASI 版本 = 对旧插件的事实性破坏；D192 的升级流程必须在升级前对比全部快照的 `vocabulary.yml`，保留旧版本或显式走 sunset 决策（扩展位）。metis package version 的「无 sunset」承诺与 WASI 基线的保留是**两个条件**，同时满足才等于「旧插件照跑」；本章不把后者包装进前者。
+- 不互相推导：契约 `@N` bump 不 bump ABI；ABI bump 不自动改契约版本；TLV 版本 bump 不改 WIT 文本。
+
+### W10.7 D192 钉版纪律
+
+**D192 定案：版本号只住消费它的清单；钉版面 = rustc / target / wit-bindgen / wasmtime / wasm-tools / wasmparser / wasm-component-ld；升级 = 一次 lockstep 改动，WIT 文本不变则不 bump ABI。**
+
+- **SSOT**：工具链版本住 `rust-toolchain.toml`；crate 版本住 Cargo 清单（workspace 依赖）；设计文档不复制数值（AGENTS.md「NEVER hand-write version numbers」）。本章只冻结纪律，不记录版本号。
+- **钉版面**：
+  - rustc + `wasm32-wasip3` target：guest 构建与宿主构建同一工具链版本（WASI 0.3，ADR-0034 W7 风险原位）；
+  - `wit-bindgen`：SDK 私有钉版（plugin-sdk S3）；作者不见；宿主侧不直接钉它——`wasmtime::component::bindgen!` 经 wasmtime 间接携带，版本由 wasmtime 钉定（构建期生成，产物为组件；两侧不需要同一 wit-bindgen 版本，ABI 由 canonical ABI + WIT 文本保证）；
+  - `wasmtime`：宿主嵌入；
+  - `wasm-tools`：只作 WIT 提取 / 调试，版本钉定，**不参与安装判定**（build-pipeline D108）；
+  - `wasmparser`：校验 SSOT（固定 feature 集合，D108）；
+  - `wasm-component-ld`：组件链接，预检在场（D112）。
+- **升级流程**：一次 lockstep 改动（清单 + 工具链）→ `just ci` + `just deny`；WIT 文本与 TLV 布局不变 = 不 bump（D188）；工具链迫使 WIT 文本变化 = 按 D188 正常 bump。
+- **诊断身份**：WIT hash（D189，脚手架记录）与 `metis.build`（D112，记录 `wit_package_version` / `wit_sha256`）只作诊断 / 溯源，不是信任锚；签名 / attestation 单独绑定产物。
+- **组件模型 1.0**：复审触发器原位（ADR-0034 W3）；到来时评估升级路径，不在本章预裁。
+
+### W10.8 D193 工具面残留与判定落点
+
+**D193 定案：命令面 SSOT = build-pipeline D105/D106/D112；W10 只定 ABI 判定落点 = 单一实现、两层执行（声明层 / 结构层）。**
+
+- **不保留 `metis sdk` 组**。A10 D28.1 的映射：
+
+| A10 子命令    | 去向                                                               |
+| ------------- | ------------------------------------------------------------------ |
+| `sdk new`     | `metis new`（build-pipeline D106）；写 SDK 版本 + WIT hash（D108） |
+| `sdk check`   | `metis check`（D106）；ABI 判定并入                                |
+| `sdk analyze` | 消亡：wasm 无源码扫描面（W9.2 / W8 D174）                          |
+| `sdk types`   | 编译期 `types!()`（plugin-sdk D104 / W7 D170）                     |
+| `sdk box *`   | 随盒消亡（ADR-0034 §2）                                            |
+
+- **判定落点 = 单一实现、两层执行**：
+  - 声明层（manifest `abi` 格式 + ∈ 支持集）：`metis check`（纯数据）、`metis build` 预检（D112）、loader 安装期都跑；
+  - 结构层（组件导出集 + import 版本后缀 + import 词汇表 + **组件类型与期望 world 的类型级比较**）：只在有组件产物的面跑——`metis build` 产物校验、安装期、部署根模式的 `metis check`；类型级比较不需要实例化（解析组件类型即可），实例化时的运行时类型检查 = 启用期最后一道。源码模式的 `metis check` 明示「需构建产物」跳过。
+  - 两层同源实现、措辞逐字一致（D133 原则）；`metis check` / `metis build` / loader 共用校验器。
+- **错误形态**：结构化 findings（声明版本 / 支持集 / 结构实际版本 / import 越界条目 / 行动提示），CLI 边界 miette 三段式（code + 说明 + help，如「升级核心或按 0.1.0 重建」）。
+- **`metis check` 的单插件模式**：声明层自完备；结构层需组件产物（源码模式跳过并明示），与 W9.11 的部署级格区分。
+- **A10 D28.3 十四项检查的存亡**：见 W10.9；不扫 guest 源码、不做能力漂移推断（W9.2 原位）。
+- **实现位置**：判定住共享纯校验面（build-pipeline D108 的 `metis-validate` 或 `metis-component`，T10.15 开工确认）；loader 与构建管线同源消费；运行时 crate 不依赖构建管线。
+
+### W10.9 A10 机制消亡清单（考古索引）
+
+每条一句死因；完整考古见 git 史、归档 [luau-abi](luau-abi.md) 与 [ADR-0026](../decisions/0026-luau-abi.md)（已 superseded）。
+
+| 机制                                                                    | 死因                                                                              |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `abi_rev` 单整数 / min 语义                                             | 载体换 WIT package version；声明必须精确（D187 / D188）                           |
+| A10 的「四层防线」工具链                                                | 换 D133 三面暴露 + wasm 结构事实                                                  |
+| `metis sdk` 组 / `sdk box *`                                            | 命令面上移（D106）；盒消亡（ADR-0034 §2）                                         |
+| `sdk analyze` + D28.3 #1–#3 / #5–#7 / #9–#14                            | wasm 无源码扫描面；能力对账 = 词汇表闭包（W9.2）；事件面声明降为审批面（W8 D174） |
+| D28.3 #4 emit↔publish 漂移                                              | 收窄 = publish 出处静态检查（W9.8）                                               |
+| D28.3 #8 判环预检                                                       | 存活 = config-format D52 / W9.11                                                  |
+| `.d.luau` / `export type` / definitions 挂接 / luau-lsp 钉版 / AST 选型 | 换 wit-bindgen + 编译期宏（plugin-sdk S2 / S7）                                   |
+| `.luaurc` / `@lib` / 部署根布线                                         | ADR-0038（模块系统消亡）                                                          |
+| `plugin()` 泛型 declare / 两槽 narrowing / integer 类型器验证           | Rust 类型系统 + `Result` 原生（plugin-sdk S4 / S5）                               |
+| WIT 递归 variant 验证项                                                 | 已成设计输入（递归 Value 走 TLV，W6）                                             |
+| ABI rev sunset / analyze 提示 rev 写低                                  | sunset 改扩展位（D188）；analyze 消亡                                             |
+| Creator 文档的 `abi_rev` 作者指南                                       | 改 `abi` 精确版本指南（T10.14 作者文档，首个外部分发前完成）                      |
+
+**语义平移保留**：命令面 `new` / `check`（D106）；判环预检（D52）；publish 出处检查（W9.8）；三面暴露（D133）；快照保留承诺（D188）；钉版纪律（D192）。
+
+### W10.10 联动登记汇总（章末）
+
+| 去向                                | 内容                                                                                                                                                                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| W1（T13-h）                         | **已兑现（2026-10-19）**：package version 语义与比较 = D187；快照布局 = D189；冻结 = D190；`wit/` 根 + 版本子目录                                                                                                                                |
+| W2（T13-i）                         | **已兑现（2026-10-19）**：`abi` 精确声明与三合一接受（D187）；字段集 / 能力词汇演进 = D188；manifest 版本机制仍不立                                                                                                                              |
+| W3（T13-j）                         | **已兑现（2026-10-19）**：首个冻结快照 = D190；import 词汇表按快照（D189）；WASI 基线独立（D191）                                                                                                                                                |
+| W5（T13-k）                         | **已兑现（2026-10-19）**：新 kind = 新快照（D188）；跨版本按声明绑定，无翻译层（D189）                                                                                                                                                           |
+| W6（T13-l）                         | **已兑现（2026-10-19）**：TLV 版本面独立（D191）；位布局冻结时点 = D190；TLV 变更不自动 bump ABI                                                                                                                                                 |
+| W7（T13-m）                         | **已兑现（2026-10-19）**：DSL 词汇 / 产生式演进 = D188；`@N` 独立（D191）                                                                                                                                                                        |
+| W8（T13-n）                         | **已兑现（2026-10-19）**：事件名规则 / `internal/*` 词汇演进 = D188；`on-event` 面演进 = 新快照                                                                                                                                                  |
+| W9（T13-o）                         | **已兑现（2026-10-19）**：支持集与多版本词汇表（D187 / D189）；WASI 基线不随 package version（D191）                                                                                                                                             |
+| ADR-0025 + 0022/0024/0027/0028/0029 | Status 行局部注：`abi_rev` 载体的历史措辞换为 WIT package version（引 ADR-0034 §3 + 本章 D187–D188）；正文全部不动                                                                                                                               |
+| config-format                       | C4.2 ABI 演进归本章；C5.3 / C8.2 / C9.2 的 W10 行兑现                                                                                                                                                                                            |
+| instance-model                      | S3.3 / S5.2 的 ABI 演进承接兑现                                                                                                                                                                                                                  |
+| journal                             | J6.1 的 ABI 演进通道兑现；journal 版本面独立（D191）                                                                                                                                                                                             |
+| plugin-sdk                          | 钉版纪律（D192）；`types!()` / 宏归属（D193）；SDK semver 诊断面（D191）                                                                                                                                                                         |
+| build-pipeline                      | D108 的版本比较语义 = D187；D112 预检消费同一实现；§14 W10 行兑现；命令面 SSOT（D193）                                                                                                                                                           |
+| seam-capabilities                   | §6.1 W10 行兑现（能力词汇演进 = 新快照）                                                                                                                                                                                                         |
+| service-registry                    | §7 契约包版本面 = W7 D165 / W10 D191；工具链钉版纪律 = W10 D192                                                                                                                                                                                  |
+| T10.9                               | ABI 比较函数消费；部署索引记录结构版本；单插件 / 部署根 check 共用                                                                                                                                                                               |
+| T10.10                              | 开工首件 = `crates/metis-plugin/wit/<version>/` 目录落盘（W1.2 的 SDK crate 位置，SDK 实现归 T10.14）；多版本绑定生成（逐快照）；路由；`CURRENT_ABI` / 支持集常量；`bindgen!` 共存形态（未验证）；冻结前维护 `vocabulary.yml`（WASI 基线版本集） |
+| T10.13                              | TLV 格式版本与位布局；冻结前交付                                                                                                                                                                                                                 |
+| T10.14                              | SDK 只对当前快照生成；脚手架写 SDK 版本 + WIT hash；首次冻结执行 + hash 校验；`abi` 作者指南（首个外部分发前）                                                                                                                                   |
+| T10.15                              | `metis check` ABI 判定；预检共用实现；命令面                                                                                                                                                                                                     |
+| 扩展位                              | snapshot sunset / floor raise；1.0.0 时点；多版本 `bindgen!` 共存形态（实现核对）；预发布版本（不立，重开 = 有预发布消费方）；冻结目录 git 史机器校验（需门禁面 ASK）；快照数增长复审触发器（阈值实现期配置）                                    |
