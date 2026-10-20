@@ -6,3 +6,7 @@
 //! tokio, mlua, or tracing. Transitions return action descriptions (data) for
 //! the runtime glue to interpret, which is the shape the L2 model-based state
 //! tests and the L4 formalization targets (Kani/hax) require.
+
+mod ledger;
+
+pub use ledger::{Disposer, Drain, EffectId, Ledger};

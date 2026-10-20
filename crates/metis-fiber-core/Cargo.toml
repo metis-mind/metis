@@ -14,3 +14,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+indexmap.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
