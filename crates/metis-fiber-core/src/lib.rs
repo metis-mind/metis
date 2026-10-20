@@ -7,11 +7,13 @@
 //! the runtime glue to interpret, which is the shape the L2 model-based state
 //! tests and the L4 formalization targets (Kani/hax) require.
 
+mod arena;
 mod fiber;
 mod id;
 mod ledger;
 mod state;
 
+pub use arena::Arena;
 pub use fiber::{Fiber, LedgerClosed};
 pub use id::FiberId;
 pub use ledger::{Disposer, Drain, EffectId, Ledger};

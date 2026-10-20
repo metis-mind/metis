@@ -1,7 +1,12 @@
 //! The fiber: one plugin instance's lifecycle container (fiber.md §0–§1) —
-//! state machine + disposer ledger. It answers three questions: is this
-//! instance alive, what has it done, how does it die cleanly.
-//! (Parent/child links arrive with the arena, which owns the wiring.)
+//! state machine + disposer ledger + parent/child links. It answers three
+//! questions: is this instance alive, what has it done, how does it die
+//! cleanly.
+//!
+//! Topology (parent/children) is pure bookkeeping written only by the
+//! arena; the "child = one effect of the parent" rule (fiber.md §8.4)
+//! lives with the glue, which records the child's unload as a disposer in
+//! the parent's ledger — LIFO settles children first for free.
 //!
 //! Policy points the fiber owns on top of its parts:
 //!
@@ -17,6 +22,7 @@
 
 use thiserror::Error;
 
+use crate::id::FiberId;
 use crate::ledger::{Disposer, Drain, EffectId, Ledger};
 use crate::state::{Action, Event, FiberState, TransitionError};
 
@@ -31,6 +37,8 @@ pub struct LedgerClosed {
 pub struct Fiber {
     state: FiberState,
     ledger: Ledger,
+    parent: Option<FiberId>,
+    children: Vec<FiberId>,
 }
 
 impl Default for Fiber {
@@ -38,6 +46,8 @@ impl Default for Fiber {
         Self {
             state: FiberState::Pending,
             ledger: Ledger::default(),
+            parent: None,
+            children: Vec::new(),
         }
     }
 }
@@ -53,6 +63,18 @@ impl Fiber {
     #[must_use]
     pub fn state(&self) -> &FiberState {
         &self.state
+    }
+
+    /// The parent this fiber is linked under (arena bookkeeping).
+    #[must_use]
+    pub fn parent(&self) -> Option<FiberId> {
+        self.parent
+    }
+
+    /// Live children (arena bookkeeping; see the module docs).
+    #[must_use]
+    pub fn children(&self) -> &[FiberId] {
+        &self.children
     }
 
     /// Number of unsettled disposers on the book (observability).
@@ -112,6 +134,21 @@ impl Fiber {
             FiberState::Unloading(_) => Some(self.ledger.begin_drain()),
             _ => None,
         }
+    }
+
+    /// Bookkeeping for the arena: set the parent link.
+    pub(crate) fn set_parent(&mut self, parent: Option<FiberId>) {
+        self.parent = parent;
+    }
+
+    /// Bookkeeping for the arena: register a child link.
+    pub(crate) fn push_child(&mut self, child: FiberId) {
+        self.children.push(child);
+    }
+
+    /// Bookkeeping for the arena: drop a child link.
+    pub(crate) fn remove_child(&mut self, child: FiberId) {
+        self.children.retain(|c| *c != child);
     }
 }
 
