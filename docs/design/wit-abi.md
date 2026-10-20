@@ -1969,7 +1969,7 @@ A10 机制原貌见 [luau-abi](luau-abi.md) §A10；逐项处置见本文各 W �
 - fs：读 / 写预算；private fs 读预算；per-read timeout（扩展位）。
 - process：输出预算（`stdout-truncated` / `stderr-truncated`）。
 - 消息：message 长度上限（含 core-deadlock 路径）。
-- 并发：每实例在飞 async 任务预算；优雅窗口 + drain 总预算；host 侧事件在途投递界；每父实例子实例数上限（T10.12）。
+- 并发：每实例在飞 async 任务预算 = 64；host 侧事件在途投递界 = 256；优雅窗口 = 5 s、drain 总预算 = 30 s（此三项 2026-10-20 T10.2 开工批拍板落定，原位 = W4.3 D95 闸门 / W4.5 D97 五段；fiber.md §10 修订注同步）；每父实例子实例数上限（T10.12）。
 - 资源：store 资源上限（内存 / 表 / 组件大小，T10.10）；包内容大小 / 文件数上限（T10.12）；tenant 级 blob 内存预算。
 - 边界：TLV 条目 / 深度 / 字节；blob 单大小 / 总量；reader / writer 块上限；每实例句柄数。
 - 事件：事件名长度上限；事件总表节点 / 引用展开预算；listener 每实例条目上限。
