@@ -116,31 +116,41 @@ pub fn invalidation_closure<K: Eq + std::hash::Hash, S: std::hash::BuildHasher>(
 
     // 3. Topo-sort the affected set with provider → consumer edges: that
     //    order is the reload order (providers first); unload is its reverse.
-    //    Kahn's algorithm over a BTreeSet ready-queue keeps it deterministic.
-    let mut prerequisites: HashMap<FiberId, BTreeSet<FiberId>> = HashMap::new();
+    //    Kahn's algorithm in countdown form — each dependent counts its
+    //    affected in-edges, a provider's pop decrements, zero means ready.
+    //    The BTreeSet ready-queue keeps the result deterministic.
+    //    (Countdown, not per-dependent prerequisite sets: termination must
+    //    not hinge on one short-circuit — a disturbed empty-set test
+    //    re-queues fibers forever.)
+    let mut remaining: HashMap<FiberId, usize> = HashMap::new();
+    let mut consumers_of: HashMap<FiberId, Vec<FiberId>> = HashMap::new();
     for (service, (provider, _)) in providers {
         if !affected.contains(provider) {
             continue;
         }
         for (dependent, _) in dependents_of.get(service).into_iter().flatten() {
+            // A fiber never waits on its own reload (self-edge exclusion);
+            // edges to unaffected dependents are not part of this plan.
             if affected.contains(dependent) && dependent != provider {
-                prerequisites
-                    .entry(*dependent)
-                    .or_default()
-                    .insert(*provider);
+                *remaining.entry(*dependent).or_insert(0) += 1;
+                consumers_of.entry(*provider).or_default().push(*dependent);
             }
         }
     }
     let mut ready: BTreeSet<FiberId> = affected
         .iter()
         .copied()
-        .filter(|fiber| prerequisites.get(fiber).is_none_or(BTreeSet::is_empty))
+        .filter(|fiber| !remaining.contains_key(fiber))
         .collect();
     let mut reload: Vec<FiberId> = Vec::with_capacity(affected.len());
     while let Some(fiber) = ready.pop_first() {
         reload.push(fiber);
-        for (dependent, deps) in &mut prerequisites {
-            if deps.remove(&fiber) && deps.is_empty() {
+        for dependent in consumers_of.get(&fiber).into_iter().flatten() {
+            let count = remaining
+                .get_mut(dependent)
+                .expect("every recorded edge also counted its dependent");
+            *count -= 1;
+            if *count == 0 {
                 ready.insert(*dependent);
             }
         }
