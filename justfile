@@ -106,6 +106,12 @@ deep: test-telemetry
 deep-kani:
     cargo kani -p metis-fiber-core
 
+# D6 fiber-scale memory-return check (testing-strategy §3.E): the
+# counting-allocator integration test in metis-fiber-core, ignored in the fast
+# track.
+deep-memory:
+    cargo nextest run -p metis-fiber-core --run-ignored only -E 'binary(memory)'
+
 # Add an internal crate (unpublished by default; rules in CONTRIBUTING.md "Adding a crate")
 new-crate name:
     cargo run -q -p xtask -- new-crate {{name}}

@@ -1,0 +1,26 @@
+[package]
+name = "metis-test-support"
+description = "Slow-track test-support utilities (counting allocator for the D6 memory legs); the workspace's unsafe quarantine"
+# Internal crates carry no semver burden. To publish later (when release
+# engineering returns): switch to version.workspace = true and drop
+# publish = false — see CONTRIBUTING.md.
+version = "0.0.0"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+# Lint quarantine, deliberate: this crate does NOT inherit the workspace
+# lints (`[lints] workspace = true`) because the workspace forbids
+# `unsafe_code` absolutely and a counting `GlobalAlloc` impl cannot exist
+# without unsafe. The complete unsafe surface is src/lib.rs (the allocator
+# impl plus its unit test); clippy strictness is restated inline so the
+# only dropped guard is the unsafe forbid itself.
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow" # carried by the caller's own error types
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+
+[dependencies]

@@ -11,7 +11,7 @@
 - Snapshot updates: `just snapshot-review` (two-stage: state the expected change first, then approve each diff against it by hand; never bulk-accept — ADR-0031 doctrine 5)
 - New crate: `just new-crate <name>`
 - Dependency policy: `just deny`; docs build: `just doc`; agent-doc smoke check + docs/ integrity (map orphans/dangling, internal links, freshness, archive): `just agent-check`; kernel-crate coverage floors: `just cov-floor` (values: `.config/cov-floor.toml`)
-- Slow track (local on-demand; failures file issues, never block commits): `just deep` (llvm-cov workspace report + test-bloat telemetry)
+- Slow track (local on-demand; failures file issues, never block commits): `just deep` (llvm-cov workspace report + test-bloat telemetry); heavier legs on demand: `just deep-kani` / `just deep-memory`
 - Toolchain bump: `just toolchain-bump` (wrapped by the weekly toolchain-update workflow; bot PRs don't trigger CI — the in-job `just ci` is the gate)
 
 ## Environment
@@ -44,7 +44,7 @@ Done = `just ci` green + self-review of the working diff.
 - NEVER push tags or cut releases — release engineering is deferred (ADR-0020, form decided in ADR-0030); version intent lives in commit messages only.
 - NEVER add agent-attribution footers (`Co-Authored-By`, "Generated with …") to commits.
 - NEVER force-push or rewrite shared history unless the human explicitly asks.
-- ASK before touching: new third-party dependencies (see the `adding-dependencies` skill), any file on the gate-surface list (`docs/design/testing-strategy.md` §4.2 — CI workflows, justfile, hook configs, `crates/xtask`, deny/dprint config, test-exemption surfaces), hosting/branch-protection settings.
+- ASK before touching: new third-party dependencies (see the `adding-dependencies` skill), any file on the gate-surface list (`docs/design/testing-strategy.md` §4.2 — CI workflows, justfile, hook configs, `crates/xtask`, deny/dprint config, test-exemption surfaces), hosting/branch-protection settings, any crate-level opt-out of `[lints] workspace = true` (the sole existing quarantine is `crates/metis-test-support`).
 - NEVER commit gate-surface changes without a `Gate-Surface:` trailer naming every touched gate path — the commit-msg hook (`xtask gate-guard`) is the machine half, and the trailer is the record that the ASK above happened.
 
 ## Style (the part lints can't enforce)

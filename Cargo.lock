@@ -557,6 +557,7 @@ name = "metis-fiber-core"
 version = "0.0.0"
 dependencies = [
  "indexmap",
+ "metis-test-support",
  "proptest",
  "slotmap",
  "thiserror",
@@ -568,6 +569,10 @@ version = "0.0.0"
 
 [[package]]
 name = "metis-runtime"
+version = "0.0.0"
+
+[[package]]
+name = "metis-test-support"
 version = "0.0.0"
 
 [[package]]

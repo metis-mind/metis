@@ -33,8 +33,14 @@ serde_json = "1"
 insta = "1"
 assert_cmd = "2"
 proptest = "1"
+# internal slow-track test-support crate (the workspace's unsafe quarantine —
+# see its Cargo.toml)
+metis-test-support = { path = "crates/metis-test-support" }
 
 [workspace.lints.rust]
+# absolute — except the one quarantine crate, which opts out of workspace
+# lints by design (crates/metis-test-support restates the clippy set by hand;
+# keep it in sync when this section grows)
 unsafe_code = "forbid"
 # Kani proof harnesses live next to the code under cfg(kani) (testing-strategy
 # §2.1); register the cfg so unexpected_cfgs keeps biting everything else.
