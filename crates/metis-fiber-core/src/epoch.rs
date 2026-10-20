@@ -158,6 +158,84 @@ pub fn invalidation_closure<K: Eq + std::hash::Hash, S: std::hash::BuildHasher>(
     RestartPlan { unload, reload }
 }
 
+#[cfg(kani)]
+mod proofs {
+    use super::*;
+    use slotmap::SlotMap;
+
+    /// Bounded DAGs (≤3 fibers, ≤3 services, epochs 1..=3): the closure
+    /// computes exactly the naive fixpoint, without duplicates, and every
+    /// provider reloads before its consumers. Universally quantified where
+    /// the L1 property tests sample.
+    #[kani::proof]
+    #[kani::unwind(16)]
+    fn closure_computes_the_fixpoint_and_respects_edges() {
+        let mut arena: SlotMap<FiberId, ()> = SlotMap::with_key();
+        let f: Vec<FiberId> = (0..3).map(|_| arena.insert(())).collect();
+
+        // Symbolic registry; DAG by construction (consumers outrank their
+        // provider's index).
+        let mut providers: HashMap<u8, (FiberId, Epoch)> = HashMap::new();
+        let mut dependents_of: HashMap<u8, Vec<(FiberId, Epoch)>> = HashMap::new();
+        let mut bumped: HashSet<u8> = HashSet::new();
+        for key in 0u8..3 {
+            if kani::any() {
+                let provider_idx: usize = kani::any();
+                kani::assume(provider_idx < 3);
+                let epoch: Epoch = kani::any();
+                kani::assume((1..=3).contains(&epoch));
+                providers.insert(key, (f[provider_idx], epoch));
+                for consumer_idx in (provider_idx + 1)..3 {
+                    if kani::any() {
+                        let recorded: Epoch = kani::any();
+                        kani::assume((1..=3).contains(&recorded));
+                        dependents_of
+                            .entry(key)
+                            .or_default()
+                            .push((f[consumer_idx], recorded));
+                    }
+                }
+                if kani::any() {
+                    bumped.insert(key);
+                }
+            }
+        }
+
+        let plan = invalidation_closure(&providers, &bumped, &dependents_of);
+
+        // Oracle: a naive fixpoint; 4 passes always suffice for 3 fibers
+        // (each pass settles at least one more fiber, or is stable).
+        let mut expected: HashSet<FiberId> = bumped
+            .iter()
+            .filter_map(|service| providers.get(service))
+            .map(|(provider, _)| *provider)
+            .collect();
+        for _ in 0..4 {
+            for (service, (provider, epoch)) in &providers {
+                for (dependent, recorded) in dependents_of.get(service).into_iter().flatten() {
+                    if is_stale(*recorded, *epoch) || expected.contains(provider) {
+                        expected.insert(*dependent);
+                    }
+                }
+            }
+        }
+
+        let reload_set: HashSet<FiberId> = plan.reload.iter().copied().collect();
+        assert_eq!(reload_set, expected, "the closure is exactly the fixpoint");
+        assert_eq!(plan.reload.len(), reload_set.len(), "no duplicates");
+        for (service, (provider, _)) in &providers {
+            for (dependent, _) in dependents_of.get(service).into_iter().flatten() {
+                if let (Some(p), Some(d)) = (
+                    plan.reload.iter().position(|x| x == provider),
+                    plan.reload.iter().position(|x| x == dependent),
+                ) {
+                    assert!(p < d, "provider reloads before consumer");
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -33,12 +33,12 @@ serde_json = "1"
 insta = "1"
 assert_cmd = "2"
 proptest = "1"
-# Kani proof-harness library (testing-strategy §2.1); version must track the
-# verifier installed by `cargo kani setup` — keep the two in the same change.
-kani = "0.68"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
+# Kani proof harnesses live next to the code under cfg(kani) (testing-strategy
+# §2.1); register the cfg so unexpected_cfgs keeps biting everything else.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)"] }
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }

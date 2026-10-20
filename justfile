@@ -100,6 +100,12 @@ deep: test-telemetry
     cargo llvm-cov --workspace --html
     cargo llvm-cov report --summary-only
 
+# Kani proofs for the fiber kernel (testing-strategy §2.1, implementation-level
+# rung of the L4 ladder; proofs live next to the code under cfg(kani)). Needs
+# kani-verifier installed — see CONTRIBUTING "Formal verification (Kani)".
+deep-kani:
+    cargo kani -p metis-fiber-core
+
 # Add an internal crate (unpublished by default; rules in CONTRIBUTING.md "Adding a crate")
 new-crate name:
     cargo run -q -p xtask -- new-crate {{name}}

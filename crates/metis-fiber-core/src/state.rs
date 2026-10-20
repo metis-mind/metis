@@ -220,6 +220,115 @@ impl Event {
     }
 }
 
+#[cfg(kani)]
+mod proofs {
+    use super::*;
+
+    fn any_state() -> FiberState {
+        match kani::any::<u8>() % 6 {
+            0 => FiberState::Pending,
+            1 => FiberState::Loading,
+            2 => FiberState::Active,
+            3 => FiberState::Unloading(UnloadTarget::Disposed),
+            4 => FiberState::Unloading(UnloadTarget::Failed(Report::new("load"))),
+            _ => FiberState::Failed(Report::new("failed")),
+        }
+    }
+
+    fn any_event() -> Event {
+        match kani::any::<u8>() % 6 {
+            0 => Event::StartLoad,
+            1 => Event::LoadSucceeded,
+            2 => Event::LoadFailed(Report::new("boom")),
+            3 => Event::Unload,
+            4 => Event::DrainFinished {
+                disposer_errors: vec![],
+            },
+            _ => {
+                let n: usize = kani::any();
+                kani::assume(n <= 2);
+                Event::DrainFinished {
+                    disposer_errors: (0..n).map(|i| Report::new(format!("e{i}"))).collect(),
+                }
+            }
+        }
+    }
+
+    /// The acceptance grid, stated independently of the implementation.
+    fn has_legal_outcome(before: &FiberState, event: &Event) -> bool {
+        use FiberState as S;
+        matches!(
+            (before, event),
+            (S::Pending, Event::StartLoad | Event::Unload)
+                | (S::Loading, Event::LoadSucceeded | Event::LoadFailed(_))
+                | (S::Active, Event::Unload)
+                | (S::Unloading(_), Event::DrainFinished { .. })
+                | (S::Failed(_), Event::Unload)
+        )
+    }
+
+    /// The full legal-edge relation over outcomes, stated independently of
+    /// the implementation (a third encoding, as the specification).
+    fn legal(before: &FiberState, event: &Event, after: &FiberState, actions: &[Action]) -> bool {
+        use FiberState as S;
+        match (before, event, after, actions) {
+            (S::Pending, Event::StartLoad, S::Loading, []) => true,
+            (S::Pending, Event::Unload, S::Disposed, []) => true,
+            (S::Loading, Event::LoadSucceeded, S::Active, []) => true,
+            (
+                S::Loading,
+                Event::LoadFailed(given),
+                S::Unloading(UnloadTarget::Failed(carried)),
+                [Action::StartDrain],
+            ) => given == carried,
+            (
+                S::Active,
+                Event::Unload,
+                S::Unloading(UnloadTarget::Disposed),
+                [Action::StartDrain],
+            ) => true,
+            (S::Unloading(target), Event::DrainFinished { disposer_errors }, landed, []) => {
+                let load_failure = match target {
+                    UnloadTarget::Failed(report) => Some(report.clone()),
+                    UnloadTarget::Disposed => None,
+                };
+                let expected = if disposer_errors.is_empty() {
+                    match load_failure {
+                        Some(report) => S::Failed(report),
+                        None => S::Disposed,
+                    }
+                } else {
+                    S::Failed(Report::drain_failure(
+                        load_failure.as_ref(),
+                        disposer_errors,
+                    ))
+                };
+                *landed == expected
+            }
+            (S::Failed(_), Event::Unload, S::Disposed, []) => true,
+            _ => false,
+        }
+    }
+
+    /// Single-step transitions implement exactly the legal edges: every
+    /// accepted step is legal, and every rejected (state, event) pair has
+    /// no legal outcome. (Kani's hard bound = no concurrency, so this is
+    /// the single-step/no-interleaving shape testing-strategy §2.1
+    /// assigns; interleaving coverage belongs to L2.)
+    #[kani::proof]
+    fn single_step_implements_exactly_the_legal_edges() {
+        let before = any_state();
+        let event = any_event();
+        match before.transition(event.clone()) {
+            Ok((after, actions)) => assert!(
+                legal(&before, &event, &after, &actions),
+                "accepted an illegal edge"
+            ),
+            Err(_) => assert!(!has_legal_outcome(&before, &event), "rejected a legal edge"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

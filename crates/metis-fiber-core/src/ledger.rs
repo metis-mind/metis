@@ -55,6 +55,47 @@ impl Iterator for Drain {
 
 impl ExactSizeIterator for Drain {}
 
+#[cfg(kani)]
+mod proofs {
+    use super::*;
+    use std::task::{Context, Poll};
+
+    /// A trivially-ready future (keeps async-block lowering out of the
+    /// proof; only ordering is proven, never execution).
+    struct Ready;
+
+    impl Future for Ready {
+        type Output = ();
+
+        fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<()> {
+            Poll::Ready(())
+        }
+    }
+
+    fn dummy() -> Disposer {
+        Box::new(|| Box::pin(Ready))
+    }
+
+    /// Bounded inserts: the drain yields exactly the reverse registration
+    /// order, consumes the book, and a second drain is empty.
+    #[kani::proof]
+    #[kani::unwind(6)]
+    fn drain_is_exact_reverse_and_consuming() {
+        let n: usize = kani::any();
+        kani::assume((1..=4).contains(&n));
+        let mut ledger = Ledger::new();
+        for expected_id in 0..n as u64 {
+            assert_eq!(ledger.record(dummy()), expected_id);
+        }
+        let drained: Vec<EffectId> = ledger.begin_drain().map(|(id, _)| id).collect();
+        let mut expected: Vec<EffectId> = (0..n as u64).collect();
+        expected.reverse();
+        assert_eq!(drained, expected);
+        assert_eq!(ledger.len(), 0, "drain consumes the book");
+        assert_eq!(ledger.begin_drain().count(), 0, "second drain is empty");
+    }
+}
+
 impl Ledger {
     /// An empty book.
     #[must_use]

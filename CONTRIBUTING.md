@@ -56,6 +56,17 @@ This creates an **internal crate** (`version = "0.0.0"`, `publish = false`) with
 - Large-output assertions (help text, diagnostics, serialized formats) use insta snapshots: snapshots are committed and reviewed; never bulk-accept. Nondeterministic fields (timestamps, paths, UUIDs) must be filtered/redacted before snapshotting.
 - Update snapshots with `just snapshot-review` — read each diff before approving.
 
+## Formal verification (Kani)
+
+Proof harnesses for the fiber kernel live next to the code under `#[cfg(kani)]` (testing-strategy §2.1; proofs are checked in the weekly slow-track workflow, never in `just ci`). The `kani` library crate is deliberately **not a dependency**: crates.io only holds the project's placeholder, and the real library ships inside the verifier bundle — the harnesses compile only when built by the Kani toolchain. To run them locally:
+
+```bash
+cargo install --locked kani-verifier --version 0.68.0
+just deep-kani                                         # the first run auto-runs Kani's setup (downloads the verifier bundle)
+```
+
+The prebuilt bundle needs a FHS glibc layout: it works on the CI runners (ubuntu-latest) but not on a NixOS host. On NixOS, run it inside a Ubuntu container (or `steam-run`), or rely on the weekly workflow — a compile failure of the harnesses there files an issue like any other slow-track failure.
+
 ## Releasing and remote CI
 
 Remote CI runs the same recipes as local `just` (`.github/workflows/`): a prek quality gate plus an ubuntu/macOS test matrix on pushes to `main` and on PRs, weekly flake.lock / toolchain bump PRs, and a scheduled dependency audit. Native Windows is not a CI target — Windows hosts are supported via WSL2 (ADR-0030).
