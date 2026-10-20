@@ -1,0 +1,119 @@
+# Weekly slow track (testing-strategy §2.4): the legs too slow or too heavy
+# for `just ci` — the llvm-cov workspace report + test-bloat telemetry
+# (`just deep`), the cargo-mutants audit over the kernel crates (missed=0
+# gate), the D6 fiber memory-return leg, and the Kani proofs. A failed leg
+# files an issue carrying the failure fingerprint (leg + first-failing
+# commit + repro command) and never blocks commits; the recipes themselves
+# live in the justfile, so every failure reproduces locally.
+name: deep (weekly slow track)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 4 * * 4" # Thursdays
+
+permissions:
+  contents: read
+  issues: write # slow-track failures file issues (testing-strategy §2.4)
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  deep:
+    name: slow-track legs
+    # runs only in this repository (skipped in forks)
+    if: github.repository_owner == 'metis-mind'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      # No magic-nix-cache: see the quality-gate job in ci.yml.
+      # cargo registry + target/ cache; actions/cache over rust-cache for the
+      # same reason as ci.yml (no `nix develop -c` key detection tax)
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: v0-rust-${{ github.job }}-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: v0-rust-${{ github.job }}-${{ runner.os }}-
+      # The Kani bundle (~/.kani) is the run's heaviest download. The verifier
+      # version is pinned here and in CONTRIBUTING.md — two homes, keep them
+      # in the same change.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.kani
+          key: v0-kani-0.68.0-${{ runner.os }}
+      # Installed in-job rather than pinned into the flake: the verifier is a
+      # weekly-only tool. continue-on-error so a Kani-side breakage cannot
+      # starve the other legs — the kani leg then fails and files the issue,
+      # which is the designed channel for exactly this first-run risk.
+      - name: install the Kani verifier
+        continue-on-error: true
+        timeout-minutes: 30
+        run: cargo install --locked kani-verifier --version 0.68.0
+      # Legs run with continue-on-error so one failure never starves the
+      # others; the final step files the issues and turns the run red.
+      # Per-leg timeouts: the job default (360 min) cancels on timeout, and
+      # cancelled steps file no issue — a hang must become a leg failure.
+      - name: coverage report + test-bloat telemetry (just deep)
+        id: deep
+        continue-on-error: true
+        timeout-minutes: 60
+        run: nix develop -c just deep
+      - name: mutation audit over the kernel crates (just deep-mutants)
+        id: mutants
+        continue-on-error: true
+        timeout-minutes: 180
+        run: nix develop -c just deep-mutants
+      - name: D6 fiber memory return (just deep-memory)
+        id: memory
+        continue-on-error: true
+        timeout-minutes: 30
+        run: nix develop -c just deep-memory
+      - name: Kani proofs (just deep-kani)
+        id: kani
+        continue-on-error: true
+        timeout-minutes: 60
+        run: nix develop -c just deep-kani
+      - name: file issues for failed legs and propagate
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          sha="$(git rev-parse HEAD)"
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          failed=""
+          file_issue_if_failed() {
+            local leg="$1"
+            local outcome="$2"
+            [ "${outcome}" = "failure" ] || return 0
+            failed="${failed} ${leg}"
+            local marker="deep failure: ${leg}"
+            # An open issue for the same leg is the live record — a recurring
+            # failure never files a duplicate. The ' @ ' suffix in the grep
+            # stops prefix collisions ('just deep' vs 'just deep-mutants').
+            if gh issue list --search "is:issue is:open in:title \"${marker}\"" --limit 5 --json title --jq '.[].title' | grep -qF "${marker} @ "; then
+              echo "::notice::an open issue already tracks '${marker}'; not filing a duplicate"
+              return 0
+            fi
+            # printf, not a heredoc: YAML block indentation would leak into a
+            # heredoc body and render the issue as one big code block. No
+            # backticks in the format string: shellcheck (SC2016) reads them
+            # as quoted-away command substitutions.
+            local body
+            body="$(printf 'Slow-track leg %s failed in the weekly deep run (testing-strategy §2.4: slow-track failures file issues, never block commits).\n\nFailure fingerprint:\n\n- leg: %s\n- commit: %s\n- repro: nix develop -c %s\n- run: %s\n' "${leg}" "${leg}" "${sha}" "${leg}" "${run_url}")"
+            gh issue create --title "${marker} @ ${sha:0:7}" --body "${body}"
+          }
+          file_issue_if_failed "just deep" "${{ steps.deep.outcome }}"
+          file_issue_if_failed "just deep-mutants" "${{ steps.mutants.outcome }}"
+          file_issue_if_failed "just deep-memory" "${{ steps.memory.outcome }}"
+          file_issue_if_failed "just deep-kani" "${{ steps.kani.outcome }}"
+          if [ -n "${failed}" ]; then
+            echo "::error::failed slow-track legs:${failed}"
+            exit 1
+          fi

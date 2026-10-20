@@ -94,8 +94,9 @@ ci: lint test doc deny agent-check cov-floor
 # Slow track (testing-strategy §2.4): llvm-cov workspace report (HTML under
 # target/llvm-cov/html + stdout summary — `report` reuses the run's merged
 # profile: --summary-only cannot combine with --html) + test-bloat telemetry.
-# Local on-demand; failures file issues, never block commits. The remote
-# weekly run lands with the first cargo-mutants weekly leg.
+# Local on-demand; the remote weekly run (.github/workflows/deep.yml) executes
+# every deep-* leg and files issues on failure — slow-track failures never
+# block commits.
 deep: test-telemetry
     cargo llvm-cov --workspace --html
     cargo llvm-cov report --summary-only
@@ -111,6 +112,12 @@ deep-kani:
 # track.
 deep-memory:
     cargo nextest run -p metis-fiber-core --run-ignored only -E 'binary(memory)'
+
+# Mutation audit over the kernel crates (list = testing-strategy §3.C):
+# missed=0 gate — a missed mutant means the test suite lacks teeth. Slow
+# track (weekly remote + on-demand); far too slow for `just ci`.
+deep-mutants:
+    cargo mutants -p metis-value -p metis-fiber-core --test-tool nextest
 
 # Add an internal crate (unpublished by default; rules in CONTRIBUTING.md "Adding a crate")
 new-crate name:

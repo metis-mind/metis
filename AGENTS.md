@@ -11,7 +11,7 @@
 - Snapshot updates: `just snapshot-review` (two-stage: state the expected change first, then approve each diff against it by hand; never bulk-accept — ADR-0031 doctrine 5)
 - New crate: `just new-crate <name>`
 - Dependency policy: `just deny`; docs build: `just doc`; agent-doc smoke check + docs/ integrity (map orphans/dangling, internal links, freshness, archive): `just agent-check`; kernel-crate coverage floors: `just cov-floor` (values: `.config/cov-floor.toml`)
-- Slow track (local on-demand; failures file issues, never block commits): `just deep` (llvm-cov workspace report + test-bloat telemetry); heavier legs on demand: `just deep-kani` / `just deep-memory`
+- Slow track (local on-demand + the weekly remote run `.github/workflows/deep.yml`; failures file issues, never block commits): `just deep` (llvm-cov workspace report + test-bloat telemetry); heavier legs on demand: `just deep-kani` / `just deep-memory` / `just deep-mutants`
 - Toolchain bump: `just toolchain-bump` (wrapped by the weekly toolchain-update workflow; bot PRs don't trigger CI — the in-job `just ci` is the gate)
 
 ## Environment

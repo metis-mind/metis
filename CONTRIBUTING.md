@@ -58,18 +58,18 @@ This creates an **internal crate** (`version = "0.0.0"`, `publish = false`) with
 
 ## Formal verification (Kani)
 
-Proof harnesses for the fiber kernel live next to the code under `#[cfg(kani)]` (testing-strategy §2.1; proofs are checked by the weekly slow-track workflow — being stood up with the fiber station — never in `just ci`; until that first run the harnesses carry no verification verdict). The `kani` library crate is deliberately **not a dependency**: crates.io only holds the project's placeholder, and the real library ships inside the verifier bundle — the harnesses compile only when built by the Kani toolchain. To run them locally:
+Proof harnesses for the fiber kernel live next to the code under `#[cfg(kani)]` (testing-strategy §2.1; proofs are checked by the weekly slow-track workflow `.github/workflows/deep.yml` — first remote run pending — never in `just ci`). The `kani` library crate is deliberately **not a dependency**: crates.io only holds the project's placeholder, and the real library ships inside the verifier bundle — the harnesses compile only when built by the Kani toolchain. To run them locally:
 
 ```bash
 cargo install --locked kani-verifier --version 0.68.0
 just deep-kani                                         # the first run auto-runs Kani's setup (downloads the verifier bundle)
 ```
 
-The prebuilt bundle needs a FHS glibc layout: it works on the CI runners (ubuntu-latest) but not on a NixOS host. On NixOS, run it inside a Ubuntu container (or `steam-run`), or rely on the weekly workflow — once it is running, a compile failure of the harnesses there files an issue like any other slow-track failure.
+The pinned version lives here and in the workflow (install step + cache key) — two homes, keep them in the same change. The prebuilt bundle needs a FHS glibc layout: it works on the CI runners (ubuntu-latest) but not on a NixOS host. On NixOS, run it inside a Ubuntu container (or `steam-run`), or rely on the weekly workflow — a compile failure of the harnesses there files an issue like any other slow-track failure.
 
 ## Releasing and remote CI
 
-Remote CI runs the same recipes as local `just` (`.github/workflows/`): a prek quality gate plus an ubuntu/macOS test matrix on pushes to `main` and on PRs, weekly flake.lock / toolchain bump PRs, and a scheduled dependency audit. Native Windows is not a CI target — Windows hosts are supported via WSL2 (ADR-0030).
+Remote CI runs the same recipes as local `just` (`.github/workflows/`): a prek quality gate plus an ubuntu/macOS test matrix on pushes to `main` and on PRs, weekly flake.lock / toolchain bump PRs, a scheduled dependency audit, and the weekly slow-track run (`deep.yml`: coverage report, mutation audit, D6 memory leg, Kani proofs — failures file issues, never block commits). Native Windows is not a CI target — Windows hosts are supported via WSL2 (ADR-0030).
 
 Releasing stays deferred: no tags, no releases, and internal crates keep `publish = false`. The form is decided ([ADR-0030](docs/decisions/0030-engineering-phase-2.md)): release-plz Release PRs as the human gate, cargo-dist for cross-platform binaries, crates.io publishing scoped to the binary crate as `metis-mind` (the name is already reserved). The machinery returns at the first releasable milestone.
 
