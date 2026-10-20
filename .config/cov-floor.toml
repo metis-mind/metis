@@ -5,3 +5,4 @@
 # trailer. Format: `crate-name = percent` lines; blanks and `#` comments
 # (whole-line or inline) ok.
 metis-value = 98.8  # T10.1 closeout: measured 98.857% (173/175 lines); the 2 uncovered lines are uncoverable by construction (compile-time Send+Sync assertion body, test unreachable!())
+metis-fiber-core = 99.5  # T10.2 closeout: measured 99.545% (876/880 lines); the 4 uncovered lines are uncoverable by construction (test-only panic fuses: block_on_ready's Pending arm + two let-else arms in state tests; one compiler-generated epilogue region on a closing brace in epoch.rs)
