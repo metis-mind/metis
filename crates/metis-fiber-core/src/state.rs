@@ -372,6 +372,12 @@ mod tests {
     }
 
     #[test]
+    fn report_display_matches_its_message() {
+        let report = report("boom");
+        assert_eq!(report.to_string(), report.message());
+    }
+
+    #[test]
     fn happy_path_runs_pending_to_disposed() {
         let (state, actions) = transition(&FiberState::Pending, Event::StartLoad);
         assert_eq!(state, FiberState::Loading);

@@ -317,7 +317,8 @@ mod tests {
         let a = fiber.record_disposer(noop()).unwrap();
         fiber.record_disposer(noop()).unwrap();
 
-        assert!(fiber.cancel_disposer(a).unwrap().is_some());
+        let cancelled = fiber.cancel_disposer(a).unwrap().expect("a is on the book");
+        block_on_ready(cancelled());
         assert_eq!(fiber.ledger_len(), 1);
         assert!(fiber.cancel_disposer(a).unwrap().is_none());
     }

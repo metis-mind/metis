@@ -171,6 +171,17 @@ mod tests {
     }
 
     #[test]
+    fn with_capacity_is_a_plain_arena_after_warmup() {
+        let mut arena = Arena::with_capacity(4);
+        let a = arena.insert(Fiber::new());
+        let b = arena.insert(disposed_fiber());
+        assert_eq!(arena.len(), 2);
+        assert!(arena.teardown(b).is_some());
+        assert!(arena.get(a).is_some());
+        assert!(arena.get(b).is_none());
+    }
+
+    #[test]
     fn stale_ids_fail_after_slot_reuse() {
         let mut arena = Arena::new();
         let old = arena.insert(disposed_fiber());
