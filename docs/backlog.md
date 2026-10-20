@@ -21,7 +21,6 @@
 
 ```mermaid
 graph TD
-    T10_1["T10.1 metis-value（进行中）"]
     T10_2["T10.2 fiber-core（未开始）"]
     T10_3["T10.3 schema DSL（未开始）"]
     T10_4["T10.4 事件派发（未开始）"]
@@ -39,9 +38,6 @@ graph TD
 
     S4["火-4 台账工具化（未消费；消费点 = 任务系统工具化立项）"]
     S5["火-5 命令输出瘦身（未消费；消费点 = 命令输出瘦身方案立项）"]
-    T10_1 --> T10_2
-    T10_1 --> T10_3
-    T10_1 --> T10_5
     T10_2 --> T10_4
     T10_3 --> T10_6
     T10_3 --> T10_7
@@ -56,7 +52,6 @@ graph TD
     T10_7 --> T10_12
     T10_9 --> T10_12
     T10_10 --> T10_12
-    T10_1 --> T10_13
     T10_13 --> T10_10
     T10_3 --> T10_14
     T10_13 --> T10_14
@@ -70,12 +65,12 @@ graph TD
 
 ### T10 实现
 
-- 状态：**进行中**（T10.0b ✅ 2026-10-16（验收 = 维护者明示收尾，抽检配额未执行在案）；已完成 = Q1–Q11 拍板固化 + 0a 六件（gate-guard 机器闸 / machete 进 lint / llvm-cov 工具链 / cov-floor 空地板闸 / testing-ledger + test-telemetry / insta 语料孤儿闸）+ Q10/Q11 + station-run 增补「收官不自动开下一站」+ 0b 一件（`just deep` 慢轨 recipe = llvm-cov 工作区报告 + 膨胀遥测腿，本地按需；远程周跑 workflow 与自动开 issue 机制仍归 T10.2）；下一步 = T10.1 验收（批已出示 2026-10-20：实现件 = c02001b / 6d70f6a / 217692d，远程 CI = run 39386217021 / 39386276011）→ 验收后等维护者开启下一站（开启节奏归维护者）；未拍板项 = cov-floor 首钉值（98.8，随验收批出示）
+- 状态：**进行中**（T10.0b ✅ 2026-10-16（验收 = 维护者明示收尾，抽检配额未执行在案）；已完成 = Q1–Q11 拍板固化 + 0a 六件（gate-guard 机器闸 / machete 进 lint / llvm-cov 工具链 / cov-floor 空地板闸 / testing-ledger + test-telemetry / insta 语料孤儿闸）+ Q10/Q11 + station-run 增补「收官不自动开下一站」+ 0b 一件（`just deep` 慢轨 recipe = llvm-cov 工作区报告 + 膨胀遥测腿，本地按需；远程周跑 workflow 与自动开 issue 机制仍归 T10.2）+ T10.1（metis-value crate + mutants 工具链固化 + cov-floor 首钉 98.8 + 首份 D11 声明 + exemplar 教学回写 station-run，2026-10-20 验收）；下一步 = 等维护者开启下一站（开启节奏归维护者）；未拍板项 = 无）
 - 依赖：T11（✅ 2026-10-14）/ T12（✅ 2026-10-14 = [ADR-0033](decisions/0033-doc-lifecycle.md)）——开工门槛全备
 - 站表（依赖列 = 硬依赖，即不可提前的并行面边界；清单锚点指向各 doc 登记原位不转抄；除 T10.0a/b 外每站自带 F 类写实清单（D8）；内核 crate 站自带 D11 测试来源声明 + llvm-cov 地板线（首钉 = T10.1））：
   - T10.0a 质量基建·快轨与机器闸 ✅（2026-10-16 验收；维护者明示收尾、抽检配额未执行在案；SHAs = c40ad79…0c632a4）——门禁面（justfile / `.pre-commit-config.yaml` / rust-toolchain.toml / crates/xtask）；依赖：无（非硬阻塞，后续站消费其门禁件故推荐最先）；清单 = [ADR-0031](decisions/0031-testing-strategy.md) Consequences 实现期清单（指针不转抄）；拍板形态（2026-10-15，Q2–Q5/Q7/Q8）= xtask `gate-guard`（commit trailer 机器闸；§4.2 清单 xtask 硬编码 + 注释指回散文 SSOT）+ AGENTS.md NEVER 增补 / cargo-machete 进 `just lint` / cargo-llvm-cov + rust-toolchain `llvm-tools-preview` 组件 / xtask `cov-floor` + `.config` 空地板文件（登记进 §4.2 修订注）/ `docs/testing-ledger.md` + xtask `test-telemetry`（增长率历史不做）/ `insta --unreferenced=auto` 进 `just ci`；追加（2026-10-15 Q10 拍板）= deny.toml duplicate skip 静音基线 + `-D unmatched-skip` fuse（随批落地，非 ADR-0031 原清单项）；HARD 人审门，依赖件逐项走 adding-dependencies。
   - T10.0b 质量基建·慢轨件 ✅（2026-10-16 验收；维护者明示收尾、抽检配额未执行在案；SHAs = b9c0e69…8880e7d）——`just deep` recipe（本地）；依赖：T10.0a（✅ 2026-10-16）；拍板形态（2026-10-15，Q1/Q6）= 首批内容 = llvm-cov 报告 + 膨胀遥测件（非空 recipe；§2.4/§5 原触发器提前，修订注在案）；远程周跑 workflow 与慢轨失败自动开 issue 机制推迟至 T10.2 随 mutants 首个硬门禁件落地。
-  - T10.1 metis-value——`crates/metis-value`；**进行中**（2026-10-20 实现件入库 = c02001b / 6d70f6a / 217692d；验收批已出示，待拍板 = cov-floor 首钉值）；依赖：无；锚 = ADR-0015/0022 + [wit-abi](design/wit-abi.md) W6 D155–D158（Value 相关子集；考古源 = luau-abi §A6.3/§A6.8 登记表）；Bytes 已提正 = [ADR-0042](decisions/0042-value-bytes.md)（W6 D158）。
+  - T10.1 metis-value ✅（2026-10-20 验收 = 维护者拍板议题 A 收官，抽检配额未执行在案；SHAs = c02001b…676c332；远程 CI = run 39386531806 ✅ 至 612035f，收官两笔随本批推送核验）——`crates/metis-value`；依赖：无；锚 = ADR-0015/0022 + [wit-abi](design/wit-abi.md) W6 D155–D158（Value 相关子集；考古源 = luau-abi §A6.3/§A6.8 登记表）；Bytes 已提正 = [ADR-0042](decisions/0042-value-bytes.md)（W6 D158）。产出 = `Value` 八变体 + `BTreeMap` + 编译期 Send+Sync 断言（零依赖）+ 首份 D11 声明（mutants 27.1.0：44 变异体 / 31 擒获 / 13 unviable / 0 missed）+ cov-floor 首钉 98.8；F 类 = 空清单（纯数据 crate 无崩溃窗口）；exemplar 教学已回写 station-run。 + [wit-abi](design/wit-abi.md) W6 D155–D158（Value 相关子集；考古源 = luau-abi §A6.3/§A6.8 登记表）；Bytes 已提正 = [ADR-0042](decisions/0042-value-bytes.md)（W6 D158）。
   - T10.2 metis-fiber-core——`crates/metis-fiber-core`（禁 tokio/mlua）；依赖：T10.1；锚 = ADR-0010/0019/0023 + fiber.md §10 开放项（SIGTERM 处理 / drain 总预算数值）+ [wit-abi](design/wit-abi.md) W4 D93–D97（exclusive 名字回收 D1.2 归 T10.14 / [plugin-sdk](design/plugin-sdk.md) S4；wait-for 图 D1.7 运行时 = W4.4 D96，可见性上报 = plugin-sdk S4 扩展位；考古源 = luau-abi §A4.6）与实现期配置行（在飞协程预算与事件在途投递界 D10.2 / 优雅窗口 + drain 预算 D11.1）；随站 = Kani（D7）+ mutants 门禁（D4）+ D6 fiber 内存件；另随本站落地 = 远程周跑 workflow 首建（碰 `.github/workflows/`，ADR-0031 已授权）+ 慢轨失败自动开 issue 机制（2026-10-15 Q1/Q6 拍板划入）。
   - T10.3 schema DSL——`crates/metis-loader`；依赖：T10.1；锚 = [wit-abi](design/wit-abi.md) W7 D163–D172 + W8 D175（事件形状总表合并）+ W9 D180–D185（反向索引（契约引用）= W9.13）+ config-format.md（schema `type:` 接线）（考古源 = luau-abi §A7.0–§A7.5 / §A8.5）——A7 半消融 = E5 拍板：记法裁至只服务 Value 形状（`buffer`/`function` 等 ctx 面词族消亡），config schema `type:` 接线与契约包三来源存活；新增 = 契约包加载与契约命名空间合并（YAML 契约包；W7 D164–D168）+ 平台固定 world 的 WIT 包加载（wit-parser 系选型走 adding-dependencies；三分法①）；形态定稿锚 = wit-abi W2/W7 章。
   - T10.4 事件系统派发——`crates/metis-runtime`；依赖：T10.2；锚 = ADR-0011/0013/0014/0016/0017 + context-events.md §0.3 修订注（背压面写实 + worker 伪码语义更新两件实现期登记）+ [wit-abi](design/wit-abi.md) W4 D93–D97（考古源 = luau-abi §A4.2（tokio 可学结构）；§A4.6 裸 yield 检测 D9.3 已消亡 = design-review A7）+ W8 D173–D179（emit 校验 D176 / `on-event` D177）；随站 = D6 事件吞吐件。
@@ -92,7 +87,7 @@ graph TD
   - T10.15 即写即用构建管线——`metis dev` watch 守护（保存 → 构建 → 热换 = 主答案）+ 构建缓存 + 脚手架模板；依赖：T10.12 / T10.14；锚 = ADR-0034 §6 四件（watch / 构建缓存 / 部署内工具链服务（可选件 = Creator 体面退场形态）/ 远端构建场（marketplace 配套，与确定性构建信任链同管线）——后两件触发器未满足，不进 v1 面）+ design-review B9（地板实测：增量重建 0.22–0.29 s + 实例化 1.7 µs）+ ADR-0034 风险 W3（WIT 包 SSOT + wit-bindgen/wasm-tools/wasmtime 钉版纪律）+ `metis sdk` 命令面重组（D28.1 存活件 = new/check 归本面与 T10.9 同实现；analyze 读代码扫描面消亡 = design-review B1；W10 D193 已兑现：ABI 判定单一实现两层执行）；开工输入 += [build-pipeline](design/build-pipeline.md)（D105–D115）+ [build-pipeline-survey](research/build-pipeline-survey.md)；W6 增补 = world import 集含 `blobs` / `streams` / `payloads`；F 类窗口 = build-pipeline §15（收官时迁入 testing-strategy §3.F）；D11 / cov-floor 若新增内核 crate 则按 station-run 义务；W10 D193 = ABI 判定落点（声明层 / 结构层）、预检共用实现；平台 / 生态契约副本获取路径（`metis sdk export` = 扩展位）+ `types!()` 引用契约的包内存在性校验。
 - 范围外（触发器未满足）：registry 扩展位 5 处 / context-events §0.5 优化位 / `metis install` 工具化与分发机制（长回）。（2026-10-16 T13-b 拨出三件：metis-codec TLV 位分配 = E1 选项① 主线化提正归 T10.13；盒 trap 句柄处置随盒概念消解（ADR-0034 §2）归 T10.10 本体；WIT 生成器（盒面）随 Luau 工具面全撤消亡 = design-review A8。）
 - 开窗前置：worktree bootstrap 自动化（[ADR-0032](decisions/0032-operating-protocol.md) Consequences 登记，届时再建）。
-- 评审面三数：拍板 21（2026-10-15 拆分批 Q1–Q6 + T10.0 批 Q1–Q9 + Q10/Q11 + 验收包四项：bddb55b 保留不重置 / flake.nix 不入 §4.2 / 推送归并行会话 / 暂存规则不立——并行同工作区为特殊态）/ self-review findings 23（站表 pass 7 已随块修复；0a 批 8 笔 commit 判断 pass 共产出 14 Required 随笔修复；llvm-cov / insta 两笔判断 pass 漏跑、事后追认 pass = clean，流程漏记一条在案；0b 批 2 Required（backlog 随行 + Gate-Surface trailer，均落地形态项随笔处置）+ 1 Nit / 1 Optional 推回在案）/ 耗时 <1h ×2（0a/0b 均验收会话即收尾，抽检配额未执行）；T10.1（2026-10-20，验收待批）= 拍板 1（mutants 入 flake 固化长期工具位）/ findings 7（flake pass 2 Required + 1 Optional；crate pass 1 Required + 1 Nit + 2 Optional，落地或明示延期在案）/ 耗时 <1h ×2（两笔 commit 各一次判断 pass）
+- 评审面三数：拍板 21（2026-10-15 拆分批 Q1–Q6 + T10.0 批 Q1–Q9 + Q10/Q11 + 验收包四项：bddb55b 保留不重置 / flake.nix 不入 §4.2 / 推送归并行会话 / 暂存规则不立——并行同工作区为特殊态）/ self-review findings 23（站表 pass 7 已随块修复；0a 批 8 笔 commit 判断 pass 共产出 14 Required 随笔修复；llvm-cov / insta 两笔判断 pass 漏跑、事后追认 pass = clean，流程漏记一条在案；0b 批 2 Required（backlog 随行 + Gate-Surface trailer，均落地形态项随笔处置）+ 1 Nit / 1 Optional 推回在案）/ 耗时 <1h ×2（0a/0b 均验收会话即收尾，抽检配额未执行）；T10.1 ✅（2026-10-20）= 拍板 1（mutants 入 flake 固化长期工具位）/ findings 7（flake pass 2 Required + 1 Optional；crate pass 1 Required + 1 Nit + 2 Optional，落地或明示延期在案）/ 耗时 <1h ×2（两笔 commit 各一次判断 pass）
 - **2026-10-15 方向变更注**：wasm-first 转向拍板（= T13，维护者对话）——T10.3 / T10.9 / T10.10 / T10.11 已随 T13-b 修订（2026-10-16，另新增 T10.13/14/15 三站）；T10.0a/b 与 T10.1/2/4/5/6/7/8/12 的语言无关面继续有效。其余站线散见 Luau 子锚点开工核对四项：T10.2 的 exclusive 名字回收 D1.2 随 E3 拍板归 T10.14 SDK 助手面；T10.4 的裸 yield 检测 D9.3 消亡（guest async 运行时自管，design-review A7）；T10.8 的 D29 `.luaurc` 脚手架件消亡（require 体系全链 = A2）；T10.7 的盒对账格 D25.5 升格为全插件进口对账（B1，语义原位存活）。
 
 ### 收官与延后记录（单行）
