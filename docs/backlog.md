@@ -104,6 +104,7 @@ graph TD
 - **global 核心数据根可达性复审**（self-review 提出）：若收紧，同批改 config-format.md §C5.1（global 可达部署根）+ seam-capabilities.md §5.2 / wit-abi W3.3（global fs 两档）。
 - **秘密引用限审批档收紧裁量**（D67 明记代价；维护者裁量未做）。
 - **org 级「允许 Actions 开 PR」开关**：org Settings → Actions → General → Workflow permissions 勾开（repo 级随后同开），或 `gh auth refresh -h github.com -s admin:org` 后走 API；未开前 flake-update / toolchain-update 周更在开 PR 一步 403，其余 CI 不受影响。
+- **Kani epoch 证明超时**（深轨首轮实测，issue #5）：`closure_computes_the_fixpoint_and_respects_edges` 单证明跑满 60 分钟腿超时被砍——成本元凶 = 符号化 `RandomState` 的 SipHash 展开（界内 ≤3 fiber / unwind(16) 下的 SMT 爆炸）；另两 harness 排队未跑（顺序执行）。处置方向 = 换确定性玩具 hasher 保留迭代序变化覆盖 + 收紧界 / 拆 harness / `--jobs` 并行；修复走工单（issue #5），属 fiber-core 证明工程调优，不动设计。
 
 各类**扩展位/复审触发器**均已在对应 ADR/设计文档内登记（SSOT 原位不动，不迁）。
 
