@@ -8,12 +8,14 @@
 //! tests and the L4 formalization targets (Kani/hax) require.
 
 mod arena;
+mod epoch;
 mod fiber;
 mod id;
 mod ledger;
 mod state;
 
 pub use arena::Arena;
+pub use epoch::{Epoch, RestartPlan, invalidation_closure, is_stale};
 pub use fiber::{Fiber, LedgerClosed};
 pub use id::FiberId;
 pub use ledger::{Disposer, Drain, EffectId, Ledger};
