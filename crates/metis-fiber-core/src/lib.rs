@@ -9,6 +9,8 @@
 
 mod id;
 mod ledger;
+mod state;
 
 pub use id::FiberId;
 pub use ledger::{Disposer, Drain, EffectId, Ledger};
+pub use state::{Action, Event, FiberState, Report, TransitionError, UnloadTarget};
