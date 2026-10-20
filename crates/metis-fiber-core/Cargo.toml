@@ -15,6 +15,7 @@ workspace = true
 
 [dependencies]
 indexmap.workspace = true
+slotmap.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true

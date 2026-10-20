@@ -50,7 +50,13 @@ allow = [
 # `just deny`'s `-D license-exception-not-encountered`: when the named crate
 # leaves the dependency tree, CI fails and the entry must be deleted in that
 # same PR.
-exceptions = []
+exceptions = [
+    # slotmap (fiber arena generational keys, ADR-0010) is Zlib-licensed —
+    # allowed for this crate only; widening the global allow-list would
+    # silently admit every future Zlib crate. Ratified in the T10.2 opening
+    # batch (issue 1a). Removal trigger: slotmap leaves the dependency tree.
+    { name = "slotmap", allow = ["Zlib"] },
+]
 
 [sources]
 unknown-registry = "deny"

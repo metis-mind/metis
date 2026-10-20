@@ -7,6 +7,8 @@
 //! the runtime glue to interpret, which is the shape the L2 model-based state
 //! tests and the L4 formalization targets (Kani/hax) require.
 
+mod id;
 mod ledger;
 
+pub use id::FiberId;
 pub use ledger::{Disposer, Drain, EffectId, Ledger};
