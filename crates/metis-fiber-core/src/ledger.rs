@@ -164,6 +164,7 @@ mod tests {
         let third = ledger.record(tagged(&log, 3));
         assert_eq!((first, second, third), (0, 1, 2));
         assert_eq!(ledger.len(), 3);
+        assert!(!ledger.is_empty(), "a booked ledger answers false");
 
         let drain: Vec<_> = ledger.begin_drain().collect();
         assert!(ledger.is_empty(), "drain consumes the book");

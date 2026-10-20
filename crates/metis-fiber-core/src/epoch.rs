@@ -331,6 +331,37 @@ mod tests {
     }
 
     #[test]
+    fn reload_order_is_topological_not_id_order() {
+        // The consumer was created BEFORE its provider (lower id): an
+        // id-sorted impostor reload would put the consumer first; the plan
+        // must be topological regardless of id assignment.
+        let ids = ids(2);
+        let (consumer, provider) = (ids[0], ids[1]);
+        let providers = HashMap::from([("s", (provider, 2))]);
+        let dependents = HashMap::from([("s", vec![(consumer, 1)])]);
+        let bumped = HashSet::from(["s"]);
+        let plan = invalidation_closure(&providers, &bumped, &dependents);
+        assert_eq!(plan.reload, vec![provider, consumer]);
+        assert_eq!(plan.unload, vec![consumer, provider]);
+    }
+
+    #[test]
+    fn a_self_edge_does_not_block_the_fibers_own_reload() {
+        // A fiber that consumes the service it provides never waits on
+        // itself (the `dependent != provider` exclusion); its dependent
+        // still waits on it. The dependent carries the LOWER id, so an
+        // id-order fallback would show.
+        let ids = ids(2);
+        let (dependent, provider) = (ids[0], ids[1]);
+        let providers = HashMap::from([("own", (provider, 2)), ("down", (provider, 2))]);
+        let dependents =
+            HashMap::from([("own", vec![(provider, 1)]), ("down", vec![(dependent, 1)])]);
+        let plan = invalidation_closure(&providers, &HashSet::new(), &dependents);
+        assert_eq!(plan.reload, vec![provider, dependent]);
+        assert_eq!(plan.unload, vec![dependent, provider]);
+    }
+
+    #[test]
     fn cycles_terminate_with_the_full_set() {
         let ids = ids(2);
         let (a, b) = (ids[0], ids[1]);
@@ -363,8 +394,11 @@ mod tests {
         use slotmap::SlotMap;
 
         /// A random registry case. Consumers always outrank their provider
-        /// in fiber index, so the dependency graph is acyclic by
-        /// construction (cycles are an L0 unit-test concern).
+        /// in fiber index (the topological rank), so the dependency graph is
+        /// acyclic by construction (cycles are an L0 unit-test concern).
+        /// Fiber ids are shuffled against the rank: slotmap hands ids out in
+        /// insertion order, so without a shuffle id order ≡ topo order and
+        /// an id-sorted impostor would pass the ordering assertions.
         #[derive(Debug, Clone)]
         struct Case {
             providers: HashMap<u32, (FiberId, Epoch)>,
@@ -402,11 +436,21 @@ mod tests {
                         Just(services),
                         Just(bumped),
                         prop::collection::vec((0u32..8, 0..n_fibers, 1u64..=5), 0..=16),
+                        prop::collection::vec(any::<u8>(), n_fibers),
                     )
                 })
-                .prop_map(|(n_fibers, services, bumped, dep_specs)| {
+                .prop_map(|(n_fibers, services, bumped, dep_specs, shuffle)| {
                     let mut arena: SlotMap<FiberId, ()> = SlotMap::with_key();
-                    let fibers: Vec<FiberId> = (0..n_fibers).map(|_| arena.insert(())).collect();
+                    let mut fibers: Vec<FiberId> =
+                        (0..n_fibers).map(|_| arena.insert(())).collect();
+                    // Deterministic Fisher–Yates from the drawn seed: the
+                    // vec index stays the topological rank (consumers
+                    // outrank providers below), the id order becomes
+                    // arbitrary (see the Case docs).
+                    for (i, &seed) in shuffle.iter().enumerate() {
+                        let j = usize::from(seed) % (i + 1);
+                        fibers.swap(i, j);
+                    }
                     let providers: HashMap<u32, (FiberId, Epoch)> = services
                         .iter()
                         .enumerate()

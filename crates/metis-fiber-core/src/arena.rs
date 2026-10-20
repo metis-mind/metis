@@ -164,10 +164,29 @@ mod tests {
         assert!(arena.is_empty());
         let id = arena.insert(Fiber::new());
         assert_eq!(arena.len(), 1);
+        assert!(!arena.is_empty(), "a non-empty arena answers false");
         assert!(arena.get(id).is_some());
         assert!(arena.get_mut(id).is_some());
         let ids: Vec<FiberId> = arena.iter().map(|(id, _)| id).collect();
         assert_eq!(ids, vec![id]);
+    }
+
+    #[test]
+    fn get_mut_mutates_the_owned_fiber() {
+        // Mutation through `get_mut` must land on the fiber `get` returns —
+        // a `get_mut` that hands out anything else (e.g. a default husk)
+        // fails here.
+        let mut arena = Arena::new();
+        let id = arena.insert(Fiber::new());
+        arena
+            .get_mut(id)
+            .unwrap()
+            .transition(Event::StartLoad)
+            .unwrap();
+        assert!(matches!(
+            arena.get(id).unwrap().state(),
+            FiberState::Loading
+        ));
     }
 
     #[test]
