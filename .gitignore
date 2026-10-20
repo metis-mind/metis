@@ -21,3 +21,4 @@
 
 # cargo-mutants output (mutation runs are local/CI artifacts, never committed)
 /mutants.out
+/mutants.out.old
