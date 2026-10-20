@@ -79,6 +79,9 @@ impl Report {
     /// construction — the honest bound is that drain errors are rare and
     /// per-fiber effect counts are modest; the glue truncates at render time
     /// (journal station) if a pathological drain ever says otherwise.
+    // Co-evolution: the Kani spec in `proofs` restates this format inline
+    // as an independent second writing — edit both in the same change, or
+    // the weekly proof run fails a week late.
     fn drain_failure(load_failure: Option<&Report>, disposer_errors: &[Report]) -> Self {
         use std::fmt::Write as _;
         let mut message = String::new();
@@ -223,14 +226,16 @@ impl Event {
 #[cfg(kani)]
 mod proofs {
     use super::*;
+    use std::fmt::Write as _;
 
     fn any_state() -> FiberState {
-        match kani::any::<u8>() % 6 {
+        match kani::any::<u8>() % 7 {
             0 => FiberState::Pending,
             1 => FiberState::Loading,
             2 => FiberState::Active,
             3 => FiberState::Unloading(UnloadTarget::Disposed),
             4 => FiberState::Unloading(UnloadTarget::Failed(Report::new("load"))),
+            5 => FiberState::Disposed,
             _ => FiberState::Failed(Report::new("failed")),
         }
     }
@@ -298,10 +303,28 @@ mod proofs {
                         None => S::Disposed,
                     }
                 } else {
-                    S::Failed(Report::drain_failure(
-                        load_failure.as_ref(),
-                        disposer_errors,
-                    ))
+                    // The aggregate is rebuilt by hand, never by calling
+                    // `Report::drain_failure`: the spec is a second writing
+                    // of the rule and must stay independent — sharing the
+                    // helper under test would make this arm tautological (a
+                    // format slip would rewrite both sides and stay green).
+                    let mut message = String::new();
+                    if let Some(report) = &load_failure {
+                        message.push_str("load failed: ");
+                        message.push_str(report.message());
+                        message.push_str("; ");
+                    }
+                    write!(
+                        message,
+                        "drain finished with {} disposer error(s)",
+                        disposer_errors.len()
+                    )
+                    .expect("writing to a String cannot fail");
+                    for error in disposer_errors {
+                        message.push_str(": ");
+                        message.push_str(error.message());
+                    }
+                    S::Failed(Report::new(message))
                 };
                 *landed == expected
             }
@@ -315,7 +338,12 @@ mod proofs {
     /// no legal outcome. (Kani's hard bound = no concurrency, so this is
     /// the single-step/no-interleaving shape testing-strategy §2.1
     /// assigns; interleaving coverage belongs to L2.)
+    // unwind pinned fail-loud like the other harnesses: the data loops are
+    // bounded by the ≤2 disposer errors and the format machinery by the
+    // fixed piece counts, so 8 carries margin — a future heavy edit trips
+    // the unwinding assertion instead of hanging the weekly proof.
     #[kani::proof]
+    #[kani::unwind(8)]
     fn single_step_implements_exactly_the_legal_edges() {
         let before = any_state();
         let event = any_event();
