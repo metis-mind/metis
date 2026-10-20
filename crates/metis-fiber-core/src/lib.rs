@@ -6,6 +6,24 @@
 //! tokio, mlua, or tracing. Transitions return action descriptions (data) for
 //! the runtime glue to interpret, which is the shape the L2 model-based state
 //! tests and the L4 formalization targets (Kani/hax) require.
+//!
+//! # Testing provenance (D11)
+//!
+//! Composition (agent-written throughout; maintainer review happens at
+//! station acceptance per the operating protocol): L0 unit tests (in-file
+//! `mod tests`), an L1 property suite with an independent naive-fixpoint
+//! oracle (epoch closure, including id/topology-decorrelated ordering), an
+//! L2 dual-reference-model suite over the lifecycle
+//! (`tests/lifecycle_model.rs`), L4 Kani proof harnesses (`#[cfg(kani)] mod
+//! proofs`; verified by the weekly slow-track leg, never `just ci`), and the
+//! D6 memory-return leg (`tests/memory.rs`, `#[ignore]`, run via
+//! `just deep-memory`).
+//!
+//! Mutation audit (testing-strategy §3.C, on-demand run): cargo-mutants
+//! 27.1.0, 2026-10-20 — 91 mutants, 78 caught, 13 unviable, 0 missed, 0
+//! timeouts. Exemptions live in `.cargo/mutants.toml` with per-entry reasons
+//! (the `#[cfg(kani)]` proof modules and `Arena::with_capacity`). Repro:
+//! `cargo mutants -p metis-fiber-core --test-tool nextest`.
 
 mod arena;
 mod epoch;
