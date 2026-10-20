@@ -1,6 +1,6 @@
 # 0031. 测试与质量策略：评审经济学教义与 D1–D12 定夺
 
-- Status: accepted
+- Status: accepted（2026-10-20 修订注：D4 豁免载体 = `.cargo/mutants.toml` 的 `exclude_re`——`#[mutants::skip]` 属性需 nightly `register_tool`、stable 工具链不可用；missed=0 与逐个注释理由本体不变，不另立新 ADR；细则 = [testing-strategy](../design/testing-strategy.md) §3.C 同批修订注）
 - Date: 2026-10-14
 
 ## Context

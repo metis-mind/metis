@@ -32,14 +32,19 @@ const GATE_PATHS: &[&str] = &[
     "deny.toml",
     "dprint.json",
     ".config/cov-floor.toml",
+    ".cargo/mutants.toml",
     "crates/xtask/",
 ];
 
 /// Corpus deletions are gate surface: `proptest-regressions/` is regression
 /// inventory (D5), removing entries weakens the replay net.
 const CORPUS_DIR: &str = "proptest-regressions/";
-/// The mutation-gate skip list is gate surface (D4): each added
-/// `#[mutants::skip]` muzzles one mutant and needs its reviewed reason.
+/// The mutation-gate exemption file is gate surface (D4) via `GATE_PATHS`
+/// above. This content scan stays as a dormant fuse: `#[mutants::skip]`
+/// cannot compile on the stable toolchain (it needs nightly
+/// `register_tool`), so the live exemption list moved to
+/// `.cargo/mutants.toml` (testing-strategy §4.2, 2026-10-20) — if the
+/// toolchain ever goes nightly, this scan re-arms for free.
 const MUTANTS_SKIP: &str = "#[mutants::skip";
 
 /// The commit-message trailer carrying the human-confirmation file list.
