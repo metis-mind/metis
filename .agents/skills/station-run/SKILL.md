@@ -71,7 +71,9 @@ starts, and a ✅ row is a state, not a launch signal.
 ## 3. Closeout (acceptance pack)
 
 Assemble all of the following, then present as one batch (operating-protocol
-§2 loop):
+§2 loop). Artifacts split by approval dependency: fact records (the D11
+declaration) ship with the implementation commit; ratification-dependent
+artifacts (the floor pin, the ledger ✅ row) ride this batch.
 
 1. **Decision batch** — every decision the station surfaced, actionable
    format (numbered, recommendation first). What the maintainer did not
@@ -85,17 +87,25 @@ Assemble all of the following, then present as one batch (operating-protocol
    Provide the frame; **never pre-select the sample** — the reviewed party
    does not own the sampling frame (doctrine 3).
 4. **D11 declaration** — the requirement is testing-strategy §2.2's
-   (kernel crates declare composition at closeout); the location is this
-   skill's convention, to be confirmed or amended by the exemplar run: a
-   `Testing provenance (D11)` section in the crate's root rustdoc stating
-   the composition (human-written/reviewed vs agent-written + mutation
-   gate) and, for agent-written suites, the mutation-gate result (§3.C).
+   (kernel crates declare composition at closeout); the location
+   (exemplar-confirmed): a `Testing provenance (D11)` section in the crate's
+   root rustdoc stating the composition (human-written/reviewed vs
+   agent-written + mutation gate) and, for agent-written suites, the
+   mutation-audit result (§3.C). The audit's house invocation is
+   `cargo mutants -p <crate> --test-tool nextest`; its artifacts
+   (`mutants.out`, `mutants.out.old`) are local-only and gitignored. The
+   declaration cites the tool version, the caught/unviable/missed counts,
+   and the repro command.
 5. **F-class update** — §3.F crash-window list and matrix current for this
    station.
 6. **Coverage floor** — kernel-list crates report the llvm-cov number
    (fast-track check, §3.C); the first kernel station measures and
    pins the floor value into the floor check (ratchet: only
-   rises).
+   rises). Pin at 0.1 granularity at or below the measured value (the
+   floor check's epsilon is built for that granularity) and name
+   uncoverable-by-construction lines in the acceptance pack. The floor
+   file is gate surface: the pin rides the acceptance batch (ratified
+   value + `Gate-Surface:` trailer), never the implementation commit.
 7. **Ledger update** — station row ✅ with SHAs; the task block status line (one
    of the ten fixed status words, done scope, next step, open items,
    review-surface three numbers); regenerate the panorama graph (completed
@@ -114,6 +124,6 @@ Assemble all of the following, then present as one batch (operating-protocol
 
 ---
 
-Exemplar run = the first kernel-crate station under this skill, carrying
-the firsts (floor-value pinning, first D11 declaration, first F-class
-list). What the exemplar teaches lands back in this skill in the same change.
+Exemplar run: complete. Its teachings are folded into §3 above (D11
+declaration shape and house invocation, floor-pin mechanics, the
+approval-dependency split); the firsts are now ordinary closeout items.
