@@ -47,7 +47,13 @@ impl Iterator for Drain {
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
 }
+
+impl ExactSizeIterator for Drain {}
 
 impl Ledger {
     /// An empty book.
@@ -95,19 +101,8 @@ impl Ledger {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testutil::block_on_ready;
     use std::sync::{Arc, Mutex};
-
-    /// Run an already-ready future to completion (tests never suspend).
-    fn block_on_ready<F: Future>(future: F) -> F::Output {
-        use std::task::{Context, Poll, Waker};
-        let waker = Waker::noop().clone();
-        let mut cx = Context::from_waker(&waker);
-        let mut future = std::pin::pin!(future);
-        match future.as_mut().poll(&mut cx) {
-            Poll::Ready(output) => output,
-            Poll::Pending => panic!("test disposers must be immediately ready"),
-        }
-    }
 
     /// A disposer that appends its tag to the shared log when run.
     fn tagged(log: &Arc<Mutex<Vec<u64>>>, tag: u64) -> Disposer {
