@@ -35,6 +35,7 @@
             cargo-deny # dependency policy: advisories/licenses/bans/sources
             cargo-machete # unused-dependency scanner (just lint)
             cargo-llvm-cov # coverage: kernel-crate floor (just ci) + reports (just deep)
+            cargo-mutants # mutation testing: kernel-crate teeth audit (testing-strategy §3.C)
             actionlint # static analysis for GitHub Actions workflows (.github/workflows)
             nixd # Nix language server
             nil # Nix language server (alternative — an editor uses one of the two)

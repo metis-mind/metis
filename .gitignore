@@ -18,3 +18,6 @@
 
 # throwaway spike crates (technical probes; results land in docs, code is discarded)
 /scratch/
+
+# cargo-mutants output (mutation runs are local/CI artifacts, never committed)
+/mutants.out
