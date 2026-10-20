@@ -4,3 +4,4 @@
 # (registered in testing-strategy §4.2) — changes need the Gate-Surface:
 # trailer. Format: `crate-name = percent` lines; blanks and `#` comments
 # (whole-line or inline) ok.
+metis-value = 98.8  # T10.1 closeout: measured 98.857% (173/175 lines); the 2 uncovered lines are uncoverable by construction (compile-time Send+Sync assertion body, test unreachable!())
