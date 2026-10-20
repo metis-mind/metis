@@ -110,7 +110,6 @@ graph TD
 - **global 核心数据根可达性复审**（self-review 提出）：若收紧，同批改 config-format.md §C5.1（global 可达部署根）+ seam-capabilities.md §5.2 / wit-abi W3.3（global fs 两档）。
 - **秘密引用限审批档收紧裁量**（D67 明记代价；维护者裁量未做）。
 - **org 级「允许 Actions 开 PR」开关**：org Settings → Actions → General → Workflow permissions 勾开（repo 级随后同开），或 `gh auth refresh -h github.com -s admin:org` 后走 API；未开前 flake-update / toolchain-update 周更在开 PR 一步 403，其余 CI 不受影响。
-- **`seam-capabilities.md` §6.1 / `plugin-sdk.md` 联动汇总**：重复 W 章决策，候选改为指针（2026-10-20 深巡检遗留；待拍板）。
 
 各类**扩展位/复审触发器**均已在对应 ADR/设计文档内登记（SSOT 原位不动，不迁）。
 
