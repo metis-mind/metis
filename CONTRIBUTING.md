@@ -58,7 +58,7 @@ This creates an **internal crate** (`version = "0.0.0"`, `publish = false`) with
 
 ## Formal verification (Kani)
 
-Proof harnesses for the fiber kernel live next to the code under `#[cfg(kani)]` (testing-strategy §2.1; proofs are checked by the weekly slow-track workflow `.github/workflows/deep.yml` — first remote run pending — never in `just ci`). The `kani` library crate is deliberately **not a dependency**: crates.io only holds the project's placeholder, and the real library ships inside the verifier bundle — the harnesses compile only when built by the Kani toolchain. To run them locally:
+L4 proof harnesses live next to the code under `#[cfg(kani)]` and are checked by the weekly slow-track workflow (`.github/workflows/deep.yml`), never in `just ci`. Admission is gated by the L4 ruler (testing-strategy §2.1, 2026-10-21 note): an enumerable bounded space gets an exhaustive test instead of a proof, and every admitted harness passes a 5-minute smoke budget. No harnesses are currently admitted — the fiber-kernel ones were withdrawn in favor of exhaustive tests (issue #5) — so `just deep-kani` is an empty leg that exits green in seconds until a candidate lands. The `kani` library crate is deliberately **not a dependency**: crates.io only holds the project's placeholder, and the real library ships inside the verifier bundle — harnesses compile only when built by the Kani toolchain. To run locally:
 
 ```bash
 cargo install --locked kani-verifier --version 0.68.0

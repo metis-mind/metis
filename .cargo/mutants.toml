@@ -6,15 +6,10 @@
 # attributes are unusable here — the attribute needs the nightly-only
 # `register_tool` feature and the house toolchain is stable — so exemptions
 # live in this one auditable file.)
-# Anchored (\\b) so a future `verify_proofs::` module or a
-# `SlabArena::with_capacity` does NOT silently inherit the exemption —
-# broadening this list must take the gate-surface path, not drift.
+# Anchored (\b) so a future `SlabArena::with_capacity` does NOT silently
+# inherit the exemption — broadening this list must take the gate-surface
+# path, not drift.
 exclude_re = [
-    # cfg(kani) proof modules (`mod proofs` in metis-fiber-core): their oracle
-    # is the Kani verifier (weekly `just deep-kani` leg), not the test suite —
-    # proof code never compiles into a nextest build, so every mutant there is
-    # missed by construction.
-    "\\bproofs::",
     # Arena::with_capacity's capacity reservation is a performance hint,
     # unobservable through the public API — no test can kill its mutants.
     "\\bArena::with_capacity\\b",

@@ -55,47 +55,6 @@ impl Iterator for Drain {
 
 impl ExactSizeIterator for Drain {}
 
-#[cfg(kani)]
-mod proofs {
-    use super::*;
-    use std::task::{Context, Poll};
-
-    /// A trivially-ready future (keeps async-block lowering out of the
-    /// proof; only ordering is proven, never execution).
-    struct Ready;
-
-    impl Future for Ready {
-        type Output = ();
-
-        fn poll(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<()> {
-            Poll::Ready(())
-        }
-    }
-
-    fn dummy() -> Disposer {
-        Box::new(|| Box::pin(Ready))
-    }
-
-    /// Bounded inserts: the drain yields exactly the reverse registration
-    /// order, consumes the book, and a second drain is empty.
-    #[kani::proof]
-    #[kani::unwind(6)]
-    fn drain_is_exact_reverse_and_consuming() {
-        let n: usize = kani::any();
-        kani::assume((1..=4).contains(&n));
-        let mut ledger = Ledger::new();
-        for expected_id in 0..n as u64 {
-            assert_eq!(ledger.record(dummy()), expected_id);
-        }
-        let drained: Vec<EffectId> = ledger.begin_drain().map(|(id, _)| id).collect();
-        let mut expected: Vec<EffectId> = (0..n as u64).collect();
-        expected.reverse();
-        assert_eq!(drained, expected);
-        assert_eq!(ledger.len(), 0, "drain consumes the book");
-        assert_eq!(ledger.begin_drain().count(), 0, "second drain is empty");
-    }
-}
-
 impl Ledger {
     /// An empty book.
     #[must_use]
@@ -202,5 +161,40 @@ mod tests {
 
         let remaining: Vec<u64> = ledger.begin_drain().map(|(id, _)| id).collect();
         assert_eq!(remaining, vec![c, b], "remaining order survives removal");
+    }
+
+    /// A disposer that does nothing (this test only reads ordering, never
+    /// executes disposers — execution is pinned by the two tests above).
+    fn noop() -> Disposer {
+        Box::new(|| Box::pin(std::future::ready(())))
+    }
+
+    /// Every book size the retired Kani harness bounded, and well past it
+    /// (issue #5; testing-strategy §2.1 2026-10-21 修订注): n ∈ 0..=64
+    /// crosses several table-growth boundaries; at every size the drain
+    /// must be the exact reverse registration order, consume the book, and
+    /// leave a second drain empty.
+    #[test]
+    fn drain_is_exact_reverse_and_consuming_at_every_book_size() {
+        for n in 0..=64u64 {
+            let mut ledger = Ledger::new();
+            for expected_id in 0..n {
+                assert_eq!(
+                    ledger.record(noop()),
+                    expected_id,
+                    "ids are sequential (n = {n})"
+                );
+            }
+            let drained: Vec<EffectId> = ledger.begin_drain().map(|(id, _)| id).collect();
+            let mut expected: Vec<EffectId> = (0..n).collect();
+            expected.reverse();
+            assert_eq!(drained, expected, "drain order (n = {n})");
+            assert_eq!(ledger.len(), 0, "drain consumes the book (n = {n})");
+            assert_eq!(
+                ledger.begin_drain().count(),
+                0,
+                "second drain is empty (n = {n})"
+            );
+        }
     }
 }

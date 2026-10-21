@@ -11,19 +11,21 @@
 //!
 //! Composition (agent-written throughout; maintainer review happens at
 //! station acceptance per the operating protocol): L0 unit tests (in-file
-//! `mod tests`), an L1 property suite with an independent naive-fixpoint
-//! oracle (epoch closure, including id/topology-decorrelated ordering), an
-//! L2 dual-reference-model suite over the lifecycle
-//! (`tests/lifecycle_model.rs`), L4 Kani proof harnesses (`#[cfg(kani)] mod
-//! proofs`; verified by the weekly slow-track leg, never `just ci`), and the
-//! D6 memory-return leg (`tests/memory.rs`, `#[ignore]`, run via
+//! `mod tests`), an L1 suite pairing a property suite (epoch closure with
+//! an independent naive-fixpoint oracle, including id/topology-decorrelated
+//! ordering) with exhaustive bounded-space tests retired from the L4 Kani
+//! harnesses (issue #5, 2026-10-21: the bounded spaces proved small enough
+//! to enumerate outright — same assertions, same oracle, now running per
+//! commit instead of weekly; the L4 admission ruler with its 5-minute
+//! budget lives in testing-strategy §2.1), an L2 dual-reference-model
+//! suite over the lifecycle (`tests/lifecycle_model.rs`), and the D6
+//! memory-return leg (`tests/memory.rs`, `#[ignore]`, run via
 //! `just deep-memory`).
 //!
 //! Mutation audit (testing-strategy §3.C, on-demand run): cargo-mutants
 //! 27.1.0, 2026-10-20 — 91 mutants, 78 caught, 13 unviable, 0 missed, 0
-//! timeouts. Exemptions live in `.cargo/mutants.toml` with per-entry reasons
-//! (the `#[cfg(kani)]` proof modules and `Arena::with_capacity`). Repro:
-//! `cargo mutants -p metis-fiber-core --test-tool nextest`.
+//! timeouts. Exemptions live in `.cargo/mutants.toml` with per-entry
+//! reasons (`Arena::with_capacity`). Repro: `cargo mutants -p metis-fiber-core --test-tool nextest`.
 
 mod arena;
 mod epoch;

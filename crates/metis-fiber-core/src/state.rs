@@ -79,9 +79,9 @@ impl Report {
     /// construction — the honest bound is that drain errors are rare and
     /// per-fiber effect counts are modest; the glue truncates at render time
     /// (journal station) if a pathological drain ever says otherwise.
-    // Co-evolution: the Kani spec in `proofs` restates this format inline
-    // as an independent second writing — edit both in the same change, or
-    // the weekly proof run fails a week late.
+    // Co-evolution: the test-suite spec (`legal`, mod tests) restates this
+    // format inline as an independent second writing — edit both in the
+    // same change.
     fn drain_failure(load_failure: Option<&Report>, disposer_errors: &[Report]) -> Self {
         use std::fmt::Write as _;
         let mut message = String::new();
@@ -219,140 +219,6 @@ impl Event {
             Self::LoadFailed(_) => "LoadFailed",
             Self::Unload => "Unload",
             Self::DrainFinished { .. } => "DrainFinished",
-        }
-    }
-}
-
-#[cfg(kani)]
-mod proofs {
-    use super::*;
-    use std::fmt::Write as _;
-
-    fn any_state() -> FiberState {
-        match kani::any::<u8>() % 7 {
-            0 => FiberState::Pending,
-            1 => FiberState::Loading,
-            2 => FiberState::Active,
-            3 => FiberState::Unloading(UnloadTarget::Disposed),
-            4 => FiberState::Unloading(UnloadTarget::Failed(Report::new("load"))),
-            5 => FiberState::Disposed,
-            _ => FiberState::Failed(Report::new("failed")),
-        }
-    }
-
-    fn any_event() -> Event {
-        match kani::any::<u8>() % 6 {
-            0 => Event::StartLoad,
-            1 => Event::LoadSucceeded,
-            2 => Event::LoadFailed(Report::new("boom")),
-            3 => Event::Unload,
-            4 => Event::DrainFinished {
-                disposer_errors: vec![],
-            },
-            _ => {
-                let n: usize = kani::any();
-                kani::assume(n <= 2);
-                Event::DrainFinished {
-                    disposer_errors: (0..n).map(|i| Report::new(format!("e{i}"))).collect(),
-                }
-            }
-        }
-    }
-
-    /// The acceptance grid, stated independently of the implementation.
-    fn has_legal_outcome(before: &FiberState, event: &Event) -> bool {
-        use FiberState as S;
-        matches!(
-            (before, event),
-            (S::Pending, Event::StartLoad | Event::Unload)
-                | (S::Loading, Event::LoadSucceeded | Event::LoadFailed(_))
-                | (S::Active, Event::Unload)
-                | (S::Unloading(_), Event::DrainFinished { .. })
-                | (S::Failed(_), Event::Unload)
-        )
-    }
-
-    /// The full legal-edge relation over outcomes, stated independently of
-    /// the implementation (a third encoding, as the specification).
-    fn legal(before: &FiberState, event: &Event, after: &FiberState, actions: &[Action]) -> bool {
-        use FiberState as S;
-        match (before, event, after, actions) {
-            (S::Pending, Event::StartLoad, S::Loading, []) => true,
-            (S::Pending, Event::Unload, S::Disposed, []) => true,
-            (S::Loading, Event::LoadSucceeded, S::Active, []) => true,
-            (
-                S::Loading,
-                Event::LoadFailed(given),
-                S::Unloading(UnloadTarget::Failed(carried)),
-                [Action::StartDrain],
-            ) => given == carried,
-            (
-                S::Active,
-                Event::Unload,
-                S::Unloading(UnloadTarget::Disposed),
-                [Action::StartDrain],
-            ) => true,
-            (S::Unloading(target), Event::DrainFinished { disposer_errors }, landed, []) => {
-                let load_failure = match target {
-                    UnloadTarget::Failed(report) => Some(report.clone()),
-                    UnloadTarget::Disposed => None,
-                };
-                let expected = if disposer_errors.is_empty() {
-                    match load_failure {
-                        Some(report) => S::Failed(report),
-                        None => S::Disposed,
-                    }
-                } else {
-                    // The aggregate is rebuilt by hand, never by calling
-                    // `Report::drain_failure`: the spec is a second writing
-                    // of the rule and must stay independent — sharing the
-                    // helper under test would make this arm tautological (a
-                    // format slip would rewrite both sides and stay green).
-                    let mut message = String::new();
-                    if let Some(report) = &load_failure {
-                        message.push_str("load failed: ");
-                        message.push_str(report.message());
-                        message.push_str("; ");
-                    }
-                    write!(
-                        message,
-                        "drain finished with {} disposer error(s)",
-                        disposer_errors.len()
-                    )
-                    .expect("writing to a String cannot fail");
-                    for error in disposer_errors {
-                        message.push_str(": ");
-                        message.push_str(error.message());
-                    }
-                    S::Failed(Report::new(message))
-                };
-                *landed == expected
-            }
-            (S::Failed(_), Event::Unload, S::Disposed, []) => true,
-            _ => false,
-        }
-    }
-
-    /// Single-step transitions implement exactly the legal edges: every
-    /// accepted step is legal, and every rejected (state, event) pair has
-    /// no legal outcome. (Kani's hard bound = no concurrency, so this is
-    /// the single-step/no-interleaving shape testing-strategy §2.1
-    /// assigns; interleaving coverage belongs to L2.)
-    // unwind pinned fail-loud like the other harnesses: the data loops are
-    // bounded by the ≤2 disposer errors and the format machinery by the
-    // fixed piece counts, so 8 carries margin — a future heavy edit trips
-    // the unwinding assertion instead of hanging the weekly proof.
-    #[kani::proof]
-    #[kani::unwind(8)]
-    fn single_step_implements_exactly_the_legal_edges() {
-        let before = any_state();
-        let event = any_event();
-        match before.transition(event.clone()) {
-            Ok((after, actions)) => assert!(
-                legal(&before, &event, &after, &actions),
-                "accepted an illegal edge"
-            ),
-            Err(_) => assert!(!has_legal_outcome(&before, &event), "rejected a legal edge"),
         }
     }
 }
@@ -525,5 +391,146 @@ mod tests {
         let state = FiberState::Active;
         let _ = state.transition(Event::StartLoad);
         assert_eq!(state, FiberState::Active, "rejection must not mutate");
+    }
+
+    /// The acceptance grid, stated independently of the implementation.
+    fn has_legal_outcome(before: &FiberState, event: &Event) -> bool {
+        use FiberState as S;
+        matches!(
+            (before, event),
+            (S::Pending, Event::StartLoad | Event::Unload)
+                | (S::Loading, Event::LoadSucceeded | Event::LoadFailed(_))
+                | (S::Active | S::Failed(_), Event::Unload)
+                | (S::Unloading(_), Event::DrainFinished { .. })
+        )
+    }
+
+    /// The full legal-edge relation over outcomes, stated independently of
+    /// the implementation (a second writing, as the specification).
+    fn legal(before: &FiberState, event: &Event, after: &FiberState, actions: &[Action]) -> bool {
+        use FiberState as S;
+        use std::fmt::Write as _;
+        match (before, event, after, actions) {
+            (S::Pending, Event::StartLoad, S::Loading, [])
+            | (S::Pending | S::Failed(_), Event::Unload, S::Disposed, [])
+            | (S::Loading, Event::LoadSucceeded, S::Active, [])
+            | (
+                S::Active,
+                Event::Unload,
+                S::Unloading(UnloadTarget::Disposed),
+                [Action::StartDrain],
+            ) => true,
+            (S::Unloading(target), Event::DrainFinished { disposer_errors }, landed, []) => {
+                let load_failure = match target {
+                    UnloadTarget::Failed(report) => Some(report.clone()),
+                    UnloadTarget::Disposed => None,
+                };
+                let expected = if disposer_errors.is_empty() {
+                    match load_failure {
+                        Some(report) => S::Failed(report),
+                        None => S::Disposed,
+                    }
+                } else {
+                    // The aggregate is rebuilt by hand, never by calling
+                    // `Report::drain_failure`: the spec is a second writing
+                    // of the rule and must stay independent — sharing the
+                    // helper under test would make this arm tautological (a
+                    // format slip would rewrite both sides and stay green).
+                    let mut message = String::new();
+                    if let Some(report) = &load_failure {
+                        message.push_str("load failed: ");
+                        message.push_str(report.message());
+                        message.push_str("; ");
+                    }
+                    write!(
+                        message,
+                        "drain finished with {} disposer error(s)",
+                        disposer_errors.len()
+                    )
+                    .expect("writing to a String cannot fail");
+                    for error in disposer_errors {
+                        message.push_str(": ");
+                        message.push_str(error.message());
+                    }
+                    S::Failed(Report::new(message))
+                };
+                *landed == expected
+            }
+            (
+                S::Loading,
+                Event::LoadFailed(given),
+                S::Unloading(UnloadTarget::Failed(carried)),
+                [Action::StartDrain],
+            ) => given == carried,
+            _ => false,
+        }
+    }
+
+    /// Spec self-test: `legal`'s negative space — an outcome no arm
+    /// matches is not legal. A green exhaustive run never evaluates the
+    /// catch-all (it firing means the implementation is broken), so the
+    /// spec's rejection side gets its own cover here.
+    #[test]
+    fn legal_rejects_outcomes_no_arm_matches() {
+        assert!(!legal(
+            &FiberState::Active,
+            &Event::StartLoad,
+            &FiberState::Active,
+            &[]
+        ));
+        // A legal edge's endpoints, but a wrong landing state:
+        assert!(!legal(
+            &FiberState::Pending,
+            &Event::StartLoad,
+            &FiberState::Active,
+            &[]
+        ));
+    }
+
+    /// Every (state, event) pair against the spec — the single-step
+    /// property the retired Kani harness quantified over (issue #5;
+    /// testing-strategy §2.1 2026-10-21 修订注), exhaustive because the
+    /// pair space is finite and tiny (7 states × 7 event instances).
+    /// Interleaving coverage belongs to L2.
+    #[test]
+    fn every_single_step_matches_the_legal_edge_spec() {
+        let states = [
+            FiberState::Pending,
+            FiberState::Loading,
+            FiberState::Active,
+            FiberState::Unloading(UnloadTarget::Disposed),
+            FiberState::Unloading(UnloadTarget::Failed(report("load"))),
+            FiberState::Disposed,
+            FiberState::Failed(report("failed")),
+        ];
+        let events = [
+            Event::StartLoad,
+            Event::LoadSucceeded,
+            Event::LoadFailed(report("boom")),
+            Event::Unload,
+            Event::DrainFinished {
+                disposer_errors: vec![],
+            },
+            Event::DrainFinished {
+                disposer_errors: vec![report("e0")],
+            },
+            Event::DrainFinished {
+                disposer_errors: vec![report("e0"), report("e1")],
+            },
+        ];
+        for before in &states {
+            for event in &events {
+                match before.transition(event.clone()) {
+                    Ok((after, actions)) => assert!(
+                        legal(before, event, &after, &actions),
+                        "accepted an illegal edge: {before:?} + {event:?}"
+                    ),
+                    Err(error) => assert!(
+                        !has_legal_outcome(before, event),
+                        "rejected a legal edge: {before:?} + {event:?} ({error})"
+                    ),
+                }
+            }
+        }
     }
 }
